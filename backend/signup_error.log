@@ -1,0 +1,30 @@
+[2026-05-16T13:33:43.751Z] Signup OTP error: Status code: 401
+Body: {
+  "message": "API Key is not enabled",
+  "code": "unauthorized"
+}
+BrevoError: Status code: 401
+Body: {
+  "message": "API Key is not enabled",
+  "code": "unauthorized"
+}
+    at TransactionalEmailsClient.<anonymous> (C:\Users\Administrator\Downloads\FinalProject\FinalProject\backend\node_modules\@getbrevo\brevo\dist\cjs\api\resources\transactionalEmails\client\Client.js:445:31)
+    at Generator.next (<anonymous>)
+    at fulfilled (C:\Users\Administrator\Downloads\FinalProject\FinalProject\backend\node_modules\@getbrevo\brevo\dist\cjs\api\resources\transactionalEmails\client\Client.js:39:58)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+
+[2026-05-16T13:35:23.527Z] Signup OTP error: Status code: 401
+Body: {
+  "message": "API Key is not enabled",
+  "code": "unauthorized"
+}
+BrevoError: Status code: 401
+Body: {
+  "message": "API Key is not enabled",
+  "code": "unauthorized"
+}
+    at TransactionalEmailsClient.<anonymous> (C:\Users\Administrator\Downloads\FinalProject\FinalProject\backend\node_modules\@getbrevo\brevo\dist\cjs\api\resources\transactionalEmails\client\Client.js:445:31)
+    at Generator.next (<anonymous>)
+    at fulfilled (C:\Users\Administrator\Downloads\FinalProject\FinalProject\backend\node_modules\@getbrevo\brevo\dist\cjs\api\resources\transactionalEmails\client\Client.js:39:58)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+

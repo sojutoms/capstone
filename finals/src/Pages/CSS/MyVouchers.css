@@ -1,0 +1,284 @@
+/* ==========================================================================
+   MY VOUCHERS - Luxury Rewards Dashboard
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+.my-vouchers-container {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  padding: 80px 0;
+  font-family: 'Outfit', sans-serif;
+  color: var(--text-primary);
+}
+
+.vouchers-content {
+  max-width: 1200px;
+  width: 92%;
+  margin: 0 auto;
+}
+
+/* ── Points Section ── */
+.points-dashboard {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 32px;
+  padding: 60px;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 60px;
+  align-items: center;
+  margin-bottom: 60px;
+  position: relative;
+  overflow: hidden;
+}
+
+.points-dashboard::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  right: -100px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.points-info h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 80px;
+  margin: 0;
+  line-height: 1;
+}
+
+.points-info p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-top: 10px;
+}
+
+.redeem-section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+}
+
+.redeem-section h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px;
+  margin: 0 0 15px;
+}
+
+.redeem-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.redeem-btn-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.redeem-btn-circle:hover:not(:disabled) {
+  background: #fff;
+  color: #000;
+}
+
+.redeem-amount {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px;
+  min-width: 100px;
+}
+
+.btn-redeem-action {
+  width: 100%;
+  padding: 15px;
+  background: #fff;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-redeem-action:hover:not(:disabled) {
+  background: #e0e0e0;
+  transform: translateY(-2px);
+}
+
+.btn-redeem-action:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.redeem-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 15px;
+  display: block;
+}
+
+/* ── Voucher Tabs ── */
+.voucher-tabs {
+  display: flex;
+  gap: 40px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 40px;
+}
+
+.v-tab {
+  padding: 15px 0;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.v-tab.active {
+  color: var(--text-primary);
+}
+
+.v-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--text-primary);
+}
+
+/* ── Voucher Cards ── */
+.vouchers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 25px;
+}
+
+.voucher-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.voucher-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.voucher-card.expired {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
+.v-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.v-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px;
+  margin: 0;
+}
+
+.v-status-tag {
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  letter-spacing: 0.1em;
+}
+
+.v-code-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.v-code {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.2em;
+}
+
+.copy-hint {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 4px;
+  display: block;
+}
+
+.v-expiry {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.v-message {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.no-vouchers {
+  text-align: center;
+  padding: 60px 0;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 18px;
+}
+
+@media (max-width: 900px) {
+  .points-dashboard {
+    grid-template-columns: 1fr;
+    padding: 40px;
+    gap: 30px;
+  }
+  .points-info h1 {
+    font-size: 60px;
+  }
+}
+
+@media (max-width: 600px) {
+  .vouchers-grid {
+    grid-template-columns: 1fr;
+  }
+  .voucher-tabs {
+    gap: 20px;
+  }
+}

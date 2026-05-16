@@ -1,0 +1,449 @@
+/* ============================================
+   ITEM - Premium Product Card
+   ============================================ */
+/* ─── Item Card ──────────────────────────────────────────────────── */
+.item {
+  width: 100%;
+  position: relative;
+  background: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease-out, background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+  cursor: pointer;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--shine-x, 50%) var(--shine-y, 50%),
+    var(--glass-bg-hover) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 5;
+}
+
+.item:hover::after {
+  opacity: 1;
+}
+
+.item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--glass-bg) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.item:hover {
+  background: var(--bg-elevated);
+  border-color: var(--glass-border-hover);
+  box-shadow:
+    var(--shadow-lg),
+    var(--shadow-glow-gold);
+}
+
+.item:hover::before {
+  opacity: 1;
+}
+
+.item-link {
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* ─── Image Section ──────────────────────────────────────────────── */
+.item-image-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transform-style: preserve-3d;
+}
+
+.item-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 20px;
+  filter: drop-shadow(0px 8px 20px rgba(0, 0, 0, 0.6));
+  transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  display: block;
+  transform: translateZ(30px); /* Lift image for 3D depth */
+}
+
+.item:hover .item-image {
+  transform: translateZ(50px) scale(1.05) rotate(1deg);
+  filter: drop-shadow(0px 15px 40px rgba(0, 0, 0, 0.8));
+}
+
+/* ─── Image Overlay on Hover ──────────────────────────────────────── */
+.item-image-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, transparent 40%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.item:hover .item-image-wrapper::after {
+  opacity: 1;
+}
+
+/* ─── Badges ──────────────────────────────────────────────────────── */
+.new-badge,
+.just-in-badge,
+.bestseller-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 4px 10px;
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  z-index: 3;
+  animation: badgeReveal 0.4s ease both;
+}
+
+@keyframes badgeReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.new-badge {
+  background: var(--accent-gold);
+  color: var(--bg-primary);
+}
+
+.just-in-badge {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(8px);
+}
+
+.bestseller-badge {
+  top: 36px;
+  background: transparent;
+  color: var(--accent-gold);
+  border: 1px solid var(--accent-gold);
+  font-size: 8px;
+}
+
+/* ─── Info Section ───────────────────────────────────────────────── */
+.item-info {
+  padding: 14px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--glass-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.item-info::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.item:hover .item-info::before {
+  opacity: 1;
+}
+
+/* ─── Product Name ──────────────────────────────────────────────── */
+.item-name {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  line-height: 1.4;
+  transition: color 0.2s ease;
+}
+
+.item:hover .item-name {
+  color: var(--accent-gold-light);
+}
+
+/* ─── Price Section ──────────────────────────────────────────────── */
+.item-prices {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.item-price-new {
+  font-family: var(--font-body);
+  color: var(--accent-gold);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: block;
+  transition: all 0.2s ease;
+}
+
+.item:hover .item-price-new {
+  text-shadow: 0 0 20px var(--accent-gold-light);
+}
+
+.item-price-old {
+  font-family: var(--font-body);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 400;
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.price-unavailable {
+  font-family: var(--font-body);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* ─── Discount Badge ────────────────────────────────────────────── */
+.item-discount {
+  display: inline-block;
+  color: var(--bg-primary);
+  background: var(--accent-gold);
+  padding: 3px 8px;
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  border-radius: 4px;
+}
+
+/* ─── Luxury Shipping Tag ────────────────────────────────────────── */
+.luxury-shipping-tag {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  color: var(--accent-gold);
+  border: 1px solid var(--accent-gold);
+  padding: 4px 8px;
+  font-family: var(--font-display);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.item:hover .luxury-shipping-tag {
+  opacity: 1;
+}
+
+/* ─── Size Overlay ───────────────────────────────────────────────── */
+.item-size-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  padding: 20px 15px 15px;
+  transform: translateY(100%);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item:hover .item-size-overlay {
+  transform: translateY(0);
+}
+
+.size-overlay-title {
+  color: var(--text-muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+.size-list-mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mini-size-item {
+  min-width: 32px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: 10px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  background: var(--glass-bg);
+}
+
+.mini-size-item:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+  background: var(--glass-bg);
+}
+
+.mini-size-more {
+  border: none;
+  background: transparent;
+  color: var(--accent-gold);
+}
+
+/* ─── Image Transition ───────────────────────────────────────────── */
+.item-image--alt {
+  animation: imgFadeIn 0.5s ease both;
+}
+
+@keyframes imgFadeIn {
+  from { opacity: 0.6; filter: blur(4px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+.item:hover .item-image {
+  transform: scale(1.05);
+}
+
+/* ─── Quick View Button (Deprecated in favor of size overlay) ────── */
+/* .item::after {
+  content: 'QUICK VIEW';
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--accent-gold);
+  color: #050505;
+  padding: 10px 24px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  border-radius: 9999px;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.item:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+} */
+
+/* ─── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 1280px) {
+  .item-name {
+    font-size: 10px;
+  }
+
+  .item-price-new {
+    font-size: 13px;
+  }
+
+  .item-info {
+    padding: 12px 14px 16px;
+  }
+}
+
+@media (max-width: 800px) {
+  .item-info {
+    padding: 10px 12px 14px;
+  }
+
+  .item-prices {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .item-price-new {
+    font-size: 13px;
+  }
+
+  .item::after {
+    display: none;
+  }
+
+  .item:hover {
+    transform: translateY(-4px);
+  }
+}
+
+@media (max-width: 500px) {
+  .item-price-new,
+  .item-price-old,
+  .price-unavailable {
+    font-size: 12px;
+  }
+
+  .item-name {
+    font-size: 10px;
+  }
+
+  .item-info {
+    padding: 8px 10px 12px;
+  }
+
+  .item-name {
+    font-size: 9px;
+  }
+
+  .item {
+    border-radius: 8px;
+  }
+
+  .item-image-wrapper {
+    padding: 10px;
+  }
+}

@@ -1,0 +1,578 @@
+/* ============================================
+   SHARED DARK-THEME PAGE STYLES
+   Hypebeast-Luxe Design System
+   ============================================ */
+
+const darkPageStyles = {
+  /* ── Page Container ── */
+  pageContainer: {
+    background: '#0a0a0a',
+    minHeight: '100vh',
+    color: '#ffffff',
+  },
+
+  /* ── Hero Section ── */
+  hero: {
+    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(10, 10, 10, 0.95) 100%)',
+    position: 'relative',
+    overflow: 'hidden',
+    padding: '80px 20px',
+    textAlign: 'center',
+  },
+  heroPattern: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'radial-gradient(ellipse at center, rgba(255, 255, 255, 0.06) 0%, transparent 70%)',
+    pointerEvents: 'none',
+  },
+  heroContent: {
+    position: 'relative',
+    zIndex: 1,
+    maxWidth: '800px',
+    margin: '0 auto',
+  },
+  heroTitle: {
+    fontFamily: "'Bebas Neue', sans-serif",
+    fontSize: 'clamp(2.2rem, 5vw, 3.5rem)',
+    fontWeight: 400,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: '#ffffff',
+    marginBottom: '16px',
+  },
+  heroSubtitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: 'clamp(0.95rem, 2vw, 1.15rem)',
+    color: 'rgba(255,255,255,0.6)',
+    lineHeight: 1.7,
+  },
+  heroDecoration: {
+    position: 'absolute',
+    bottom: '-2px',
+    left: 0,
+    right: 0,
+    height: '40px',
+    background: '#0a0a0a',
+    clipPath: 'polygon(0 50%, 100% 0, 100% 100%, 0 100%)',
+  },
+
+  /* ── Page Content Wrapper ── */
+  pageContent: {
+    maxWidth: '1100px',
+    margin: '0 auto',
+    padding: '48px 20px',
+  },
+
+  /* ── Content Section Card ── */
+  contentSection: {
+    background: '#111111',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '16px',
+    padding: '40px',
+    marginBottom: '28px',
+    transition: 'border-color 0.3s ease',
+  },
+
+  /* ── Section Badge ── */
+  sectionBadge: {
+    display: 'inline-block',
+    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+    color: '#050505',
+    padding: '6px 16px',
+    borderRadius: '9999px',
+    fontFamily: "'Bebas Neue', sans-serif",
+    fontSize: '10px',
+    fontWeight: 400,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    marginBottom: '18px',
+  },
+  valueBadge: {
+    background: 'rgba(255, 255, 255, 0.2)',
+    color: '#ffffff',
+  },
+
+  /* ── Section Title ── */
+  sectionTitle: {
+    fontFamily: "'Playfair Display', serif",
+    fontSize: 'clamp(1.5rem, 3vw, 2rem)',
+    color: '#ffffff',
+    marginBottom: '24px',
+    fontWeight: 700,
+    fontStyle: 'italic',
+  },
+
+  /* ── Story / Paragraph ── */
+  storyContent: {
+    marginTop: '16px',
+  },
+  paragraph: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: '14px',
+    lineHeight: 1.8,
+    color: 'rgba(255,255,255,0.6)',
+    marginBottom: '16px',
+  },
+  dropCap: {
+    fontSize: '3.2rem',
+    fontWeight: 700,
+    float: 'left',
+    lineHeight: 1,
+    marginRight: '10px',
+    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+  },
+
+  /* ── Values Section (accent bg) ── */
+  valuesSection: {
+    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, #111111 100%)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  valuesGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: '20px',
+    marginTop: '32px',
+  },
+  valueCard: {
+    background: 'rgba(255,255,255,0.03)',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '12px',
+    padding: '28px',
+    textAlign: 'center',
+    transition: 'all 0.3s ease',
+    cursor: 'default',
+  },
+  valueIcon: {
+    fontSize: '2.4rem',
+    marginBottom: '16px',
+  },
+  valueTitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: '1.1rem',
+    marginBottom: '12px',
+    color: '#ffffff',
+    fontWeight: 600,
+  },
+  valueDesc: {
+    color: 'rgba(255,255,255,0.55)',
+    lineHeight: 1.6,
+    fontSize: '0.85rem',
+    margin: 0,
+  },
+
+  /* ── Feature List ── */
+  featureList: {
+    listStyle: 'none',
+    padding: 0,
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+    gap: '14px',
+    marginTop: '24px',
+  },
+  featureItem: {
+    background: '#0a0a0a',
+    padding: '18px 22px',
+    borderRadius: '10px',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderLeft: '3px solid #ffffff',
+    fontSize: '14px',
+    color: 'rgba(255,255,255,0.6)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    transition: 'all 0.3s ease',
+  },
+  featureCheck: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '26px',
+    height: '26px',
+    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+    color: '#050505',
+    borderRadius: '50%',
+    fontWeight: 'bold',
+    flexShrink: 0,
+    fontSize: '0.8rem',
+  },
+
+  /* ── Stats Grid ── */
+  statsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: '16px',
+    marginTop: '28px',
+  },
+  statCard: {
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '12px',
+    padding: '24px',
+    textAlign: 'center',
+    transition: 'all 0.3s ease',
+  },
+  statNumber: {
+    fontFamily: "'Bebas Neue', sans-serif",
+    fontSize: '2rem',
+    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+    lineHeight: 1.2,
+  },
+  statLabel: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: '11px',
+    color: 'rgba(255,255,255,0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    marginTop: '6px',
+  },
+
+  /* ── Steps / Timeline ── */
+  stepsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '20px',
+    marginTop: '28px',
+  },
+  stepCard: {
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '12px',
+    padding: '28px 24px',
+    textAlign: 'center',
+    transition: 'all 0.3s ease',
+    position: 'relative',
+  },
+  stepNumber: {
+    fontFamily: "'Bebas Neue', sans-serif",
+    fontSize: '2rem',
+    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+    marginBottom: '12px',
+    display: 'block',
+  },
+  stepTitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: '1rem',
+    fontWeight: 600,
+    color: '#ffffff',
+    marginBottom: '10px',
+  },
+  stepDesc: {
+    fontSize: '0.85rem',
+    color: 'rgba(255,255,255,0.5)',
+    lineHeight: 1.6,
+    margin: 0,
+  },
+
+  /* ── Form Elements ── */
+  formGroup: {
+    marginBottom: '20px',
+  },
+  label: {
+    display: 'block',
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: '11px',
+    fontWeight: 600,
+    color: 'rgba(255,255,255,0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    marginBottom: '8px',
+  },
+  input: {
+    width: '100%',
+    padding: '14px 16px',
+    background: '#0a0a0a',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '10px',
+    color: '#ffffff',
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: '14px',
+    outline: 'none',
+    transition: 'border-color 0.3s ease',
+    boxSizing: 'border-box',
+  },
+  textarea: {
+    width: '100%',
+    padding: '14px 16px',
+    background: '#0a0a0a',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '10px',
+    color: '#ffffff',
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: '14px',
+    outline: 'none',
+    minHeight: '140px',
+    resize: 'vertical',
+    transition: 'border-color 0.3s ease',
+    boxSizing: 'border-box',
+  },
+  submitButton: {
+    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+    color: '#050505',
+    border: 'none',
+    padding: '16px 40px',
+    borderRadius: '10px',
+    fontFamily: "'Bebas Neue', sans-serif",
+    fontSize: '14px',
+    fontWeight: 400,
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    width: '100%',
+  },
+
+  /* ── CTA / Banner ── */
+  ctaSection: {
+    background: 'linear-gradient(135deg, rgba(201,162,39,0.12) 0%, #111111 100%)',
+    border: '1px solid rgba(201,162,39,0.2)',
+    borderRadius: '16px',
+    padding: '48px 40px',
+    textAlign: 'center',
+    marginBottom: '28px',
+  },
+  ctaTitle: {
+    fontFamily: "'Playfair Display', serif",
+    fontSize: 'clamp(1.4rem, 3vw, 1.8rem)',
+    color: '#ffffff',
+    marginBottom: '14px',
+    fontWeight: 700,
+    fontStyle: 'italic',
+  },
+  ctaDesc: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: '14px',
+    lineHeight: 1.7,
+    marginBottom: '24px',
+    maxWidth: '600px',
+    margin: '0 auto 24px',
+  },
+  ctaButton: {
+    display: 'inline-block',
+    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+    color: '#050505',
+    padding: '14px 36px',
+    borderRadius: '9999px',
+    fontFamily: "'Bebas Neue', sans-serif",
+    fontSize: '13px',
+    letterSpacing: '0.12em',
+    textTransform: 'uppercase',
+    textDecoration: 'none',
+    cursor: 'pointer',
+    border: 'none',
+    transition: 'all 0.3s ease',
+  },
+
+  /* ── Info Grid (contact, etc.) ── */
+  infoGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px',
+    marginTop: '24px',
+  },
+  infoCard: {
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '12px',
+    padding: '24px',
+    textAlign: 'center',
+    transition: 'all 0.3s ease',
+  },
+  infoIcon: {
+    fontSize: '2rem',
+    marginBottom: '12px',
+  },
+  infoTitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: '0.95rem',
+    fontWeight: 600,
+    color: '#ffffff',
+    marginBottom: '8px',
+  },
+  infoText: {
+    fontSize: '0.85rem',
+    color: 'rgba(255,255,255,0.5)',
+    lineHeight: 1.5,
+    margin: 0,
+  },
+
+  /* ── Table styles ── */
+  table: {
+    width: '100%',
+    borderCollapse: 'separate',
+    borderSpacing: '0',
+    marginTop: '20px',
+  },
+  th: {
+    background: 'rgba(201,162,39,0.1)',
+    color: '#ffffff',
+    fontFamily: "'Bebas Neue', sans-serif",
+    fontSize: '12px',
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    padding: '14px 16px',
+    textAlign: 'left',
+    borderBottom: '1px solid rgba(255,255,255,0.1)',
+  },
+  td: {
+    padding: '14px 16px',
+    fontSize: '13px',
+    color: 'rgba(255,255,255,0.6)',
+    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    fontFamily: "'Outfit', sans-serif",
+  },
+
+  /* ── Accordion / FAQ ── */
+  faqItem: {
+    background: '#0a0a0a',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '10px',
+    marginBottom: '10px',
+    overflow: 'hidden',
+  },
+  faqQuestion: {
+    padding: '18px 22px',
+    fontSize: '14px',
+    fontWeight: 600,
+    color: '#ffffff',
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontFamily: "'Outfit', sans-serif",
+  },
+  faqAnswer: {
+    padding: '0 22px 18px',
+    fontSize: '13px',
+    color: 'rgba(255,255,255,0.5)',
+    lineHeight: 1.7,
+    fontFamily: "'Outfit', sans-serif",
+  },
+
+  /* ── Job Card / Listing ── */
+  jobCard: {
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '12px',
+    padding: '28px',
+    marginBottom: '14px',
+    transition: 'all 0.3s ease',
+  },
+  jobTitle: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: '1.1rem',
+    fontWeight: 600,
+    color: '#ffffff',
+    marginBottom: '8px',
+  },
+  jobMeta: {
+    fontSize: '0.8rem',
+    color: 'rgba(255,255,255,0.4)',
+    marginBottom: '12px',
+    display: 'flex',
+    gap: '16px',
+    flexWrap: 'wrap',
+  },
+  jobDesc: {
+    fontSize: '0.85rem',
+    color: 'rgba(255,255,255,0.55)',
+    lineHeight: 1.6,
+    margin: 0,
+  },
+  jobTag: {
+    display: 'inline-block',
+    background: 'rgba(201,162,39,0.1)',
+    color: '#ffffff',
+    padding: '4px 10px',
+    borderRadius: '6px',
+    fontSize: '10px',
+    fontWeight: 600,
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
+  },
+
+  /* ── Legal Text ── */
+  legalText: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: '13px',
+    lineHeight: 1.8,
+    color: 'rgba(255,255,255,0.55)',
+    marginBottom: '14px',
+  },
+  legalHeading: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: '1rem',
+    fontWeight: 600,
+    color: '#ffffff',
+    marginTop: '28px',
+    marginBottom: '12px',
+  },
+  legalList: {
+    paddingLeft: '20px',
+    margin: '12px 0',
+  },
+  legalListItem: {
+    fontSize: '13px',
+    color: 'rgba(255,255,255,0.55)',
+    lineHeight: 1.8,
+    marginBottom: '6px',
+  },
+
+  /* ── Tier / Pricing Card ── */
+  tierGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: '20px',
+    marginTop: '28px',
+  },
+  tierCard: {
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '16px',
+    padding: '32px',
+    textAlign: 'center',
+    transition: 'all 0.3s ease',
+    position: 'relative',
+  },
+  tierCardHighlighted: {
+    background: 'rgba(201,162,39,0.06)',
+    border: '1px solid rgba(201,162,39,0.25)',
+  },
+  tierTitle: {
+    fontFamily: "'Bebas Neue', sans-serif",
+    fontSize: '1.3rem',
+    letterSpacing: '0.08em',
+    color: '#ffffff',
+    marginBottom: '8px',
+  },
+  tierPrice: {
+    fontFamily: "'Outfit', sans-serif",
+    fontSize: '2rem',
+    fontWeight: 700,
+    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+    marginBottom: '16px',
+  },
+  tierFeature: {
+    fontSize: '0.85rem',
+    color: 'rgba(255,255,255,0.5)',
+    padding: '8px 0',
+    borderBottom: '1px solid rgba(255,255,255,0.05)',
+  },
+};
+
+export default darkPageStyles;

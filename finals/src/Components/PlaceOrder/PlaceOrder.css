@@ -1,0 +1,534 @@
+/* ==========================================================================
+   THE ACQUISITION SANCTUARY - Checkout Overhaul
+   ========================================================================== */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+/* The local variables were removed to prevent global theme conflicts */
+
+.checkout-terminal {
+  background: var(--bg-primary);
+  min-height: 100vh;
+  padding: 80px 40px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  background-image: var(--gradient-glow);
+}
+
+.terminal-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 60px;
+  max-width: 1400px;
+  margin: 0 auto;
+  align-items: start;
+  animation: terminalEntry 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes terminalEntry {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Checkout Header ─────────────────────────────────────────────────── */
+.checkout-header {
+  margin-bottom: 48px;
+}
+
+.checkout-title {
+  font-family: var(--font-display);
+  font-size: 52px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: var(--text-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  line-height: 1;
+}
+
+.checkout-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  margin-top: 12px;
+}
+
+/* ── Terminal Sections ──────────────────────────────────────────────── */
+.terminal-section {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 32px;
+  backdrop-filter: blur(10px);
+  transition: all 0.4s ease;
+}
+
+.terminal-section:hover {
+  border-color: var(--accent-gold);
+  background: var(--glass-bg);
+}
+
+.section-header-innovative {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.indicator-dot {
+  width: 10px;
+  height: 10px;
+  background: var(--accent-gold);
+  border-radius: 50%;
+  box-shadow: 0 0 15px var(--accent-gold);
+  animation: pulseGold 2s infinite;
+}
+
+@keyframes pulseGold {
+  0% { box-shadow: 0 0 5px var(--accent-gold); }
+  50% { box-shadow: 0 0 20px var(--accent-gold); }
+  100% { box-shadow: 0 0 5px var(--accent-gold); }
+}
+
+.section-header-innovative h3 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* ── Inputs & Fields ────────────────────────────────────────────────── */
+.input-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.field-group label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  opacity: 0.8;
+}
+
+.field-group input, 
+.field-group select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 16px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 15px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.field-group select option {
+  background-color: var(--dropdown-bg);
+  color: var(--text-primary);
+  padding: 10px;
+}
+
+.field-group input:focus, 
+.field-group select:focus {
+  border-color: var(--accent-gold);
+  background: var(--glass-bg);
+  box-shadow: 0 0 20px var(--accent-gold-rgb-01);
+}
+
+/* ── Membership Elevation Preview ────────────────────────────────────── */
+.membership-elevation-box {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), transparent);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 20px;
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.elevation-icon {
+  font-size: 24px;
+}
+
+.elevation-text h4 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  margin: 0;
+  color: var(--accent-gold);
+}
+
+.elevation-text p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 4px 0 0;
+}
+
+/* ── Summary Sidebar ────────────────────────────────────────────────── */
+.summary-sticker {
+  background: var(--bg-surface);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 32px;
+  position: sticky;
+  top: 100px;
+  box-shadow: var(--shadow-xl);
+}
+
+.summary-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: 0.1em;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+/* ── Payment Options ────────────────────────────────────────────────── */
+.innovative-payment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.payment-pill {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 16px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.payment-pill input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.payment-pill.active {
+  background: var(--accent-gold);
+  border-color: var(--accent-gold);
+}
+
+.payment-pill.active .pill-text {
+  color: var(--bg-primary);
+  font-weight: 700;
+}
+
+.pill-text {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ── Authorize Button ────────────────────────────────────────────────── */
+.authorize-btn {
+  width: 100%;
+  background: var(--accent-gold);
+  color: var(--bg-primary);
+  padding: 20px;
+  border: none;
+  border-radius: 14px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.authorize-btn:hover {
+  transform: translateY(-4px);
+  background: var(--accent-gold-light);
+  box-shadow: var(--shadow-lg);
+}
+
+.authorize-btn:active {
+  transform: translateY(-1px);
+}
+
+.authorize-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.authorize-btn:hover svg {
+  transform: translateX(5px);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .terminal-wrapper {
+    grid-template-columns: 1fr;
+  }
+  .summary-sticker {
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .checkout-terminal {
+    padding: 40px 20px;
+  }
+  .input-grid {
+    grid-template-columns: 1fr;
+  }
+  .checkout-title {
+    font-size: 36px;
+  }
+}
+
+/* ── Saved Address Dropdown ────────────────────────────────────────── */
+.innovative-dropdown {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.saved-address-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--glass-border);
+  transition: all 0.3s ease;
+}
+
+.saved-address-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.saved-address-info {
+  flex: 1;
+  cursor: pointer;
+}
+
+.saved-address-info .strong {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.saved-address-info .small {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.saved-address-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.addr-action-btn {
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-muted);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.addr-edit-btn:hover {
+  border-color: #fff;
+  color: #fff;
+}
+
+.addr-delete-btn:hover {
+  border-color: #ff4d4d;
+  color: #ff4d4d;
+}
+
+/* ── Voucher Dropdown ────────────────────────────────────────────────── */
+.voucher-dropdown-root {
+  position: relative;
+  margin-top: 24px;
+  z-index: 100;
+}
+
+.voucher-select-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.voucher-select-trigger:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.voucher-select-trigger.applied {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #ffffff;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.trigger-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.trigger-icon {
+  font-size: 24px;
+}
+
+.trigger-text-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.trigger-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+}
+
+.trigger-value {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+}
+
+.chevron {
+  font-size: 10px;
+  color: var(--text-secondary);
+  transition: transform 0.3s ease;
+}
+
+.voucher-select-trigger:hover .chevron {
+  color: #fff;
+}
+
+.voucher-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  right: 0;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  z-index: 9999;
+  padding: 12px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+  max-height: 300px;
+  overflow-y: auto;
+  animation: dropdownFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-vouchers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dropdown-voucher-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dropdown-voucher-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.v-item-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.v-item-discount {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: #fff;
+  letter-spacing: 0.05em;
+}
+
+.v-item-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.v-item-right {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #fff;
+  opacity: 0.6;
+}
+
+.remove-voucher-btn {
+  margin-top: 12px;
+  background: transparent;
+  border: none;
+  color: #ff4d4d;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.3s;
+}
+
+.remove-voucher-btn:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.dropdown-loading, .dropdown-empty, .dropdown-error {
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+}

@@ -1,0 +1,359 @@
+/* ==========================================
+   REVIEW MODAL — LUXE BOUTIQUE THEME
+========================================== */
+
+.review-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Must be higher than Navbar (9999) */
+  z-index: 10005;
+  padding: 40px 20px;
+}
+
+.review-modal {
+  background: #0f0f0f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 85vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+  animation: modalReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalReveal {
+  from { opacity: 0; transform: scale(0.95) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Header ── */
+.review-modal-header {
+  padding: 36px 48px 24px;
+  background: #0f0f0f;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.review-modal-header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.review-modal-header p {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  color: #888;
+  margin: 8px 0 0;
+  font-weight: 400;
+}
+
+.modal-close-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #aaa;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.modal-close-btn:hover {
+  background: #fff;
+  color: #000;
+  transform: rotate(90deg);
+}
+
+/* ── Product Strip ── */
+.review-product-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px 48px;
+  background: rgba(255,255,255,0.03);
+}
+
+.review-product-info img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.review-product-info span {
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* ── Form ── */
+.review-form {
+  padding: 40px 48px;
+}
+
+.form-group {
+  margin-bottom: 32px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 14px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.form-group input[type="text"],
+.form-group textarea {
+  width: 100%;
+  background: #000;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 16px 20px;
+  color: #fff;
+  font-size: 15px;
+  font-family: 'Outfit', sans-serif;
+  transition: all 0.25s;
+  line-height: 1.6;
+}
+
+.form-group input[type="text"]:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #fff;
+  box-shadow: 0 0 20px rgba(255,255,255,0.05);
+}
+
+.form-group textarea {
+  min-height: 160px;
+}
+
+.form-group small {
+  display: block;
+  text-align: right;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #444;
+  font-weight: 500;
+}
+
+/* ── Stars ── */
+.star-rating {
+  display: flex;
+  gap: 16px;
+}
+
+.star {
+  background: none;
+  border: none;
+  font-size: 32px;
+  color: #222;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.star.filled {
+  color: #fff;
+  filter: drop-shadow(0 0 12px rgba(255,255,255,0.3));
+}
+
+.star:hover {
+  transform: scale(1.2);
+}
+
+/* ── Luxe Radios ── */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  font-size: 15px;
+  color: #888;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.radio-label:hover {
+  color: #fff;
+}
+
+.radio-label input[type="radio"] {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #333;
+  border-radius: 50%;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #000;
+}
+
+.radio-label input[type="radio"]:checked {
+  border-color: #fff;
+}
+
+.radio-label input[type="radio"]:checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #fff;
+}
+
+/* ── Agreement ── */
+.agreement {
+  margin-top: 48px;
+  padding: 24px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #777;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+.checkbox-label input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 2px;
+  background: #000;
+  transition: all 0.2s;
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+  background: #fff;
+  border-color: #fff;
+}
+
+/* ── Policy Notice ── */
+.review-policy-notice {
+  padding: 20px 48px;
+  color: #555;
+  font-size: 12px;
+  text-align: center;
+  margin-bottom: 24px;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* ── Footer ── */
+.button-row {
+  padding: 0 48px 48px;
+  display: flex;
+  gap: 20px;
+}
+
+.button-row button {
+  flex: 1;
+  padding: 18px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-secondary {
+  background: #1a1a1a !important;
+  color: #888 !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+.btn-secondary:hover {
+  background: #252525 !important;
+  color: #fff !important;
+}
+
+.btn-primary {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #ddd !important;
+  transform: translateY(-3px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+}
+
+.btn-primary:disabled {
+  background: #222 !important;
+  color: #444 !important;
+  cursor: not-allowed;
+}
+
+/* ── Scrollbar ── */
+.review-modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.review-modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.review-modal::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+}
+
+.review-modal::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.2);
+}

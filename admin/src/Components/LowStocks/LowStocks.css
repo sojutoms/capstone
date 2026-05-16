@@ -1,0 +1,21 @@
+.alert-card {
+  background: var(--bg-surface, #181818);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  margin-bottom: 32px;
+}
+.alert-card h3 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: #991b1b;
+}
+.low-stock-list {
+  list-style: none;
+  padding: 0;
+}
+.low-stock-list li {
+  padding: 6px 0;
+  font-size: 14px;
+  color: #991b1b;
+}

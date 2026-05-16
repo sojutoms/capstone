@@ -1,0 +1,691 @@
+/* OperationsPanel.css ───────────────────────────────────────────────────── */
+
+.op-root {
+    padding: 28px 32px;
+    max-width: 1000px;
+    font-family: var(--font-body);
+    background: var(--bg-deep);
+    min-height: 100vh;
+    color: var(--text-primary);
+}
+
+.op-header {
+    margin-bottom: 24px;
+}
+
+.op-header h1 {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 4px;
+    letter-spacing: -0.02em;
+}
+
+.op-header p {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    margin: 0;
+}
+
+/* ── Tabs ── */
+.op-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 4px;
+    margin-bottom: 24px;
+    width: fit-content;
+}
+
+.op-tab-btn {
+    padding: 9px 20px;
+    border: none;
+    background: transparent;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.op-tab-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.op-tab-btn.active {
+    background: var(--text-primary);
+    color: var(--bg-deep);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ── Tab content ── */
+.op-tab-content {
+    animation: opFadeIn .2s ease;
+}
+
+@keyframes opFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.op-tab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.op-tab-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 4px;
+}
+
+.op-tab-header p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+    max-width: 500px;
+}
+
+/* ── Buttons ── */
+.op-btn {
+    padding: 9px 16px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+}
+
+.op-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-light);
+}
+
+.op-btn:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.op-btn--primary {
+    background: var(--text-primary);
+    color: var(--bg-deep);
+    border-color: var(--text-primary);
+}
+
+.op-btn--primary:hover:not(:disabled) {
+    background: #1e293b;
+}
+
+.op-btn--ghost {
+    background: transparent;
+}
+
+.op-btn--sell {
+    background: #059669;
+    color: #fff;
+    border-color: #059669;
+    font-size: 14px;
+    padding: 11px 24px;
+}
+
+.op-btn--sell:hover {
+    background: #047857;
+}
+
+.op-btn--danger {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+
+/* ── Badges ── */
+.op-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: #f1f5f9;
+    color: #374151;
+}
+
+.op-badge--blue {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.op-badge--green {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.op-badge--purple {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
+/* ── Misc ── */
+.op-loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.op-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #e2e8f0;
+    border-top-color: #0f172a;
+    border-radius: 50%;
+    animation: opSpin .7s linear infinite;
+}
+
+@keyframes opSpin {
+    to {
+        transform: rotate(360deg)
+    }
+}
+
+.op-empty {
+    text-align: center;
+    padding: 48px;
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+.op-search {
+    padding: 9px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    width: 240px;
+}
+
+.op-search:focus {
+    border-color: #94a3b8;
+}
+
+.op-section-label {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.op-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+/* ─── Scanner Tab ─── */
+.op-scan-form {
+    margin-bottom: 20px;
+}
+
+.op-scan-input-wrap {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: var(--bg-surface);
+    border: 2px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 4px 4px 4px 14px;
+    transition: border-color .15s;
+}
+
+.op-scan-input-wrap:focus-within {
+    border-color: var(--text-primary);
+}
+
+.op-scan-icon {
+    font-size: 18px;
+    color: var(--text-tertiary);
+}
+
+.op-scan-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    background: transparent;
+    color: var(--text-primary);
+}
+
+.op-scan-result {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+    animation: opFadeIn .2s ease;
+}
+
+.op-result-header {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    align-items: flex-start;
+}
+
+.op-result-img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid #f1f5f9;
+}
+
+.op-result-img-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+
+.op-result-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 8px;
+}
+
+.op-result-meta {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.op-result-price {
+    font-size: 24px;
+    font-weight: 900;
+    color: #059669;
+    margin-bottom: 6px;
+}
+
+.op-result-status {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.op-result-status.available {
+    color: #059669;
+}
+
+.op-result-status.sold {
+    color: #dc2626;
+}
+
+.op-result-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.op-already-sold {
+    font-size: 13px;
+    color: #dc2626;
+    font-weight: 600;
+    padding: 10px 0;
+}
+
+.op-recent-sells {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.op-recent-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #d1fae5;
+}
+
+.op-recent-row:last-child {
+    border-bottom: none;
+}
+
+.op-recent-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.op-recent-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.op-recent-size {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.op-recent-price {
+    font-size: 14px;
+    font-weight: 700;
+    color: #059669;
+}
+
+.op-recent-total {
+    font-size: 14px;
+    font-weight: 800;
+    color: #059669;
+    text-align: right;
+    padding-top: 10px;
+}
+
+/* ─── Price Tags Tab ─── */
+.op-tag-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.op-tag-style-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.op-style-btn {
+    padding: 6px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: var(--bg-surface, #181818);
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .12s;
+}
+
+.op-style-btn.active {
+    background: var(--text-primary);
+    color: var(--bg-deep);
+    border-color: var(--text-primary);
+}
+
+.op-selected-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.op-clear-btn {
+    background: none;
+    border: none;
+    color: #1e40af;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: underline;
+}
+
+.op-product-pick-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.op-pick-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1.5px solid #f1f5f9;
+    cursor: pointer;
+    transition: all .12s;
+    background: var(--bg-surface, #181818);
+}
+
+.op-pick-row:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+}
+
+.op-pick-row.selected {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.op-pick-check {
+    font-size: 18px;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.op-pick-row.selected .op-pick-check {
+    color: #2563eb;
+}
+
+.op-pick-img {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.op-pick-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.op-pick-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.op-pick-meta {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.op-pick-price {
+    font-size: 14px;
+    font-weight: 700;
+    color: #059669;
+    flex-shrink: 0;
+}
+
+/* ─── Shift Summary Tab ─── */
+.op-date-input {
+    padding: 9px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+}
+
+.op-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+}
+
+.op-kpi-card {
+    background: var(--bg-surface, #181818);
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+}
+
+.op-kpi-icon {
+    font-size: 28px;
+    margin-bottom: 10px;
+}
+
+.op-kpi-value {
+    font-size: 24px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.op-kpi-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+
+.op-hourly-section {
+    margin-bottom: 28px;
+}
+
+.op-hourly-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 140px;
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.op-hour-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+}
+
+.op-bar-wrap {
+    height: 80px;
+    display: flex;
+    align-items: flex-end;
+    width: 100%;
+}
+
+.op-bar {
+    width: 100%;
+    min-height: 4px;
+    background: #0f172a;
+    border-radius: 4px 4px 0 0;
+    transition: height .4s ease;
+}
+
+.op-hour-label {
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 5px;
+    font-weight: 600;
+}
+
+.op-hour-sales {
+    font-size: 10px;
+    color: #059669;
+    font-weight: 700;
+}
+
+.op-recent-section {}
+
+.op-sales-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 14px;
+}
+
+.op-sale-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--bg-surface, #181818);
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+}
+
+.op-sale-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.op-sale-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.op-sale-right {
+    text-align: right;
+}
+
+.op-sale-price {
+    font-size: 14px;
+    font-weight: 700;
+    color: #059669;
+}
+
+.op-sale-time {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+.op-top-product {
+    font-size: 13px;
+    color: #059669;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 10px 14px;
+}

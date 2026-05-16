@@ -1,0 +1,310 @@
+/* ==========================================================================
+   ADMIN LOGIN - Extreme Iridescent Glass Experience
+   ========================================================================== */
+
+.admin-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  font-family: var(--font-body);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Background: Cinematic Flare ── */
+.admin-login-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.admin-login-flare {
+  position: absolute;
+  top: -10%;
+  right: -10%;
+  width: 80%;
+  height: 80%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+  filter: blur(100px);
+  transform: rotate(-15deg);
+}
+
+/* The "Line Thingy" - Massive Glowing Arc with Sharp Core */
+.admin-login-bg::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1200px;
+  height: 1200px;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 0 150px rgba(255, 255, 255, 0.3),
+    inset 0 0 150px rgba(255, 255, 255, 0.3);
+  transform: translate(-75%, -50%);
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(20px);
+  opacity: 0.8;
+}
+
+/* Secondary broad volumetric glow for depth */
+.admin-login-bg::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1400px;
+  height: 1400px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at center, 
+    transparent 40%, 
+    rgba(255, 255, 255, 0.1) 50%, 
+    transparent 60%
+  );
+  filter: blur(120px);
+  transform: translate(-75%, -50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.admin-login-mesh {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(at 0% 0%, rgba(255, 255, 255, 0.03) 0, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(255, 255, 255, 0.02) 0, transparent 50%);
+}
+
+/* ── The Capsule Card ── */
+.admin-login-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 480px; /* Increased from 420px to fit title */
+  padding: 20px;
+}
+
+.iridescent-glass {
+  background: rgba(10, 10, 10, 0.4);
+  backdrop-filter: blur(80px) saturate(150%);
+  -webkit-backdrop-filter: blur(80px) saturate(150%);
+  border-radius: 90px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 80px 50px;
+  position: relative;
+  box-shadow: 
+    0 50px 150px rgba(0, 0, 0, 0.9),
+    inset 0 0 30px rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+/* Iridescent overlay */
+.iridescent-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 0%,
+    rgba(255, 0, 255, 0.02) 25%,
+    rgba(0, 255, 255, 0.02) 50%,
+    rgba(255, 255, 0, 0.02) 75%,
+    transparent 100%
+  );
+  z-index: -1;
+  opacity: 0.5;
+  filter: blur(20px);
+}
+
+/* ── Typography ── */
+.admin-login-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.admin-login-title-chrome {
+  font-family: var(--font-display);
+  font-size: 24px; /* Reduced further */
+  font-weight: 900;
+  letter-spacing: 0.06em; /* Reduced further */
+  margin: 0;
+  background: linear-gradient(to bottom, #fff 20%, #888 50%, #fff 80%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  text-transform: uppercase;
+  width: 100%;
+  text-align: center;
+  display: block;
+}
+
+.admin-login-subtitle-luxe {
+  font-size: 11px;
+  letter-spacing: 0.4em;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.admin-login-tagline-luxe {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 12px;
+  font-weight: 500;
+}
+
+/* ── Form Elements ── */
+.admin-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.admin-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-input-label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+  padding-left: 20px;
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50px;
+  padding: 0 24px;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.glass-pill:focus-within {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
+}
+
+.admin-input-icon {
+  color: rgba(255, 255, 255, 0.3);
+  margin-right: 12px;
+}
+
+.admin-input-minimal {
+  flex: 1;
+  background: transparent !important;
+  border: none;
+  padding: 18px 0;
+  color: #fff !important;
+  font-size: 14px;
+  outline: none;
+  min-width: 0;
+}
+
+/* Fix autofill background */
+.admin-input-minimal:-webkit-autofill,
+.admin-input-minimal:-webkit-autofill:hover, 
+.admin-input-minimal:-webkit-autofill:focus {
+  -webkit-text-fill-color: #fff !important;
+  -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.admin-input-minimal::placeholder {
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.admin-password-toggle {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+}
+
+/* ── Submit Button ── */
+.admin-login-btn-luxe {
+  margin-top: 24px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #000;
+  padding: 20px;
+  border-radius: 50px;
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+}
+
+.admin-login-btn-luxe:hover:not(:disabled) {
+  background: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 0 40px rgba(255, 255, 255, 0.4);
+}
+
+.admin-login-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Error State ── */
+.admin-login-error {
+  text-align: center;
+  color: #ef4444;
+  font-size: 12px;
+  margin-bottom: 20px;
+  background: rgba(239, 68, 68, 0.05);
+  padding: 10px;
+  border-radius: 20px;
+}
+
+/* ── Footer ── */
+.admin-login-footer-minimal {
+  margin-top: 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.1em;
+}
+
+/* ── Mobile ── */
+@media (max-width: 480px) {
+  .iridescent-glass {
+    padding: 60px 30px;
+    border-radius: 60px;
+  }
+}

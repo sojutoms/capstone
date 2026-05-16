@@ -1,0 +1,179 @@
+/* ============================================
+   DESCRIPTION BOX - Premium Dark Review Panel
+   ============================================ */
+
+.descriptionbox {
+  max-width: 1400px;
+  width: 92%;
+  margin: 48px auto;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+}
+
+.descriptionbox-navigator {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0;
+}
+
+.descriptionbox-nav-box {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 14px 28px;
+  border: 1px solid var(--glass-border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.descriptionbox-nav-box:first-child {
+  border-radius: 8px 0 0 0;
+}
+
+.descriptionbox-nav-box:last-child {
+  border-radius: 0 8px 0 0;
+}
+
+.descriptionbox-nav-box.fade {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--glass-border);
+}
+
+.descriptionbox-nav-box:hover {
+  background: var(--bg-elevated);
+  color: var(--accent-gold);
+}
+
+.descriptionbox-description {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border: 1px solid var(--glass-border);
+  border-top: none;
+  padding: 28px;
+  border-radius: 0 0 12px 12px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* ── Review form ── */
+.descriptionbox-textarea {
+  width: 100%;
+  padding: 14px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 100px;
+  transition: border-color 0.2s ease;
+}
+
+.descriptionbox-textarea:focus {
+  outline: none;
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.descriptionbox-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.descriptionbox-rating {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.descriptionbox-rating select {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: var(--font-body);
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.descriptionbox-rating select:focus {
+  outline: none;
+  border-color: var(--accent-gold);
+}
+
+.descriptionbox-submit-btn {
+  background: linear-gradient(135deg, var(--accent-gold), var(--accent-gold-light));
+  color: #050505;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 9999px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: fit-content;
+}
+
+.descriptionbox-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.3);
+}
+
+/* ── Review list ── */
+.descriptionbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.descriptionbox-item {
+  background: var(--bg-primary);
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  transition: border-color 0.2s ease;
+}
+
+.descriptionbox-item:hover {
+  border-color: var(--glass-border-hover);
+}
+
+.descriptionbox-stars {
+  color: var(--accent-gold);
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .descriptionbox {
+    margin: 32px auto;
+    width: 100%;
+    padding: 0 16px;
+  }
+
+  .descriptionbox-nav-box {
+    font-size: 11px;
+    padding: 12px 20px;
+  }
+
+  .descriptionbox-description {
+    padding: 20px;
+  }
+}

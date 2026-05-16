@@ -1,0 +1,86 @@
+.category-skeleton-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.skeleton-image-wrapper {
+  width: 100%;
+  aspect-ratio: 1/1;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-line {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-title {
+  width: 80%;
+  height: 20px;
+}
+
+.skeleton-meta {
+  width: 40%;
+  height: 14px;
+}
+
+.skeleton-price {
+  width: 30%;
+  height: 24px;
+  margin-top: 10px;
+}
+
+.skeleton-shimmer {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%
+  );
+  animation: shimmer-anim 1.5s infinite;
+}
+
+.skeleton-line::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%
+  );
+  animation: shimmer-anim 1.5s infinite;
+}
+
+@keyframes shimmer-anim {
+  100% {
+    transform: translateX(100%);
+  }
+}

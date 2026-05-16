@@ -1,0 +1,252 @@
+/* NotificationCenter.css ─────────────────────────────────────────────────── */
+/* White Accent Theme */
+
+.nc-root {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Bell button ── */
+.nc-bell {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  margin-right: 10px;
+}
+.nc-bell:hover {
+  background: rgba(255,255,255,0.16);
+  color: #fff;
+  border-color: rgba(255,255,255,0.3);
+}
+.nc-bell.has-unread {
+  color: #fff;
+  background: rgba(255,255,255,0.15);
+  animation: ncBellWiggle 2.5s ease-in-out 1s;
+}
+
+@keyframes ncBellWiggle {
+  0%, 100%  { transform: rotate(0deg); }
+  10%, 30%  { transform: rotate(-8deg); }
+  20%, 40%  { transform: rotate(8deg); }
+  50%       { transform: rotate(0deg); }
+}
+
+/* ── Unread badge ── */
+.nc-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  background: #ffffff;
+  color: #050505;
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #181818;
+  animation: ncBadgePop 0.3s cubic-bezier(.68,-.55,.27,1.55);
+  line-height: 1;
+}
+@keyframes ncBadgePop {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+
+/* ── Loading dot ── */
+.nc-loading-dot {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+  animation: ncPulse 1s ease-in-out infinite;
+}
+@keyframes ncPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.7); }
+}
+
+/* ── Dropdown panel ── */
+.nc-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 380px;
+  max-width: 95vw;
+  background: #0d0d0d;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.5),
+    0 8px 28px rgba(0,0,0,0.4),
+    0 24px 48px rgba(0,0,0,0.3);
+  z-index: 5000;
+  overflow: hidden;
+  animation: ncPanelIn 0.2s cubic-bezier(.16,1,.3,1);
+}
+@keyframes ncPanelIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Panel header ── */
+.nc-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.nc-panel-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+.nc-panel-sub {
+  font-size: 11px;
+  color: #ffffff;
+  font-weight: 600;
+  margin-top: 1px;
+  opacity: 0.8;
+}
+.nc-action-btn {
+  padding: 5px 10px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.nc-action-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+/* ── Notification list ── */
+.nc-list {
+  max-height: 440px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+
+.nc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 24px;
+  color: rgba(255,255,255,0.4);
+  font-size: 13px;
+  text-align: center;
+}
+.nc-empty-icon { font-size: 36px; }
+
+/* ── Group label ── */
+.nc-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.5);
+  padding: 10px 18px 4px;
+  background: #080808;
+}
+
+/* ── Notification item ── */
+.nc-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 18px;
+  cursor: pointer;
+  transition: background 0.1s;
+  position: relative;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.nc-item:last-child { border-bottom: none; }
+.nc-item:hover { background: rgba(255,255,255,0.04); }
+
+.nc-item.unread { background: rgba(255,255,255,0.03); }
+.nc-item.unread:hover { background: rgba(255,255,255,0.07); }
+
+.nc-item-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.nc-item-body { flex: 1; min-width: 0; }
+.nc-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+.nc-item-body-text {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+.nc-item-time {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  font-weight: 500;
+}
+
+.nc-unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+/* ── Footer ── */
+.nc-panel-footer {
+  padding: 10px 18px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  background: #080808;
+}
+.nc-footer-btn {
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  border-radius: 6px;
+  transition: background 0.12s;
+  letter-spacing: 0.02em;
+}
+.nc-footer-btn:hover { background: rgba(255,255,255,0.08); }
