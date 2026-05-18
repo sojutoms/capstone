@@ -3,7 +3,8 @@ import "./AddProduct.css";
 import upload_area from "../../assets/upload_area.svg";
 import API_BASE_URL, { authorizedFetch } from "../../services/api";
 
-const FALLBACK_SHOE_SIZES = ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13", "13.5", "14"];
+const FALLBACK_SHOE_SIZES  = ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13", "13.5", "14"];
+const FALLBACK_WATCH_SIZES = ["36", "38", "40", "42", "44", "46"];
 const FALLBACK_SUBCATEGORIES = [
   { label: "Lifestyle", value: "lifestyle" },
   { label: "Running", value: "running" },
@@ -41,7 +42,8 @@ const formatCurrencyForDisplay = (priceStr) => {
   }).format(cents / 100);
 };
 
-const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+const SIMPLE_CATEGORIES = ["bags", "collectibles"];
+const WATCH_CATEGORIES  = ["watch"];
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Image upload helpers
@@ -117,6 +119,7 @@ const AddProduct = ({ onAdded }) => {
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
   const [shoeSizes, setShoeSizes] = useState(FALLBACK_SHOE_SIZES);
+  const [watchSizes, setWatchSizes] = useState(FALLBACK_WATCH_SIZES);
   const [shoeSubcats, setShoeSubcats] = useState(FALLBACK_SUBCATEGORIES);
   const [loadingMeta, setLoadingMeta] = useState(true);
 
@@ -152,6 +155,13 @@ const AddProduct = ({ onAdded }) => {
   }, [shoeSizes]);
 
   useEffect(() => {
+    if (isWatchCategory) {
+      setSizes(watchSizes.reduce((acc, s) => ({ ...acc, [s]: { quantity: 0, price: "" } }), {}));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchSizes]);
+
+  useEffect(() => {
     const fetchMeta = async () => {
       setLoadingMeta(true);
       try {
@@ -160,19 +170,22 @@ const AddProduct = ({ onAdded }) => {
           "Content-Type": "application/json",
           ...(token && { "auth-token": token, "Authorization": `Bearer ${token}` })
         };
-        const [catRes, brandRes, sizeRes, subRes] = await Promise.all([
+        const [catRes, brandRes, sizeRes, watchSizeRes, subRes] = await Promise.all([
           authorizedFetch("/categories"),
           authorizedFetch("/brands"),
           authorizedFetch("/sizes").catch(() => ({ json: async () => ({}) })),
+          authorizedFetch("/watch-sizes").catch(() => ({ json: async () => ({}) })),
           authorizedFetch("/subcategories").catch(() => ({ json: async () => ({}) })),
         ]);
-        const [catData, brandData, sizeData, subData] = await Promise.all([
-          catRes.json(), brandRes.json(), sizeRes.json(), subRes.json(),
+        const [catData, brandData, sizeData, watchSizeData, subData] = await Promise.all([
+          catRes.json(), brandRes.json(), sizeRes.json(), watchSizeRes.json(), subRes.json(),
         ]);
         if (catData.success) setCategories(catData.categories || []);
         if (brandData.success) setBrands(brandData.brands || []);
         if (sizeData.success && sizeData.sizes?.length > 0)
           setShoeSizes(sizeData.sizes.map((s) => s.value).sort((a, b) => parseFloat(a) - parseFloat(b)));
+        if (watchSizeData.success && watchSizeData.sizes?.length > 0)
+          setWatchSizes(watchSizeData.sizes.map((s) => s.value).sort((a, b) => parseFloat(a) - parseFloat(b)));
         if (subData.success && subData.subcategories?.length > 0)
           setShoeSubcats(subData.subcategories.map((s) => ({ label: s.name, value: s.slug, parentCategory: s.parentCategory })));
         if (catData.success && catData.categories.length > 0)
@@ -187,7 +200,9 @@ const AddProduct = ({ onAdded }) => {
   }, []);
 
   const isSimpleCategory = SIMPLE_CATEGORIES.includes(productDetails.category);
-  const isShoeCategory = !isSimpleCategory && productDetails.category !== "";
+  const isWatchCategory  = WATCH_CATEGORIES.includes(productDetails.category);
+  const isShoeCategory   = !isSimpleCategory && !isWatchCategory && productDetails.category !== "";
+  const activeSizes      = isWatchCategory ? watchSizes : shoeSizes;
   const availableBrands = brands.filter((b) => b.parentCategory === productDetails.category);
   const availableSubcats = shoeSubcats.filter((sc) => !sc.parentCategory || sc.parentCategory === productDetails.category);
 
@@ -292,7 +307,9 @@ const AddProduct = ({ onAdded }) => {
       setProductDetails((p) => ({ ...p, category: value, brand: newBrands.length > 0 ? newBrands[0].slug : "" }));
       setErrors((prev) => ({ ...prev, category: "", brand: "" }));
       setSelectedSubCategories([]);
-      setSizes(shoeSizes.reduce((acc, s) => ({ ...acc, [s]: { quantity: 0, price: "" } }), {}));
+      const nextWatchCat = WATCH_CATEGORIES.includes(value);
+      const srcSizes = nextWatchCat ? watchSizes : shoeSizes;
+      setSizes(srcSizes.reduce((acc, s) => ({ ...acc, [s]: { quantity: 0, price: "" } }), {}));
       setSingleStock(0);
       setSinglePrice("");
       return;
@@ -410,25 +427,26 @@ const AddProduct = ({ onAdded }) => {
         subCategories: isShoeCategory ? selectedSubCategories : [],
         ...(isSimpleCategory
           ? { stock: Number(singleStock || 0), price: (() => { const c = priceStringToCents(singlePrice || ""); return Number.isFinite(c) ? c / 100 : 0; })() }
-          : { sizes: shoeSizes.map((s) => { const obj = sizes[s] || {}; const c = priceStringToCents(obj.price || ""); return { size: String(s), quantity: Number(obj.quantity || 0), price: Number.isFinite(c) ? c / 100 : 0 }; }) }
+          : { sizes: activeSizes.map((s) => { const obj = sizes[s] || {}; const c = priceStringToCents(obj.price || ""); return { size: String(s), quantity: Number(obj.quantity || 0), price: Number.isFinite(c) ? c / 100 : 0 }; }) }
         ),
       };
 
       const saveRes = await authorizedFetch("/addproduct", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(product),
       });
       const saveData = await saveRes.json();
 
       if (saveData.success) {
         addToast("success", `Product added — assigned SKU #${saveData.id ?? saveData.productId ?? "—"}. You can now add colorways from the Add Colorway tab.`);
-        setProductDetails({ name: "", category: categories[0]?.slug || "", brand: "", description: "" });
+        const resetCat = categories[0]?.slug || "";
+        const resetSrcSizes = WATCH_CATEGORIES.includes(resetCat) ? watchSizes : shoeSizes;
+        setProductDetails({ name: "", category: resetCat, brand: "", description: "" });
         setMainImageFile(null);
         setSubImageFiles([]);
         setCommittedMainUrl("");
         setCommittedSubUrls([]);
-        setSizes(shoeSizes.reduce((acc, s) => ({ ...acc, [s]: { quantity: 0, price: "" } }), {}));
+        setSizes(resetSrcSizes.reduce((acc, s) => ({ ...acc, [s]: { quantity: 0, price: "" } }), {}));
         setSingleStock(0);
         setSinglePrice("");
         setSelectedSubCategories([]);
@@ -492,185 +510,185 @@ const AddProduct = ({ onAdded }) => {
   if (loadingMeta) return <div className="add-product"><p style={{ padding: 24 }}>Loading categories...</p></div>;
 
   return (
-      <div className="add-product-container animate-in">
-        <div className="info-banner glass-medium">
-          <div className="info-icon">💡</div>
-          <div className="info-content">
-            <strong>SKU Numbering:</strong> Products are assigned a global <strong>SKU #</strong>. Units receive unique <strong>Product IDs</strong> when added to stock.
-            <br />
-            <span className="info-hint">Add color variants via the <strong>Add Colorway</strong> tab after saving.</span>
-          </div>
-        </div>
-
-        {hasDuplicateError && (
-          <div className="error-banner glass-danger">
-            <div className="error-icon">⚠</div>
-            <div className="error-content">
-              <strong>DUPLICATE DETECTED</strong>
-              {nameCheckStatus === "duplicate" && <div>• Name <strong>"{productDetails.name}"</strong> is already in use.</div>}
-              {mainImageCheckStatus === "duplicate" && <div>• Main image is already used.</div>}
-              {subImageCheckStatus === "duplicate" && <div>• One or more sub-images are already used.</div>}
-            </div>
-          </div>
-        )}
-
-        <div className="add-product-grid">
-          <div className="add-product-left">
-            <div className="form-section">
-              <label className="form-label">PRODUCT TITLE <NameStatusBadge /></label>
-              <input
-                value={productDetails.name}
-                onChange={changeHandler}
-                onBlur={handleNameBlur}
-                type="text"
-                name="name"
-                placeholder="Enter product title..."
-                className={`form-input-luxe ${errors.name ? "error" : nameCheckStatus === "ok" ? "valid" : ""}`}
-              />
-              {errors.name && <div className="field-error">{errors.name}</div>}
-            </div>
-
-            <div className="form-row">
-              <div className="form-section">
-                <label className="form-label">CATEGORY</label>
-                <select value={productDetails.category} onChange={changeHandler} name="category" className={`form-select-luxe ${errors.category ? "error" : ""}`}>
-                  <option value="">Select Category</option>
-                  {categories.map((cat) => <option key={cat.slug} value={cat.slug}>{cat.name}</option>)}
-                </select>
-                {errors.category && <div className="field-error">{errors.category}</div>}
-              </div>
-
-              {availableBrands.length > 0 && (
-                <div className="form-section">
-                  <label className="form-label">BRAND</label>
-                  <select value={productDetails.brand} onChange={changeHandler} name="brand" className={`form-select-luxe ${errors.brand ? "error" : ""}`}>
-                    <option value="">Select Brand</option>
-                    {availableBrands.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
-                  </select>
-                  {errors.brand && <div className="field-error">{errors.brand}</div>}
-                </div>
-              )}
-            </div>
-
-            {isShoeCategory && availableSubcats.length > 0 && (
-              <div className="form-section">
-                <label className="form-label">SUB CATEGORIES <span className="label-hint">(OPTIONAL)</span></label>
-                <div className="subcat-chip-grid">
-                  {availableSubcats.map(({ label, value }) => {
-                    const active = selectedSubCategories.includes(value);
-                    return (
-                      <button key={value} type="button" onClick={() => toggleSubCategory(value)}
-                        className={`subcat-chip ${active ? "active" : ""}`}>
-                        {active && <span className="chip-check">✓</span>}{label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div className="form-section">
-              <label className="form-label">DESCRIPTION</label>
-              <textarea value={productDetails.description} onChange={changeHandler} name="description" rows={5} placeholder="Write a short description..." className="form-input-luxe" />
-            </div>
-          </div>
-
-          <div className="add-product-right">
-            <div className="form-section">
-              <label className="form-label">MAIN IMAGE</label>
-              <div className="image-upload-box glass">
-                <label htmlFor="main-file-input" className="image-dropzone">
-                  <img
-                    src={mainImageFile ? URL.createObjectURL(mainImageFile) : upload_area}
-                    className="preview-img"
-                    alt="main preview"
-                  />
-                  <div className="upload-overlay">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                    <span>{mainImageFile ? "REPLACE IMAGE" : "UPLOAD IMAGE"}</span>
-                  </div>
-                </label>
-                <input onChange={handleMainImage} type="file" id="main-file-input" accept="image/*" hidden />
-                <ImageStatusBadge status={mainImageCheckStatus} />
-              </div>
-              {errors.mainImage && <div className="field-error">{errors.mainImage}</div>}
-            </div>
-
-            {!isSimpleCategory && (
-              <div className="form-section">
-                <label className="form-label">SUB IMAGES <span className="label-hint">(MAX 4)</span></label>
-                <div className="sub-images-grid">
-                  {[0, 1, 2, 3].map(i => (
-                    <div key={i} className="sub-image-box glass">
-                      {subImageFiles[i] ? (
-                        <img src={URL.createObjectURL(subImageFiles[i])} alt={`Sub ${i}`} />
-                      ) : (
-                        <div className="empty-sub-slot">+</div>
-                      )}
-                    </div>
-                  ))}
-                  <input type="file" multiple accept="image/*" onChange={handleSubImages} className="sub-file-input" />
-                </div>
-                <ImageStatusBadge status={subImageCheckStatus} />
-                {errors.subImages && <div className="field-error">{errors.subImages}</div>}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="inventory-section glass-strong">
-          <div className="section-header">
-            <h3 className="section-title">STOCK & PRICING</h3>
-            {isSimpleCategory ? (
-               <span className="section-badge">SIMPLE ITEM</span>
-            ) : (
-               <span className="section-badge">SIZED ITEM</span>
-            )}
-          </div>
-
-          {isSimpleCategory ? (
-            <div className="simple-inventory-grid">
-              <div className="inventory-field">
-                <label className="form-label">UNITS</label>
-                <div className="luxe-input-group">
-                  <span className="group-prefix">QTY</span>
-                  <input type="number" className="luxe-num-input" min="0" step="1" placeholder="0" value={String(singleStock ?? "")} onChange={(e) => handleSingleStockChange(e.target.value)} />
-                </div>
-              </div>
-              <div className="inventory-field">
-                <label className="form-label">PRICE</label>
-                <div className="luxe-input-group">
-                  <span className="group-prefix">₱</span>
-                  <input type="number" inputMode="decimal" className="luxe-num-input" min="0" step="0.01" placeholder="0.00" value={singlePrice ?? ""} onChange={(e) => handleSinglePriceChange(e.target.value)} />
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="sized-inventory-grid">
-              {shoeSizes.map((size) => (
-                <div key={size} className="size-row glass-medium">
-                  <div className="size-header">{size}</div>
-                  <div 
-                    className="size-inputs" 
-                    style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px", overflow: "visible" }}
-                  >
-                    <input className="luxe-num-input" type="number" placeholder="QTY" min="0" step="1" value={String(sizes[size]?.quantity ?? "")} onChange={(e) => handleSizeQuantityChange(size, e.target.value)} />
-                    <input className="luxe-num-input" type="number" placeholder="PRICE" inputMode="decimal" min="0" step="0.01" value={sizes[size]?.price ?? ""} onChange={(e) => handleSizePriceChange(size, e.target.value)} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          {errors.single && <div className="field-error">{errors.single}</div>}
-          {errors.sizes && <div className="field-error">{errors.sizes}</div>}
-        </div>
-
-        <div className="add-product-footer">
-          <button onClick={Add_Product} className="submit-btn-luxe" disabled={!canSubmit}>
-            {isSubmitting ? "PROCESSING..." : isAnyChecking ? "VALIDATING..." : "SAVE PRODUCT"}
-          </button>
+    <div className="add-product-container animate-in">
+      <div className="info-banner glass-medium">
+        <div className="info-icon">💡</div>
+        <div className="info-content">
+          <strong>SKU Numbering:</strong> Products are assigned a global <strong>SKU #</strong>. Units receive unique <strong>Product IDs</strong> when added to stock.
+          <br />
+          <span className="info-hint">Add color variants via the <strong>Add Colorway</strong> tab after saving.</span>
         </div>
       </div>
+
+      {hasDuplicateError && (
+        <div className="error-banner glass-danger">
+          <div className="error-icon">⚠</div>
+          <div className="error-content">
+            <strong>DUPLICATE DETECTED</strong>
+            {nameCheckStatus === "duplicate" && <div>• Name <strong>"{productDetails.name}"</strong> is already in use.</div>}
+            {mainImageCheckStatus === "duplicate" && <div>• Main image is already used.</div>}
+            {subImageCheckStatus === "duplicate" && <div>• One or more sub-images are already used.</div>}
+          </div>
+        </div>
+      )}
+
+      <div className="add-product-grid">
+        <div className="add-product-left">
+          <div className="form-section">
+            <label className="form-label">PRODUCT TITLE <NameStatusBadge /></label>
+            <input
+              value={productDetails.name}
+              onChange={changeHandler}
+              onBlur={handleNameBlur}
+              type="text"
+              name="name"
+              placeholder="Enter product title..."
+              className={`form-input-luxe ${errors.name ? "error" : nameCheckStatus === "ok" ? "valid" : ""}`}
+            />
+            {errors.name && <div className="field-error">{errors.name}</div>}
+          </div>
+
+          <div className="form-row">
+            <div className="form-section">
+              <label className="form-label">CATEGORY</label>
+              <select value={productDetails.category} onChange={changeHandler} name="category" className={`form-select-luxe ${errors.category ? "error" : ""}`}>
+                <option value="">Select Category</option>
+                {categories.map((cat) => <option key={cat.slug} value={cat.slug}>{cat.name}</option>)}
+              </select>
+              {errors.category && <div className="field-error">{errors.category}</div>}
+            </div>
+
+            {availableBrands.length > 0 && (
+              <div className="form-section">
+                <label className="form-label">BRAND</label>
+                <select value={productDetails.brand} onChange={changeHandler} name="brand" className={`form-select-luxe ${errors.brand ? "error" : ""}`}>
+                  <option value="">Select Brand</option>
+                  {availableBrands.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
+                </select>
+                {errors.brand && <div className="field-error">{errors.brand}</div>}
+              </div>
+            )}
+          </div>
+
+          {isShoeCategory && availableSubcats.length > 0 && (
+            <div className="form-section">
+              <label className="form-label">SUB CATEGORIES <span className="label-hint">(OPTIONAL)</span></label>
+              <div className="subcat-chip-grid">
+                {availableSubcats.map(({ label, value }) => {
+                  const active = selectedSubCategories.includes(value);
+                  return (
+                    <button key={value} type="button" onClick={() => toggleSubCategory(value)}
+                      className={`subcat-chip ${active ? "active" : ""}`}>
+                      {active && <span className="chip-check">✓</span>}{label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="form-section">
+            <label className="form-label">DESCRIPTION</label>
+            <textarea value={productDetails.description} onChange={changeHandler} name="description" rows={5} placeholder="Write a short description..." className="form-input-luxe" />
+          </div>
+        </div>
+
+        <div className="add-product-right">
+          <div className="form-section">
+            <label className="form-label">MAIN IMAGE</label>
+            <div className="image-upload-box glass">
+              <label htmlFor="main-file-input" className="image-dropzone">
+                <img
+                  src={mainImageFile ? URL.createObjectURL(mainImageFile) : upload_area}
+                  className="preview-img"
+                  alt="main preview"
+                />
+                <div className="upload-overlay">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" /></svg>
+                  <span>{mainImageFile ? "REPLACE IMAGE" : "UPLOAD IMAGE"}</span>
+                </div>
+              </label>
+              <input onChange={handleMainImage} type="file" id="main-file-input" accept="image/*" hidden />
+              <ImageStatusBadge status={mainImageCheckStatus} />
+            </div>
+            {errors.mainImage && <div className="field-error">{errors.mainImage}</div>}
+          </div>
+
+          <div className="form-section">
+            <label className="form-label">SUB IMAGES <span className="label-hint">(MAX 4)</span></label>
+            <div className="sub-images-grid">
+              {[0, 1, 2, 3].map(i => (
+                <div key={i} className="sub-image-box glass">
+                  {subImageFiles[i] ? (
+                    <img src={URL.createObjectURL(subImageFiles[i])} alt={`Sub ${i}`} />
+                  ) : (
+                    <div className="empty-sub-slot">+</div>
+                  )}
+                </div>
+              ))}
+              <input type="file" multiple accept="image/*" onChange={handleSubImages} className="sub-file-input" />
+            </div>
+            <ImageStatusBadge status={subImageCheckStatus} />
+            {errors.subImages && <div className="field-error">{errors.subImages}</div>}
+          </div>
+        </div>
+      </div>
+
+      <div className="inventory-section glass-strong">
+        <div className="section-header">
+          <h3 className="section-title">STOCK & PRICING</h3>
+          {isSimpleCategory ? (
+            <span className="section-badge">SIMPLE ITEM</span>
+          ) : isWatchCategory ? (
+            <span className="section-badge">CASE DIAMETER (mm)</span>
+          ) : (
+            <span className="section-badge">SIZED ITEM</span>
+          )}
+        </div>
+
+        {isSimpleCategory ? (
+          <div className="simple-inventory-grid">
+            <div className="inventory-field">
+              <label className="form-label">UNITS</label>
+              <div className="luxe-input-group">
+                <span className="group-prefix">QTY</span>
+                <input type="number" className="luxe-num-input" min="0" step="1" placeholder="0" value={String(singleStock ?? "")} onChange={(e) => handleSingleStockChange(e.target.value)} />
+              </div>
+            </div>
+            <div className="inventory-field">
+              <label className="form-label">PRICE</label>
+              <div className="luxe-input-group">
+                <span className="group-prefix">₱</span>
+                <input type="number" inputMode="decimal" className="luxe-num-input" min="0" step="0.01" placeholder="0.00" value={singlePrice ?? ""} onChange={(e) => handleSinglePriceChange(e.target.value)} />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="sized-inventory-grid">
+            {activeSizes.map((size) => (
+              <div key={size} className="size-row glass-medium">
+                <div className="size-header">{isWatchCategory ? `${size}mm` : size}</div>
+                <div
+                  className="size-inputs"
+                  style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px", overflow: "visible" }}
+                >
+                  <input className="luxe-num-input" type="number" placeholder="QTY" min="0" step="1" value={String(sizes[size]?.quantity ?? "")} onChange={(e) => handleSizeQuantityChange(size, e.target.value)} />
+                  <input className="luxe-num-input" type="number" placeholder="PRICE" inputMode="decimal" min="0" step="0.01" value={sizes[size]?.price ?? ""} onChange={(e) => handleSizePriceChange(size, e.target.value)} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {errors.single && <div className="field-error">{errors.single}</div>}
+        {errors.sizes && <div className="field-error">{errors.sizes}</div>}
+      </div>
+
+      <div className="add-product-footer">
+        <button onClick={Add_Product} className="submit-btn-luxe" disabled={!canSubmit}>
+          {isSubmitting ? "PROCESSING..." : isAnyChecking ? "VALIDATING..." : "SAVE PRODUCT"}
+        </button>
+      </div>
+    </div>
   );
 };
 

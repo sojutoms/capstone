@@ -21,7 +21,7 @@ const TYPES = {
 };
 
 const POLL_INTERVAL = 30_000; // 30 seconds
-const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 
 const isSimple = (cat) => SIMPLE_CATEGORIES.includes((cat || "").toLowerCase());
 

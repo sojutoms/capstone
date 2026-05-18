@@ -12,14 +12,10 @@ import ColorwayTab from "./ColorwayTab";
 import StockTab from "./StockTab";
 
 
-
 // ─── Constants ────────────────────────────────────────────────────────────────
-const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 const SHOE_SUBCATEGORIES = ["lifestyle", "running", "football", "basketball"];
 const FALLBACK_SHOE_SIZES = ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13"];
-
-
-
 
 
 function sizesArrayOrMapToMap(sizes = {}, defaultPrice = 0) {
@@ -249,12 +245,12 @@ const ProductManagement = () => {
       : [];
 
     if (isSimple) {
-      setEditedDetails({ ...product, price: product.price !== undefined ? Number(product.price) : 0, stock: product.stock !== undefined ? Number(product.stock) : 0, sizes: {}, subCategories: [], colorways });
+      setEditedDetails({ ...product, price: product.price !== undefined ? Number(product.price) : 0, stock: product.stock !== undefined ? Number(product.stock) : 0, sizes: {}, subCategories: [], colorways, _newSubFiles: [], _newSubPreviews: [] });
       return;
     }
     const liveSizes = getEffectiveSizes(product);
     const editedSizes = shoeSizes.reduce((acc, s) => { acc[s] = { quantity: liveSizes[s]?.quantity || 0, price: liveSizes[s]?.price || 0 }; return acc; }, {});
-    setEditedDetails({ ...product, sizes: editedSizes, subCategories: Array.isArray(product.subCategories) ? product.subCategories : [], colorways });
+    setEditedDetails({ ...product, sizes: editedSizes, subCategories: Array.isArray(product.subCategories) ? product.subCategories : [], colorways, _newSubFiles: [], _newSubPreviews: [] });
   };
 
   const handleEditChange = (e) => {
@@ -315,6 +311,33 @@ const ProductManagement = () => {
     }));
   };
 
+  const handleEditSubImages = (files) => {
+    const existing = editedDetails.subImages || [];
+    const remaining = 4 - existing.length;
+    if (remaining <= 0) return;
+    const arr = Array.from(files).slice(0, remaining);
+    setEditedDetails((prev) => ({
+      ...prev,
+      _newSubFiles: arr,
+      _newSubPreviews: arr.map((f) => URL.createObjectURL(f)),
+    }));
+  };
+
+  const handleRemoveExistingSubImage = (idx) => {
+    setEditedDetails((prev) => ({
+      ...prev,
+      subImages: (prev.subImages || []).filter((_, i) => i !== idx),
+    }));
+  };
+
+  const handleRemoveNewSubImage = (idx) => {
+    setEditedDetails((prev) => {
+      const newFiles = (prev._newSubFiles || []).filter((_, i) => i !== idx);
+      const newPreviews = (prev._newSubPreviews || []).filter((_, i) => i !== idx);
+      return { ...prev, _newSubFiles: newFiles, _newSubPreviews: newPreviews };
+    });
+  };
+
   const saveEdit = async () => {
     if (!editingProduct || !editedDetails) return;
     const token = sessionStorage.getItem("admin-token") || "";
@@ -344,14 +367,23 @@ const ProductManagement = () => {
         finalColorways.push({ name: cw.name.trim(), hex: cw.hex || "", image: mainUrl, subImages: subUrls });
       }
 
+      let finalSubImages = editedDetails.subImages || [];
+      if (editedDetails._newSubFiles?.length > 0) {
+        const fd = new FormData();
+        editedDetails._newSubFiles.forEach((f) => fd.append("product", f));
+        const r = await authorizedFetch("/upload-multiple", { method: "POST", body: fd });
+        const d = await r.json();
+        if (d.success) finalSubImages = [...finalSubImages, ...d.image_urls];
+      }
+
       if (isSimple) {
-        const epRes = await authorizedFetch("/editproduct", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingProduct.id, name: editedDetails.name, category: editedDetails.category, brand: editedDetails.brand || "", description: editedDetails.description, image: editedDetails.image, subImages: editedDetails.subImages || [], subCategories: [], colorways: finalColorways, price: Number(editingProduct.price || 0), stock: Number(editingProduct.stock || 0), sizes: [] }) });
+        const epRes = await authorizedFetch("/editproduct", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingProduct.id, name: editedDetails.name, category: editedDetails.category, brand: editedDetails.brand || "", description: editedDetails.description, image: editedDetails.image, subImages: finalSubImages, subCategories: [], colorways: finalColorways, price: Number(editingProduct.price || 0), stock: Number(editingProduct.stock || 0), sizes: [] }) });
         const epBody = await epRes.json().catch(() => ({}));
         if (!epRes.ok) { showToast({ message: epBody.error || "Failed to save product", type: "error" }); return; }
       } else {
         const liveSizes = getEffectiveSizes(editingProduct);
         const sizesPayloadArray = shoeSizes.map((s) => ({ size: String(s), quantity: Number(liveSizes[s]?.quantity || 0), price: Number(liveSizes[s]?.price || 0) }));
-        const epRes = await authorizedFetch("/editproduct", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingProduct.id, name: editedDetails.name, category: editedDetails.category, brand: editedDetails.brand || "", description: editedDetails.description, image: editedDetails.image, subImages: editedDetails.subImages || [], subCategories: editedDetails.subCategories || [], colorways: finalColorways, sizes: sizesPayloadArray }) });
+        const epRes = await authorizedFetch("/editproduct", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingProduct.id, name: editedDetails.name, category: editedDetails.category, brand: editedDetails.brand || "", description: editedDetails.description, image: editedDetails.image, subImages: finalSubImages, subCategories: editedDetails.subCategories || [], colorways: finalColorways, sizes: sizesPayloadArray }) });
         const epBody = await epRes.json().catch(() => ({}));
         if (!epRes.ok) { showToast({ message: epBody.error || "Failed to save product", type: "error" }); return; }
       }
@@ -769,6 +801,31 @@ const ProductManagement = () => {
                         <span>Replace Image</span>
                       </div>
                     </label>
+                  </div>
+                </div>
+
+                <div className="visual-section">
+                  <label className="form-label">SUB IMAGES <span className="form-label-hint">({((editedDetails.subImages || []).length + (editedDetails._newSubPreviews || []).length)}/4)</span></label>
+                  <div className="edit-sub-images-grid">
+                    {(editedDetails.subImages || []).map((url, i) => (
+                      <div key={`existing-${i}`} className="edit-sub-image-slot">
+                        <img src={url} alt={`Sub ${i + 1}`} />
+                        <button type="button" className="edit-sub-remove-btn" onClick={() => handleRemoveExistingSubImage(i)}>✕</button>
+                      </div>
+                    ))}
+                    {(editedDetails._newSubPreviews || []).map((url, i) => (
+                      <div key={`new-${i}`} className="edit-sub-image-slot edit-sub-image-slot--new">
+                        <img src={url} alt={`New sub ${i + 1}`} />
+                        <button type="button" className="edit-sub-remove-btn" onClick={() => handleRemoveNewSubImage(i)}>✕</button>
+                        <span className="edit-sub-new-badge">NEW</span>
+                      </div>
+                    ))}
+                    {((editedDetails.subImages || []).length + (editedDetails._newSubPreviews || []).length) < 4 && (
+                      <label className="edit-sub-add-slot">
+                        <input type="file" multiple accept="image/*" onChange={(e) => handleEditSubImages(e.target.files)} />
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                      </label>
+                    )}
                   </div>
                 </div>
 

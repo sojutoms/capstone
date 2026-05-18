@@ -4,6 +4,7 @@ const router = express.Router();
 const CategoryBrand = require("../models/CategoryBrand");
 const { requireRole } = require("../middleware/auth");
 const ShoeSize    = require("../models/ShoeSize");
+const WatchSize   = require("../models/WatchSize");
 const Subcategory = require("../models/Subcategory");
 
 // ─── GET all categories ───────────────────────────────────────
@@ -271,6 +272,50 @@ router.delete("/subcategories/:slug", requireRole("owner"), async (req, res) => 
 
     await Subcategory.deleteOne({ slug: req.params.slug });
     res.json({ success: true, message: "Subcategory deleted" });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WATCH SIZES (case diameter in mm)
+// ══════════════════════════════════════════════════════════════════════════════
+
+router.get("/watch-sizes", async (req, res) => {
+  try {
+    const sizes = await WatchSize.find().sort({ order: 1, value: 1 }).lean();
+    res.json({ success: true, sizes });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+router.post("/watch-sizes", requireRole("owner"), async (req, res) => {
+  try {
+    const { value } = req.body;
+    if (!value || !String(value).trim()) {
+      return res.status(400).json({ success: false, error: "Size value is required" });
+    }
+    const trimmed = String(value).trim();
+    const existing = await WatchSize.findOne({ value: trimmed });
+    if (existing) {
+      return res.status(409).json({ success: false, error: "Size already exists" });
+    }
+    const size = new WatchSize({ value: trimmed, isDefault: false });
+    await size.save();
+    res.json({ success: true, size });
+  } catch (err) {
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+router.delete("/watch-sizes/:id", requireRole("owner"), async (req, res) => {
+  try {
+    const size = await WatchSize.findById(req.params.id);
+    if (!size)          return res.status(404).json({ success: false, error: "Size not found" });
+    if (size.isDefault) return res.status(403).json({ success: false, error: "Cannot delete a default size" });
+    await WatchSize.deleteOne({ _id: req.params.id });
+    res.json({ success: true, message: "Size deleted" });
   } catch (err) {
     res.status(500).json({ success: false, error: "Server error" });
   }

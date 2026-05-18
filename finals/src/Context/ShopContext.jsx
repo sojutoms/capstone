@@ -218,7 +218,7 @@ const ShopContextProvider = (props) => {
     localStorage.removeItem("cartSizes");
   };
 
-  const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+  const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 
   const getSizePrice = (product, size) => {
     if (!product) return 0;

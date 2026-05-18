@@ -1,7 +1,7 @@
 import React, { useContext } from "react";
 import { ShopContext } from "../../Context/ShopContext";
 
-const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 
 const CartTotal = ({
   paymentMethod,

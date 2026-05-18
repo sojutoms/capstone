@@ -341,37 +341,17 @@ const parseUA = (ua = "") => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // SESSIONS TAB
 // ═══════════════════════════════════════════════════════════════════════════════
+const ROLE_COLORS = {
+  owner:           { color: "#e5c97e", bg: "rgba(212,175,55,0.15)" },
+  admin:           { color: "#60a5fa", bg: "rgba(59,130,246,0.12)" },
+  staff:           { color: "#4ade80", bg: "rgba(34,197,94,0.12)" },
+  inventory_staff: { color: "#a78bfa", bg: "rgba(139,92,246,0.12)" },
+};
+
 const SessionsTab = ({ showToast }) => {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [forcing, setForcing] = useState({});
-
-  const mockSessions = () => [
-    {
-      id: "sess-1", adminEmail: "owner@sneaky.com", adminName: "Owner",
-      role: "owner", ip: "192.168.1.10",
-      device: "Chrome 124 / macOS",
-      loginAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-      lastActive: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
-      isCurrent: true,
-    },
-    {
-      id: "sess-2", adminEmail: "admin@sneaky.com", adminName: "Admin User",
-      role: "admin", ip: "192.168.1.22",
-      device: "Firefox 125 / Windows 11",
-      loginAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-      lastActive: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-      isCurrent: false,
-    },
-    {
-      id: "sess-3", adminEmail: "staff@sneaky.com", adminName: "Staff Member",
-      role: "staff", ip: "10.0.0.5",
-      device: "Mobile Safari / iOS 17",
-      loginAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-      lastActive: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-      isCurrent: false,
-    },
-  ];
 
   const fetchSessions = useCallback(async () => {
     setLoading(true);
@@ -380,11 +360,8 @@ const SessionsTab = ({ showToast }) => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
-        // Normalize _id → id, and convert raw userAgent string → readable device label
         setSessions((data.sessions || []).map(s => ({
           ...normalizeDoc(s),
-          // Backend sends raw UA string in `device`; parse it to something human-readable.
-          // If the backend already sends a clean label (mock data), keep it as-is.
           device: s.device && !s.device.startsWith("Mozilla")
             ? s.device
             : parseUA(s.device || ""),
@@ -393,8 +370,8 @@ const SessionsTab = ({ showToast }) => {
         throw new Error(data.error || "success=false");
       }
     } catch (err) {
-      console.error("[Sessions] fetch failed, using mock data:", err.message);
-      setSessions(mockSessions());
+      console.error("[Sessions] fetch failed:", err.message);
+      setSessions([]);
     } finally {
       setLoading(false);
     }
@@ -412,35 +389,28 @@ const SessionsTab = ({ showToast }) => {
       });
       const data = await res.json();
       if (data.success) {
-        // FIX: filter by normalized id
         setSessions(s => s.filter(x => x.id !== sessionId));
-        showToast?.({ message: `Session for ${adminEmail} terminated`, type: "success" });
+        showToast?.({ message: `Session for ${adminEmail} revoked`, type: "success" });
       } else {
         throw new Error(data.error || "force-logout failed");
       }
     } catch (err) {
-      console.error("[Sessions] force-logout error:", err.message);
-      showToast?.({ message: "Failed to force logout", type: "error" });
+      showToast?.({ message: "Failed to revoke session", type: "error" });
     } finally {
       setForcing(f => ({ ...f, [sessionId]: false }));
     }
   };
 
-  const ROLE_COLORS = {
-    owner: { color: "#ffffff", bg: "rgba(212,175,55,0.15)" },
-    admin: { color: "#60a5fa", bg: "rgba(59,130,246,0.12)" },
-    staff: { color: "#4ade80", bg: "rgba(34,197,94,0.12)" },
-    inventory_staff: { color: "#a78bfa", bg: "rgba(139,92,246,0.12)" },
-  };
+  const onlineCount = sessions.filter(s => s.isOnline).length;
 
   return (
     <div className="sp-tab-content">
       <div className="sp-tab-header stagger-in">
         <div className="sp-tab-title-group">
-          <h2 className="tab-title">ACTIVE SESSIONS</h2>
+          <h2 className="tab-title">ADMIN SESSIONS</h2>
           <p className="tab-subtitle">
             <span className="pulse-dot"></span>
-            {sessions.length} admin session{sessions.length !== 1 ? "s" : ""} currently authenticated.
+            {sessions.length} admin account{sessions.length !== 1 ? "s" : ""} · {onlineCount} currently online
           </p>
         </div>
         <button className="sp-btn sp-btn--premium" onClick={fetchSessions}>
@@ -459,10 +429,11 @@ const SessionsTab = ({ showToast }) => {
       ) : (
         <div className="sp-session-list">
           {sessions.length === 0 && (
-            <div className="sp-empty">No active secure sessions detected.</div>
+            <div className="sp-empty">No admin accounts with active sessions found.</div>
           )}
           {sessions.map(sess => {
             const rc = ROLE_COLORS[sess.role] || ROLE_COLORS.staff;
+            const roles = sess.roles || [sess.role];
             return (
               <div key={sess.id} className={`sp-session-card ${sess.isCurrent ? "current" : ""}`}>
                 <div className="sp-session-left">
@@ -470,29 +441,32 @@ const SessionsTab = ({ showToast }) => {
                     <div className="sp-session-avatar">
                       {(sess.adminName || "?")[0].toUpperCase()}
                     </div>
-                    {sess.isCurrent && (
-                      <div className="sp-session-pulse-ring"></div>
-                    )}
+                    {sess.isOnline && <div className="sp-session-pulse-ring"></div>}
                   </div>
                   <div className="sp-session-info">
                     <div className="sp-session-name">
                       {sess.adminName}
-                      {sess.isCurrent && <span className="sp-current-badge-luxe">SYSTEM_USER</span>}
+                      {sess.isCurrent && <span className="sp-current-badge-luxe">YOU</span>}
                     </div>
                     <div className="sp-session-email">{sess.adminEmail}</div>
-                    
+
                     <div className="sp-session-meta-row">
-                      <div className="sp-role-tag" style={{ border: `1px solid ${rc.bg}`, color: rc.color }}>
-                        <span className="tag-indicator" style={{ background: rc.color }}></span>
-                        {sess.role.toUpperCase()}
-                      </div>
+                      {roles.map(r => {
+                        const c = ROLE_COLORS[r] || ROLE_COLORS.staff;
+                        return (
+                          <div key={r} className="sp-role-tag" style={{ border: `1px solid ${c.bg}`, color: c.color }}>
+                            <span className="tag-indicator" style={{ background: c.color }}></span>
+                            {r.replace(/_/g, " ").toUpperCase()}
+                          </div>
+                        );
+                      })}
                       <div className="sp-meta-pill">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
                         </svg>
                         {sess.ip}
                       </div>
-                      <div className="sp-meta-pill" title={sess.rawDevice || sess.device}>
+                      <div className="sp-meta-pill" title={sess.device}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                           <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
                         </svg>
@@ -502,33 +476,35 @@ const SessionsTab = ({ showToast }) => {
 
                     <div className="sp-session-times-luxe">
                       <div className="time-metric">
-                        <span className="time-label">SESSION_START</span>
+                        <span className="time-label">LAST_LOGIN</span>
                         <span className="time-value">{relTime(sess.loginAt)}</span>
                       </div>
                       <div className="time-metric">
-                        <span className="time-label">LAST_ACTIVITY</span>
+                        <span className="time-label">LAST_ACTIVE</span>
                         <span className="time-value">{relTime(sess.lastActive)}</span>
                       </div>
                     </div>
                   </div>
                 </div>
-                {!sess.isCurrent ? (
-                  <button
-                    className="sp-btn sp-btn--danger-luxe"
-                    onClick={() => forceLogout(sess.id, sess.adminEmail)}
-                    disabled={forcing[sess.id]}
-                  >
-                    <div className="btn-glimmer"></div>
-                    {forcing[sess.id] ? "TERMINATING..." : "REVOKE ACCESS"}
-                  </button>
-                ) : (
-                  <div className="active-session-label-wrapper">
-                    <div className="active-session-label">
-                      <span className="pulse-dot"></span>
-                      ACTIVE_LINK
-                    </div>
+
+                <div className="sp-session-right">
+                  {/* Online / Offline indicator */}
+                  <div className={`sp-online-badge ${sess.isOnline ? "online" : "offline"}`}>
+                    <span className={sess.isOnline ? "pulse-dot" : "offline-dot"}></span>
+                    {sess.isOnline ? "ONLINE" : "OFFLINE"}
                   </div>
-                )}
+
+                  {!sess.isCurrent && (
+                    <button
+                      className="sp-btn sp-btn--danger-luxe"
+                      onClick={() => forceLogout(sess.id, sess.adminEmail)}
+                      disabled={forcing[sess.id]}
+                    >
+                      <div className="btn-glimmer"></div>
+                      {forcing[sess.id] ? "REVOKING..." : "REVOKE ACCESS"}
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -542,159 +518,8 @@ const SessionsTab = ({ showToast }) => {
           </svg>
         </div>
         <div className="info-text">
-          <strong>ENCLAVE PROTOCOL:</strong> Revoking access immediately invalidates all cryptographic tokens associated with the session ID. This event is cryptographically signed and logged.
+          <strong>ONLINE</strong> = active within the last 15 minutes. Revoking access immediately invalidates the session token and is logged in the audit trail.
         </div>
-      </div>
-    </div>
-  );
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// LOGIN ALERTS TAB
-// ═══════════════════════════════════════════════════════════════════════════════
-const LoginAlertsTab = () => {
-  const [alerts, setAlerts] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const mockAlerts = () => [
-    {
-      id: "a1", type: "failed_login", severity: "warning",
-      email: "owner@sneaky.com", ip: "203.177.12.45",
-      attempts: 3, timestamp: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-      message: "3 failed login attempts from unknown IP",
-    },
-    {
-      id: "a2", type: "new_ip", severity: "info",
-      email: "admin@sneaky.com", ip: "115.42.150.37",
-      attempts: 1, timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
-      message: "Login from new IP address (Philippines)",
-    },
-    {
-      id: "a3", type: "failed_login", severity: "danger",
-      email: "admin@sneaky.com", ip: "185.220.101.5",
-      attempts: 8, timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-      message: "8 failed attempts — possible brute force from Tor exit node",
-    },
-    {
-      id: "a4", type: "off_hours", severity: "info",
-      email: "staff@sneaky.com", ip: "192.168.1.99",
-      attempts: 1, timestamp: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(),
-      message: "Login at unusual hour (3:42 AM)",
-    },
-  ];
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res = await authorizedFetch("/admin/login-alerts");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (data.success) {
-          setAlerts((data.alerts || []).map(normalizeDoc));
-        } else {
-          throw new Error(data.error || "success=false");
-        }
-      } catch (err) {
-        console.error("[LoginAlerts] fetch failed, using mock data:", err.message);
-        setAlerts(mockAlerts());
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
-
-  const SEV = {
-    danger: { icon: "🚨", color: "#f87171", bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.3)" },
-    warning: { icon: "⚠️", color: "#fbbf24", bg: "rgba(251,191,36,0.08)", border: "rgba(251,191,36,0.3)" },
-    info: { icon: "ℹ️", color: "#60a5fa", bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.3)" },
-  };
-
-  return (
-    <div className="sp-tab-content">
-      <div className="sp-tab-header stagger-in">
-        <div>
-          <h2 className="tab-title">SECURITY ALERTS</h2>
-          <p className="tab-subtitle">Real-time surveillance of suspicious patterns and access violations.</p>
-        </div>
-        <div className="sp-status-badge">
-          <span className="pulse-dot"></span>
-          THREAT_SCAN_ACTIVE
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="sp-loading">
-          <div className="sp-spinner" />
-          <span>ANALYZING THREAT VECTORS...</span>
-        </div>
-      ) : (
-        <div className="sp-alert-list">
-          {alerts.length === 0 && (
-            <div className="sp-empty-luxe">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                <path d="M9 12l2 2 4-4" />
-              </svg>
-              <span>NO THREATS DETECTED</span>
-            </div>
-          )}
-          {alerts.map(alert => {
-            const s = SEV[alert.severity] || SEV.info;
-            return (
-              <div key={alert.id} className={`sp-alert-card-luxe severity-${alert.severity}`}>
-                <div className="sp-alert-glow" style={{ background: s.color }}></div>
-                <div className="sp-alert-header">
-                  <div className="sp-alert-type">
-                    <span className="type-icon">{s.icon}</span>
-                    <span className="type-label" style={{ color: s.color }}>{alert.type.replace(/_/g, ' ').toUpperCase()}</span>
-                  </div>
-                  <div className="sp-alert-time">{relTime(alert.timestamp)}</div>
-                </div>
-                
-                <div className="sp-alert-body-luxe">
-                  <div className="sp-alert-msg-luxe">{alert.message}</div>
-                  <div className="sp-alert-details">
-                    <div className="detail-item">
-                      <span className="label">TARGET_ACCOUNT</span>
-                      <span className="value">{alert.email}</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="label">ORIGIN_IP</span>
-                      <span className="value mono">{alert.ip}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="sp-alert-footer">
-                  {alert.attempts > 5 && (
-                    <div className="sp-alert-badge urgent">
-                      {alert.attempts} ATTEMPTS DETECTED
-                    </div>
-                  )}
-                  <div className="sp-alert-actions">
-                    <button className="sp-btn-small sp-btn--ghost-luxe">DISMISS</button>
-                    <button className="sp-btn-small sp-btn--danger-ghost">BLOCK IP</button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <div className="sp-integration-note">
-        <div className="note-header">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-          </svg>
-          INTEGRATION_GUIDE
-        </div>
-        <p>
-          Configure <code>fail2ban</code> style logic on <code>/admin/login-attempts</code>. 
-          Recommendation: Automated IP blocking after 10 failed vectors within a 15-minute window.
-        </p>
       </div>
     </div>
   );
@@ -705,7 +530,7 @@ const LoginAlertsTab = () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 const SecurityPanel = ({ showToast }) => {
   const [tab, setTab] = useState("audit");
-  const [stats, setStats] = useState({ logs: 0, sessions: 0, alerts: 0 });
+  const [stats, setStats] = useState({ logs: 0, sessions: 0 });
 
   const adminRoles = JSON.parse(sessionStorage.getItem("admin-roles") || "[]");
   const isOwner = adminRoles.includes("owner");
@@ -714,23 +539,20 @@ const SecurityPanel = ({ showToast }) => {
     // Fetch summary stats
     const fetchStats = async () => {
       try {
-        const [lRes, sRes, aRes] = await Promise.all([
+        const [lRes, sRes] = await Promise.all([
           authorizedFetch("/admin/audit-log?limit=1"),
           authorizedFetch("/admin/sessions"),
-          authorizedFetch("/admin/login-alerts")
         ]);
-        
+
         const lData = lRes.ok ? await lRes.json() : { total: 1240 };
         const sData = sRes.ok ? await sRes.json() : { sessions: [1,2,3] };
-        const aData = aRes.ok ? await aRes.json() : { alerts: [1,2] };
 
         setStats({
           logs: lData.total || 1240,
           sessions: (sData.sessions || []).length || 3,
-          alerts: (aData.alerts || []).length || 2
         });
       } catch (err) {
-        setStats({ logs: 1240, sessions: 3, alerts: 2 });
+        setStats({ logs: 1240, sessions: 3 });
       }
     };
     if (isOwner) fetchStats();
@@ -778,10 +600,6 @@ const SecurityPanel = ({ showToast }) => {
             <span className="metric-label">ACTIVE SESSIONS</span>
             <span className="metric-value">{stats.sessions}</span>
           </div>
-          <div className="sp-metric-card glass-medium urgent">
-            <span className="metric-label">SECURITY ALERTS</span>
-            <span className="metric-value">{stats.alerts}</span>
-          </div>
         </div>
       </header>
 
@@ -789,7 +607,6 @@ const SecurityPanel = ({ showToast }) => {
         {[
           { key: "audit", label: "Audit Log", icon: "📋" },
           { key: "sessions", label: "Sessions", icon: "🔑" },
-          { key: "alerts", label: "Login Alerts", icon: "🚨" },
         ].map(t => (
           <button
             key={t.key}
@@ -805,7 +622,6 @@ const SecurityPanel = ({ showToast }) => {
       <main className="sp-main-content">
         {tab === "audit" && <AuditLogTab />}
         {tab === "sessions" && <SessionsTab showToast={showToast} />}
-        {tab === "alerts" && <LoginAlertsTab />}
       </main>
     </div>
   );

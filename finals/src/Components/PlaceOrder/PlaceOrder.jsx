@@ -7,7 +7,7 @@ import API_BASE_URL from '../../services/api';
 import { getShippingFee, getShippingTier, getCodFee } from '../../services/shippingFee';
 
 const NCR_REGION_CODE = '1300000000';
-const SIMPLE_CATEGORIES = ['watch', 'bags', 'collectibles'];
+const SIMPLE_CATEGORIES = ['bags', 'collectibles'];
 
 // ─── PSGC fetch helper ────────────────────────────────────────────────────────
 const fixEncoding = (str) => {

@@ -4,7 +4,8 @@ import { ShopContext } from "../../Context/ShopContext";
 import { useNavigate } from "react-router-dom";
 import API_BASE_URL from "../../services/api";
 
-const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+const SIMPLE_CATEGORIES = ["bags", "collectibles"];
+const WATCH_CATEGORIES  = ["watch"];
 
 const CartItems = () => {
   const { all_product, cartItems, removeFromCart, addToCart } = useContext(ShopContext);
@@ -175,8 +176,14 @@ const CartItems = () => {
           <div className="spec-grid">
             {!SIMPLE_CATEGORIES.includes(String(product.category).toLowerCase()) && (
               <div className="spec-item">
-                <span className="spec-label">Size (US)</span>
-                <span className="spec-value">{normalizedSize || "—"}</span>
+                <span className="spec-label">
+                  {WATCH_CATEGORIES.includes(String(product.category).toLowerCase()) ? "Diameter" : "Size (US)"}
+                </span>
+                <span className="spec-value">
+                  {WATCH_CATEGORIES.includes(String(product.category).toLowerCase())
+                    ? (normalizedSize ? `${normalizedSize}mm` : "—")
+                    : (normalizedSize || "—")}
+                </span>
               </div>
             )}
             <div className="spec-item">

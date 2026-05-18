@@ -25,6 +25,9 @@ const icons = {
   security: (
     <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
   ),
+  pos: (
+    <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /><path d="M6 7h4M6 11h6" /><rect x="14" y="7" width="4" height="4" rx="1" /></svg>
+  ),
 };
 
 const NavItem = ({ to, icon, label, active }) => (
@@ -46,13 +49,14 @@ const Sidebar = () => {
   const isStaff          = adminRoles.includes("staff");
   const isInventoryStaff = adminRoles.includes("inventory_staff");
 
-  const canViewDashboard    = isOwner || isAdmin;
+  const canViewDashboard    = isOwner || isAdmin || isStaff || isInventoryStaff;
   const canViewProduct      = isOwner || isAdmin || isStaff || isInventoryStaff;
   const canViewUsers        = isOwner || isAdmin;
-  const canViewSales        = isOwner;
+  const canViewSales        = isOwner || isAdmin || isStaff;
   const canViewTransactions = isOwner || isAdmin;
   const canViewSKU          = isOwner || isAdmin || isStaff || isInventoryStaff;
-  const canViewSecurity     = isOwner;
+  const canViewSecurity     = isOwner || isAdmin;
+  const canViewPOS          = isOwner || isAdmin || isStaff;
 
   return (
     <nav className="sidebar">
@@ -105,6 +109,15 @@ const Sidebar = () => {
           <span className="sidebar-section-label">Security</span>
 
           <NavItem to="/admin/security" icon="security" label="Security Panel" active={path === "/admin/security"} />
+        </>
+      )}
+
+      {/* POS group */}
+      {canViewPOS && (
+        <>
+          <span className="sidebar-section-label">In-Store</span>
+
+          <NavItem to="/admin/pos" icon="pos" label="Point of Sale" active={path === "/admin/pos"} />
         </>
       )}
 

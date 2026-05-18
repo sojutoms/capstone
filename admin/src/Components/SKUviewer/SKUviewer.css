@@ -580,6 +580,30 @@
   box-shadow: 0 10px 20px rgba(255, 255, 255, 0.1);
 }
 
+.m-btn-secondary {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary, #aaa);
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+  margin-top: 10px;
+}
+
+.m-btn-secondary:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
 /* ── Sizes Modal (Full Breakdown) ── */
 .sizes-modal {
   background: #0a0a0a;

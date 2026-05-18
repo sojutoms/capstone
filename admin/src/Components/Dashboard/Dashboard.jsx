@@ -224,6 +224,7 @@ const Dashboard = () => {
   const [monthlySales, setMonthlySales] = useState([]);
   const [categorySales, setCategorySales] = useState([]);
   const [lowStockItems, setLowStockItems] = useState([]);
+  const [totalNetRevenue, setTotalNetRevenue] = useState(0);
   const [loading, setLoading] = useState(true);
 
   // AI state
@@ -277,9 +278,10 @@ const Dashboard = () => {
         setStats(statsData);
         setMonthlySales(deriveMonthlyFromLogs(logs));
         setCategorySales(deriveCategoryFromLogs(logs));
+        setTotalNetRevenue(logs.reduce((s, r) => s + (Number(r.total) || 0), 0));
 
         // ── Derive low stock from the same data ProductManagement uses ──
-        const SIMPLE = ["watch", "bags", "collectibles"];
+        const SIMPLE = ["bags", "collectibles"];
         const seqByProduct = {};
         sequences.forEach((s) => {
           const pid = String(s.productId);
@@ -415,9 +417,9 @@ const Dashboard = () => {
           <OverviewCard
             icon="💰"
             title="Total Sales"
-            value={`₱${stats.totalSales ? Number(stats.totalSales).toLocaleString() : "0"}`}
-            trend="+12.5%"
-            trendUp={true}
+            value={`₱${totalNetRevenue.toLocaleString("en-PH", { maximumFractionDigits: 0 })}`}
+            trend={salesTrend ? `${salesTrend.direction === "up" ? "+" : "-"}${salesTrend.percent}% vs last month` : null}
+            trendUp={salesTrend ? salesTrend.direction === "up" : true}
             sparkData={monthlySales.map(m => m.sales)}
           />
           <OverviewCard

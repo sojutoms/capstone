@@ -2,9 +2,13 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import "./SKUviewer.css";
 import API_BASE_URL, { authorizedFetch } from "../../services/api";
 
-const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+const SIMPLE_CATEGORIES = ["bags", "collectibles"];
+const WATCH_CATEGORIES = ["watch"];
 
-// ─── Luxe Select Component ───────────────────────────────────────────────────
+const isSimpleCat = (cat) => SIMPLE_CATEGORIES.includes((cat || "").toLowerCase());
+const isWatchCat = (cat) => WATCH_CATEGORIES.includes((cat || "").toLowerCase());
+
+// ─── Luxe Select Component ────────────────────────────────────────────────────
 const LuxeSelect = ({ value, options, onChange, placeholder = "Select option", style }) => {
   const [open, setOpen] = useState(false);
   const [openUp, setOpenUp] = useState(false);
@@ -75,6 +79,11 @@ const SKUViewer = () => {
 
   const [selectedUnit, setSelectedUnit] = useState(null);
 
+  const [showBatchHistory, setShowBatchHistory] = useState(false);
+  const [batchHistoryProduct, setBatchHistoryProduct] = useState(null);
+  const [batchHistoryData, setBatchHistoryData] = useState([]);
+  const [batchHistoryLoading, setBatchHistoryLoading] = useState(false);
+
   const [showSummaryTable, setShowSummaryTable] = useState(false);
   const [summaryFilter, setSummaryFilter] = useState("all");
 
@@ -96,9 +105,7 @@ const SKUViewer = () => {
   const isInventoryStaff = adminRoles.includes("inventory_staff");
   const canModify = isOwner || isAdmin || isInventoryStaff;
 
-  const getAdminToken = () => sessionStorage.getItem("admin-token") || "";
-
-  // ── Helpers ──────────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
   const productMap = useMemo(() => {
     const m = {};
     products.forEach((p) => { m[String(p.id)] = p; });
@@ -148,8 +155,6 @@ const SKUViewer = () => {
     return entries.reduce((a, e) => a + Number(e.price || 0), 0) / entries.length;
   };
 
-  const isSimpleCat = (cat) => SIMPLE_CATEGORIES.includes((cat || "").toLowerCase());
-
   const getPriceRange = (seqs) => {
     const prices = seqs.map((s) => getUnitPrice(s)).filter((p) => p > 0);
     if (!prices.length) return "—";
@@ -157,6 +162,13 @@ const SKUViewer = () => {
     const mx = Math.max(...prices);
     if (mn === mx) return `₱${formatPrice(mn)}`;
     return `₱${formatPrice(mn)} – ₱${formatPrice(mx)}`;
+  };
+
+  // Size label helper — appends "mm" for watch categories
+  const formatSizeLabel = (size, cat) => {
+    if (!size || size === "—") return size;
+    if (isWatchCat(cat)) return `${size}mm`;
+    return `US M ${size}`;
   };
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
@@ -242,27 +254,15 @@ const SKUViewer = () => {
   }, [skuGroups, productMap, getBrand]);
 
   // ── Colorway helpers ──────────────────────────────────────────────────────
-  // For a given group, find the root parentId and all siblings (colorways).
-  // A colorway product has parentId set; the base product has no parentId.
   const getColorwayFamily = useCallback((group) => {
     const product = productMap[String(group.productId)];
     if (!product) return { parent: null, colorways: [] };
-
-    // Determine the root parent id
     const rootParentId = product.parentId ? product.parentId : product.id;
-
-    // Parent product
     const parent = productMap[String(rootParentId)] || null;
-
-    // All child colorway products
-    const colorways = products.filter(
-      (p) => !p.isDeleted && String(p.parentId) === String(rootParentId)
-    );
-
+    const colorways = products.filter((p) => !p.isDeleted && String(p.parentId) === String(rootParentId));
     return { parent, colorways, rootParentId };
   }, [productMap, products]);
 
-  // Given a productId, find its skuSummary group (for navigating to a colorway's group)
   const findGroupByProductId = useCallback((productId) => {
     return skuSummaries.find((g) => String(g.productId) === String(productId)) || null;
   }, [skuSummaries]);
@@ -273,8 +273,7 @@ const SKUViewer = () => {
   const filteredSummaries = useMemo(() => {
     let list = skuSummaries;
 
-    // IMPORTANT: In the grid, show only BASE products (no parentId) so colorways
-    // don't appear as separate cards. Their stock is navigable via the modal swatches.
+    // Show only base products (no parentId) in the grid
     list = list.filter((g) => {
       const product = productMap[String(g.productId)];
       return !product?.parentId;
@@ -323,6 +322,23 @@ const SKUViewer = () => {
     setPidSearch(""); setPidFilterSize("all"); setPidFilterStatus("all");
     setPidSort({ key: "productItemId", dir: "asc" }); setPidPage(1);
     setShowProductIds(true);
+  };
+
+  const openBatchHistory = async (group) => {
+    setSelectedSkuGroup(null);
+    setBatchHistoryProduct(group);
+    setBatchHistoryData([]);
+    setBatchHistoryLoading(true);
+    setShowBatchHistory(true);
+    try {
+      const res = await authorizedFetch(`/batches/${group.productId}`);
+      const data = await res.json();
+      setBatchHistoryData(data.success ? (data.batches || []) : []);
+    } catch {
+      setBatchHistoryData([]);
+    } finally {
+      setBatchHistoryLoading(false);
+    }
   };
 
   // ── Product IDs filter/sort ───────────────────────────────────────────────
@@ -399,6 +415,7 @@ const SKUViewer = () => {
     );
   };
 
+  // Column count for the unit table changes based on category type
   const pidColCount = (cat) => isSimpleCat(cat) ? 7 : 8;
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -471,10 +488,10 @@ const SKUViewer = () => {
           <div className="summary-table-header">
             <h3 className="chrome-text" style={{ fontSize: '20px' }}>INVENTORY HEALTH REPORT</h3>
             <div className="summary-controls">
-              <LuxeSelect 
-                value={summaryFilter} 
-                onChange={setSummaryFilter} 
-                options={summaryOptions.map((b) => ({ value: b, label: b === "all" ? "ALL CATEGORIES" : b.toUpperCase() }))} 
+              <LuxeSelect
+                value={summaryFilter}
+                onChange={setSummaryFilter}
+                options={summaryOptions.map((b) => ({ value: b, label: b === "all" ? "ALL CATEGORIES" : b.toUpperCase() }))}
               />
               <button className="page-btn" onClick={() => setShowSummaryTable(false)}>CLOSE</button>
             </div>
@@ -523,13 +540,17 @@ const SKUViewer = () => {
                         {Object.keys(p.lowSizes).length > 0 && (
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                             <span className="low-stock" style={{ fontSize: '9px', fontWeight: 800 }}>LOW:</span>
-                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{Object.keys(p.lowSizes).join(", ")}</span>
+                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                              {Object.keys(p.lowSizes).map((s) => isWatchCat(p.category) ? `${s}mm` : s).join(", ")}
+                            </span>
                           </div>
                         )}
                         {Object.keys(p.outSizes).length > 0 && (
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                             <span className="out-stock" style={{ fontSize: '9px', fontWeight: 800 }}>OUT:</span>
-                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{Object.keys(p.outSizes).join(", ")}</span>
+                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                              {Object.keys(p.outSizes).map((s) => isWatchCat(p.category) ? `${s}mm` : s).join(", ")}
+                            </span>
                           </div>
                         )}
                         {Object.keys(p.lowSizes).length === 0 && Object.keys(p.outSizes).length === 0 && (
@@ -553,8 +574,8 @@ const SKUViewer = () => {
           <input type="text" placeholder="Search SKU, Product, or Brand..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }} className="search-input-luxe" />
         </div>
         <div className="filter-group">
-          <LuxeSelect 
-            value={filterCategory} 
+          <LuxeSelect
+            value={filterCategory}
             onChange={(val) => { setFilterCategory(val); setFilterBrand("all"); setPage(1); }}
             options={[
               { value: "all", label: "ALL CATEGORIES" },
@@ -562,8 +583,8 @@ const SKUViewer = () => {
             ]}
           />
           {brandsForFilter.length > 0 && (
-            <LuxeSelect 
-              value={filterBrand} 
+            <LuxeSelect
+              value={filterBrand}
               onChange={(val) => { setFilterBrand(val); setPage(1); }}
               options={[
                 { value: "all", label: "ALL BRANDS" },
@@ -585,7 +606,7 @@ const SKUViewer = () => {
           </div>
         )}
         {paginated.map((group) => {
-          const simple = isSimpleCat(group.category);
+          const isWatch = isWatchCat(group.category);
           const cwCount = products.filter((p) => !p.isDeleted && String(p.parentId) === String(group.productId)).length;
           return (
             <div key={group.productId} className={`sku-card glass-medium ${group.available.length > 0 ? "available" : "sold"}`} onClick={() => openSkuModal(group)}>
@@ -599,6 +620,7 @@ const SKUViewer = () => {
                 <div className="sku-card-img-wrapper">
                   <img src={group.image} alt={group.name} className="sku-image" />
                   {cwCount > 0 && <span className="cw-count-badge" title={`${cwCount} Colorways`}>{cwCount}</span>}
+                  {isWatch && <span className="watch-sku-badge" title="Watch — sized by case diameter">⌚</span>}
                 </div>
                 <div className="sku-info">
                   <h3 className="sku-product-name">{group.name}</h3>
@@ -606,10 +628,13 @@ const SKUViewer = () => {
                     <span className="sku-brand">{(group.category || "").toUpperCase()}</span>
                     {group.brand && <span className="sku-brand accent">{group.brand.toUpperCase()}</span>}
                   </div>
-                  {!simple && group.availSizes.length > 0 && (
+                  {/* Show available case sizes / shoe sizes */}
+                  {group.availSizes.length > 0 && (
                     <div className="sku-sizes-row">
                       {group.availSizes.slice(0, 5).map((sz) => (
-                        <span key={sz} className="sku-size-dot">{sz}</span>
+                        <span key={sz} className={`sku-size-dot ${isWatch ? "watch-size-dot" : ""}`}>
+                          {isWatch ? `${sz}mm` : sz}
+                        </span>
                       ))}
                       {group.availSizes.length > 5 && <span className="sku-size-more">+{group.availSizes.length - 5}</span>}
                     </div>
@@ -636,12 +661,8 @@ const SKUViewer = () => {
       {/* ── SKU Summary Modal ── */}
       {selectedSkuGroup && (() => {
         const { parent, colorways, rootParentId } = getColorwayFamily(selectedSkuGroup);
-        const isColorwayProduct = !!productMap[String(selectedSkuGroup.productId)]?.parentId;
-
-        // The "active" colorway in the switcher is the one currently shown in the modal
+        const isWatch = isWatchCat(selectedSkuGroup.category);
         const activeProductId = selectedSkuGroup.productId;
-
-        // Aggregate stock across base + all colorways for the SKU line
         const allFamilyProductIds = [String(rootParentId), ...colorways.map((c) => String(c.id))];
         const familySequences = allSequences.filter((s) => allFamilyProductIds.includes(String(s.productId)));
         const familyAvailable = familySequences.filter((s) => s.status === "available").length;
@@ -653,7 +674,7 @@ const SKUViewer = () => {
               <button className="modal-close" onClick={() => setSelectedSkuGroup(null)}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6 6 18M6 6l12 12"/></svg>
               </button>
-              
+
               <div className="modal-sidebar">
                 <div className="modal-image-wrap glass-medium">
                   <img src={selectedSkuGroup.image} alt={selectedSkuGroup.name} className="modal-hero-image" />
@@ -677,6 +698,7 @@ const SKUViewer = () => {
                   <div className="m-tags">
                     <span className="m-tag">{(selectedSkuGroup.category || "").toUpperCase()}</span>
                     {selectedSkuGroup.brand && <span className="m-tag accent">{selectedSkuGroup.brand.toUpperCase()}</span>}
+                    {isWatch && <span className="m-tag" style={{ background: "rgba(251,191,36,0.1)", color: "#fbbf24", borderColor: "rgba(251,191,36,0.2)" }}>⌚ CASE SIZES</span>}
                   </div>
                 </div>
 
@@ -685,17 +707,24 @@ const SKUViewer = () => {
                     <label>DYNAMIC PRICE RANGE</label>
                     <span className="m-value price">{selectedSkuGroup.priceRange}</span>
                   </div>
-                  
-                  {!isSimpleCat(selectedSkuGroup.category) && (
+
+                  {selectedSkuGroup.availSizes.length > 0 && (
                     <div className="m-detail">
-                      <label>ACTIVE SIZES IN STOCK</label>
+                      <label>{isWatch ? "CASE DIAMETERS IN STOCK" : "ACTIVE SIZES IN STOCK"}</label>
                       <div className="m-sizes-grid">
-                        {selectedSkuGroup.availSizes.length > 0 ? (
-                          selectedSkuGroup.availSizes.map((sz) => (
-                            <span key={sz} className="m-size-pill glass-medium">US M {sz}</span>
-                          ))
-                        ) : <span className="m-no-data">CURRENTLY UNAVAILABLE</span>}
+                        {selectedSkuGroup.availSizes.map((sz) => (
+                          <span key={sz} className={`m-size-pill glass-medium ${isWatch ? "m-watch-size-pill" : ""}`}>
+                            {isWatch ? `${sz}mm` : `US M ${sz}`}
+                          </span>
+                        ))}
                       </div>
+                    </div>
+                  )}
+
+                  {selectedSkuGroup.availSizes.length === 0 && !isSimpleCat(selectedSkuGroup.category) && (
+                    <div className="m-detail">
+                      <label>{isWatch ? "CASE DIAMETERS IN STOCK" : "ACTIVE SIZES IN STOCK"}</label>
+                      <span className="m-no-data">CURRENTLY UNAVAILABLE</span>
                     </div>
                   )}
 
@@ -743,6 +772,12 @@ const SKUViewer = () => {
                       <path d="M5 12h14M12 5l7 7-7 7" />
                     </svg>
                   </button>
+                  <button className="m-btn-secondary" onClick={() => openBatchHistory(selectedSkuGroup)}>
+                    BATCH HISTORY
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path d="M12 2v20M2 12h20" /><rect x="3" y="3" width="18" height="18" rx="2" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
@@ -767,17 +802,21 @@ const SKUViewer = () => {
               <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap" }}>
                 <span className="m-tag">{(productIdsData.category || "").toUpperCase()}</span>
                 {productIdsData.brand && <span className="m-tag accent">{productIdsData.brand.toUpperCase()}</span>}
+                {isWatchCat(productIdsData.category) && <span className="m-tag" style={{ background: "rgba(251,191,36,0.1)", color: "#fbbf24", borderColor: "rgba(251,191,36,0.2)" }}>⌚ CASE SIZES</span>}
               </div>
             </div>
 
+            {/* Size chips — show mm suffix for watch */}
             {!isSimpleCat(productIdsData.category) && (
               <div className="sizes-chips" style={{ padding: "0 40px 16px" }}>
-                <div className={`size-chip glass-medium available ${pidFilterSize === "all" ? "active-size" : ""}`} onClick={() => { setPidFilterSize("all"); setPidPage(1); }}>ALL SIZES</div>
+                <div className={`size-chip glass-medium available ${pidFilterSize === "all" ? "active-size" : ""}`} onClick={() => { setPidFilterSize("all"); setPidPage(1); }}>
+                  ALL {isWatchCat(productIdsData.category) ? "CASE SIZES" : "SIZES"}
+                </div>
                 {[...new Set(productIdsData.seqs.map((s) => s.size).filter((s) => s && s !== "—"))].sort((a, b) => parseFloat(a) - parseFloat(b)).map((size) => {
                   const avail = productIdsData.seqs.filter((s) => s.size === size && s.status === "available").length;
                   return (
                     <div key={size} className={`size-chip glass-medium ${avail > 0 ? "available" : "unavailable"} ${pidFilterSize === size ? "active-size" : ""}`} onClick={() => { setPidFilterSize(size); setPidPage(1); }}>
-                      US M {size}
+                      {isWatchCat(productIdsData.category) ? `${size}mm` : `US M ${size}`}
                     </div>
                   );
                 })}
@@ -789,16 +828,16 @@ const SKUViewer = () => {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="search-icon">
                   <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
                 </svg>
-                <input 
-                  type="text" 
-                  placeholder="SEARCH UNITS..." 
-                  className="sizes-search-input-luxe" 
-                  value={pidSearch} 
-                  onChange={(e) => { setPidSearch(e.target.value); setPidPage(1); }} 
+                <input
+                  type="text"
+                  placeholder="SEARCH UNITS..."
+                  className="sizes-search-input-luxe"
+                  value={pidSearch}
+                  onChange={(e) => { setPidSearch(e.target.value); setPidPage(1); }}
                 />
               </div>
-              <LuxeSelect 
-                value={pidFilterStatus} 
+              <LuxeSelect
+                value={pidFilterStatus}
                 onChange={(val) => { setPidFilterStatus(val); setPidPage(1); }}
                 options={[
                   { value: "all", label: "ALL STATUS" },
@@ -814,7 +853,11 @@ const SKUViewer = () => {
                   <tr>
                     <th className="th-sortable" onClick={() => togglePidSort("productItemId")}>UNIT ID {pidSortInd("productItemId")}</th>
                     <th>STATUS</th>
-                    {!isSimpleCat(productIdsData.category) && <th className="th-sortable" onClick={() => togglePidSort("size")}>SIZE {pidSortInd("size")}</th>}
+                    {!isSimpleCat(productIdsData.category) && (
+                      <th className="th-sortable" onClick={() => togglePidSort("size")}>
+                        {isWatchCat(productIdsData.category) ? "CASE (MM)" : "SIZE"} {pidSortInd("size")}
+                      </th>
+                    )}
                     <th className="th-sortable" onClick={() => togglePidSort("price")}>PRICE {pidSortInd("price")}</th>
                     <th className="th-sortable" onClick={() => togglePidSort("consignedBy")}>CONSIGNER {pidSortInd("consignedBy")}</th>
                     <th className="th-sortable" onClick={() => togglePidSort("addedDate")}>DATE IN {pidSortInd("addedDate")}</th>
@@ -827,12 +870,17 @@ const SKUViewer = () => {
                     <tr><td colSpan={pidColCount(productIdsData.category)} style={{ textAlign: "center", padding: 32, color: "var(--text-tertiary)" }}>No units matching your criteria.</td></tr>
                   )}
                   {pidPaginated.map((seq) => {
-                    const simple = isSimpleCat(productIdsData.category);
+                    const isWatch = isWatchCat(productIdsData.category);
+                    const isSimple = isSimpleCat(productIdsData.category);
                     return (
                       <tr key={seq._id || seq.sequenceNumber} className={seq.status === "sold" ? "row-sold" : ""} onClick={() => setSelectedUnit(seq)}>
                         <td className="sku-link" style={{ color: "var(--accent-white)", fontWeight: 700 }}>#{getProductItemId(seq)}</td>
                         <td><span className={`sku-status ${seq.status}`}>{seq.status.toUpperCase()}</span></td>
-                        {!simple && <td style={{ fontWeight: 600 }}>US M {seq.size}</td>}
+                        {!isSimple && (
+                          <td style={{ fontWeight: 600 }}>
+                            {isWatch ? `${seq.size}mm` : `US M ${seq.size}`}
+                          </td>
+                        )}
                         <td style={{ fontWeight: 700, color: '#fff' }}>₱{formatPrice(getUnitPrice(seq))}</td>
                         <td><ConsignedByBadge email={seq.consignedBy} /></td>
                         <td style={{ fontSize: '11px', fontWeight: 600 }}>{fmtDate(seq.addedDate)}</td>
@@ -852,6 +900,94 @@ const SKUViewer = () => {
                 <div className="page-info">Page <strong>{pidPage}</strong> of <strong>{pidTotalPages}</strong></div>
                 <button className="page-btn" onClick={() => setPidPage((p) => Math.min(pidTotalPages, p + 1))} disabled={pidPage === pidTotalPages}>NEXT</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Batch History Modal ── */}
+      {showBatchHistory && batchHistoryProduct && (
+        <div className="sku-modal-overlay" onClick={() => setShowBatchHistory(false)}>
+          <div className="sizes-modal glass-strong animate-in" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-back" onClick={() => { setShowBatchHistory(false); setSelectedSkuGroup(batchHistoryProduct); }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              BACK TO SUMMARY
+            </button>
+            <button className="modal-close" onClick={() => setShowBatchHistory(false)}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+
+            <div className="sizes-modal-header">
+              <h2 className="chrome-text" style={{ fontSize: "24px" }}>BATCH HISTORY — SKU #{batchHistoryProduct.skuNum}</h2>
+              <p className="sizes-product-name">{batchHistoryProduct.name.toUpperCase()}</p>
+              <div style={{ display: "flex", gap: 12, marginTop: 12, flexWrap: "wrap", alignItems: "center" }}>
+                <span className="m-tag">{(batchHistoryProduct.category || "").toUpperCase()}</span>
+                {batchHistoryProduct.brand && <span className="m-tag accent">{batchHistoryProduct.brand.toUpperCase()}</span>}
+                <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>{batchHistoryData.length} batch{batchHistoryData.length !== 1 ? "es" : ""} on record</span>
+              </div>
+            </div>
+
+            <div style={{ padding: "0 40px 32px", overflowY: "auto", maxHeight: "60vh" }}>
+              {batchHistoryLoading ? (
+                <div style={{ textAlign: "center", padding: 48, color: "var(--text-tertiary)" }}>Loading batches…</div>
+              ) : batchHistoryData.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 48, color: "var(--text-tertiary)" }}>No batch records found for this product.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {batchHistoryData.map((batch, i) => {
+                    const totalAdded = (batch.lines || []).reduce((s, l) => s + Number(l.quantity || 0), 0);
+                    const isSimple = isSimpleCat(batchHistoryProduct.category);
+                    return (
+                      <div key={batch._id || i} className="glass-medium" style={{ borderRadius: 12, overflow: "hidden" }}>
+                        {/* Batch header */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: "1px solid var(--border-color, rgba(255,255,255,0.06))" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <span style={{ fontSize: 13, fontWeight: 800, color: "var(--accent-white)" }}>BATCH #{batch.batchNumber}</span>
+                            {batch.supplierName && (
+                              <span style={{ fontSize: 11, color: "#4ade80", background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 5, padding: "2px 8px" }}>
+                                {batch.supplierName}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                            <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{fmtDate(batch.receivedDate)}</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--accent-white)" }}>{totalAdded} unit{totalAdded !== 1 ? "s" : ""} added</span>
+                            <span className={`sku-status ${batch.availableUnits > 0 ? "available" : "sold"}`} style={{ fontSize: 10 }}>
+                              {batch.availableUnits ?? "?"} REMAINING
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Size/qty breakdown */}
+                        <div style={{ padding: "10px 18px" }}>
+                          {batch.notes && (
+                            <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginBottom: 10, fontStyle: "italic" }}>
+                              Note: {batch.notes}
+                            </div>
+                          )}
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            {(batch.lines || []).map((line, j) => {
+                              const sizeLabel = isSimple ? "Unit" : (isWatchCat(batchHistoryProduct.category) ? `${line.size}mm` : `US ${line.size}`);
+                              return (
+                                <div key={j} style={{ display: "flex", flexDirection: "column", alignItems: "center", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 8, padding: "8px 12px", minWidth: 72 }}>
+                                  <span style={{ fontSize: 11, color: "var(--text-tertiary)", marginBottom: 2 }}>{sizeLabel}</span>
+                                  <span style={{ fontSize: 16, fontWeight: 800, color: "var(--accent-white)" }}>×{line.quantity}</span>
+                                  <span style={{ fontSize: 10, color: "#c9a84c", marginTop: 2 }}>₱{formatPrice(line.sellingPrice)}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {batch.costPrice > 0 && (
+                            <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-tertiary)" }}>
+                              Cost per unit: ₱{formatPrice(batch.costPrice)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -896,10 +1032,13 @@ const SKUViewer = () => {
                     <span className="m-val">{getBrand(selectedUnit).toUpperCase()}</span>
                   </div>
                 )}
+                {/* Show case size for watch, shoe size for shoes, nothing for simple */}
                 {!isSimpleCat(selectedUnit.category) && (
                   <div className="meta-row-luxe glass">
-                    <span className="m-key">SIZE</span>
-                    <span className="m-val">US M {selectedUnit.size}</span>
+                    <span className="m-key">{isWatchCat(selectedUnit.category) ? "CASE DIAMETER" : "SIZE"}</span>
+                    <span className="m-val">
+                      {isWatchCat(selectedUnit.category) ? `${selectedUnit.size}mm` : `US M ${selectedUnit.size}`}
+                    </span>
                   </div>
                 )}
                 <div className="meta-row-luxe glass">

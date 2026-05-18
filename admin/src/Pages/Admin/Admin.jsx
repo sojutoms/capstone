@@ -12,6 +12,7 @@ import ProductManagement from "../../Components/productManagement/productManagem
 import CommandPalette    from "../../Components/CommandPalette/CommandPalette";
 import OperationsPanel   from "../../Components/OperationsPanel/OperationsPanel";
 import SecurityPanel     from "../../Components/SecurityPanel/SecurityPanel";
+import POS               from "../../Components/POS/POS";
 
 const IDLE_TIMEOUT_MS = 3 * 60 * 1000;
 const ACTIVITY_EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"];
@@ -157,6 +158,7 @@ const Admin = () => {
             <Route path="/skuviewer"          element={<SKUViewer />} />
             <Route path="/operations"         element={<OperationsPanel />} />
             <Route path="/admin/security"     element={<SecurityPanel showToast={showToast} />} />
+            <Route path="/admin/pos"          element={<POS />} />
           </Routes>
         </div>
       </div>

@@ -13,7 +13,7 @@ const {
 const AuditLog = require("../models/AuditLog");
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret_ecom";
-const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 
 // ─── Helper: write audit log (non-blocking) ───────────────────────────────────
 async function writeAudit(action, req, details = {}) {
@@ -1089,8 +1089,94 @@ const deleteReview = async (req, res) => {
   }
 };
 
+// ─── POST /admin/pos/sale ─────────────────────────────────────────────────────
+const posSale = async (req, res) => {
+  try {
+    const { items, paymentMethod, total } = req.body;
+    if (!items || !Array.isArray(items) || items.length === 0)
+      return res.status(400).json({ success: false, error: "No items provided" });
+
+    const tokenHeader = req.header("auth-token") || req.header("Authorization") || "";
+    const token = tokenHeader.startsWith("Bearer ") ? tokenHeader.slice(7) : tokenHeader;
+    let soldBy = null;
+    try {
+      const payload = jwt.verify(token, JWT_SECRET);
+      soldBy = payload.name || payload.email || null;
+    } catch {}
+
+    const orderNumber = `STORE-${Date.now()}`;
+    const soldDate = new Date();
+    const errors = [];
+    const results = [];
+
+    for (const item of items) {
+      const numProductId = Number(item.productId);
+      const numQty = Math.max(1, Number(item.qty || 1));
+      const size = item.size;
+
+      try {
+        const product = await Product.findOne({ id: numProductId });
+        if (!product) { errors.push(`Product ${numProductId} not found`); continue; }
+
+        const isSimple = SIMPLE_CATEGORIES.includes((product.category || "").toLowerCase());
+
+        // Mark ShoeSequence records as sold
+        const skuQuery = { productId: numProductId, status: "available" };
+        if (!isSimple && size && size !== "—") skuQuery.size = String(size);
+
+        const availableSkus = await ShoeSequence.find(skuQuery)
+          .sort({ sequenceNumber: 1 }).limit(numQty).lean();
+
+        if (availableSkus.length > 0) {
+          await ShoeSequence.updateMany(
+            { _id: { $in: availableSkus.map((s) => s._id) }, status: "available" },
+            { $set: { status: "sold", soldDate, soldBy, orderNumber } }
+          );
+        }
+
+        // Deduct from Product stock
+        if (isSimple) {
+          product.stock = Math.max(0, (product.stock || 0) - numQty);
+          await product.save();
+        } else {
+          const sz = product.sizes;
+          if (sz && typeof sz === "object") {
+            const key = String(size);
+            if (Array.isArray(sz)) {
+              const entry = sz.find((s) => String(s.size) === key);
+              if (entry) entry.quantity = Math.max(0, (entry.quantity || 0) - numQty);
+            } else if (sz[key]) {
+              const entry = sz[key];
+              if (typeof entry === "object") {
+                sz[key] = { ...entry, quantity: Math.max(0, (entry.quantity || 0) - numQty) };
+              } else {
+                sz[key] = Math.max(0, Number(entry) - numQty);
+              }
+              product.markModified("sizes");
+            }
+          }
+          await product.save();
+        }
+
+        results.push({ productId: numProductId, size, qty: numQty, skuMarked: availableSkus.length });
+      } catch (itemErr) {
+        errors.push(`Product ${numProductId}: ${itemErr.message}`);
+      }
+    }
+
+    if (results.length === 0 && errors.length > 0)
+      return res.status(400).json({ success: false, error: errors.join("; ") });
+
+    return res.json({ success: true, orderNumber, soldDate, results, errors });
+  } catch (err) {
+    console.error("POST /admin/pos/sale error:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
 module.exports = {
   getAdminOrders, getAdminOrder, updateOrderStatus, getStatsOverview,
   getMonthlySales, getCategorySales, getLowStock, getSalesData, getSalesLog,
   giveVoucher, adminLogin, assignRole, createStaff, getAllReviews, deleteReview,
+  posSale,
 };

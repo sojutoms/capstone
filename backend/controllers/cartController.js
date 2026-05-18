@@ -34,7 +34,7 @@ const addToCart = async (req, res) => {
     const currentQtyInCart = (user.cartData && user.cartData[key]) || 0;
     
     // Check stock based on category
-    const isSimple = ["watch", "bags", "collectibles"].includes((product.category || "").toLowerCase());
+    const isSimple = ["bags", "collectibles"].includes((product.category || "").toLowerCase());
     
     if (isSimple) {
       if (currentQtyInCart + 1 > (product.stock || 0)) {

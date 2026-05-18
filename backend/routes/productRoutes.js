@@ -22,7 +22,7 @@ const {
   deleteReview,
 } = require("../controllers/productController");
 
-const adminAuth = requireRole("admin");
+const adminAuth = requireRole("admin", "owner");
 
 router.get("/allproducts", getAllProducts);
 router.post("/addproduct", adminAuth, validate(["name", "category"]), validateProduct, addProduct);

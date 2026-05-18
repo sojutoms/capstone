@@ -96,13 +96,6 @@ const Navbar = () => {
         </a>
       </div>
 
-      {/* Center: Command hint */}
-      <div className="nav-center">
-        <div className="nav-cmdk-hint" title="Open command palette">
-          <kbd>⌘</kbd><kbd>K</kbd>
-        </div>
-      </div>
-
       {/* Right: Actions + User */}
       <div className="nav-right">
         {/* Notification Center */}

@@ -116,25 +116,46 @@ const getAuditLog = async (req, res) => {
 // SESSIONS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+const ADMIN_ROLES = ["owner", "admin", "staff", "inventory_staff"];
+const ACTIVE_THRESHOLD_MS = 15 * 60 * 1000; // 15 min
+
 const getActiveSessions = async (req, res) => {
   try {
     const tokenHeader = req.header("auth-token") || req.header("Authorization") || "";
     const rawToken = tokenHeader.startsWith("Bearer ") ? tokenHeader.slice(7) : tokenHeader;
 
-    const sessions = await AdminSession.find({ isActive: true })
+    // All active sessions, newest first
+    const allSessions = await AdminSession.find({ isActive: true })
       .sort({ lastActive: -1 })
       .lean();
 
-    const result = sessions.map((s) => ({
+    // Deduplicate by email — keep only the most-recent session per admin.
+    // Also skip any session that has no admin roles (customer sessions that
+    // somehow ended up in this collection).
+    const seen = new Set();
+    const uniqueSessions = [];
+    for (const s of allSessions) {
+      if (!s.adminEmail) continue;
+      const roles = s.adminRoles || [];
+      if (!roles.some((r) => ADMIN_ROLES.includes(r))) continue;
+      if (seen.has(s.adminEmail)) continue;
+      seen.add(s.adminEmail);
+      uniqueSessions.push(s);
+    }
+
+    const now = Date.now();
+    const result = uniqueSessions.map((s) => ({
       id: s._id,
       adminEmail: s.adminEmail,
       adminName: s.adminName,
+      roles: s.adminRoles || [],
       role: (s.adminRoles || [])[0] || "staff",
       ip: s.ip,
       device: s.userAgent,
       loginAt: s.loginAt,
       lastActive: s.lastActive,
       isCurrent: s.token === rawToken,
+      isOnline: !!(s.lastActive && now - new Date(s.lastActive).getTime() < ACTIVE_THRESHOLD_MS),
     }));
 
     return res.json({ success: true, sessions: result });

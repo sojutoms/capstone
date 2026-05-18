@@ -81,7 +81,8 @@ const StarRow = ({ rating, size = 13, onPress }) => (
    MAIN COMPONENT
 ═══════════════════════════════════════════════ */
 
-const SHOE_CATEGORIES = ["nike", "adidas", "puma", "nb"];
+const SHOE_CATEGORIES  = ["nike", "adidas", "puma", "nb"];
+const WATCH_CATEGORIES = ["watch"];
 
 export default function ProductDetailScreen({ route }) {
   const navigation                     = useNavigation();
@@ -102,8 +103,8 @@ export default function ProductDetailScreen({ route }) {
   const heartScale     = useRef(new Animated.Value(1)).current;
   const imageSliderRef = useRef(null);
 
-  const favorite = isFavorite(product?.id);
-const isShoe = true;
+  const favorite       = isFavorite(product?.id);
+  const isWatchProduct = WATCH_CATEGORIES.includes((product?.category || "").toLowerCase());
 
   if (!product) {
     return (
@@ -327,10 +328,14 @@ const isShoe = true;
         {sortedSizes.length > 0 && (
           <View style={s.sizeBlock}>
             <View style={s.sizeHeader}>
-              <Text style={s.sizeTitle}>SELECT SIZE</Text>
-              <TouchableOpacity>
-                <Text style={s.sizeGuide}>Size Guide ›</Text>
-              </TouchableOpacity>
+              <Text style={s.sizeTitle}>
+                {isWatchProduct ? "SELECT CASE SIZE" : "SELECT SIZE"}
+              </Text>
+              {!isWatchProduct && (
+                <TouchableOpacity>
+                  <Text style={s.sizeGuide}>Size Guide ›</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             <ScrollView
@@ -351,7 +356,7 @@ const isShoe = true;
                     activeOpacity={0.7}
                   >
                     <Text style={[s.sizeChipText, active && s.sizeChipTextActive, oos && s.sizeChipTextOos]}>
-                      {sz}
+                      {isWatchProduct ? `${sz}mm` : sz}
                     </Text>
                     {oos && <View style={s.oosLine} />}
                   </TouchableOpacity>

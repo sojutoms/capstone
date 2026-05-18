@@ -150,7 +150,7 @@ const UserManagement = () => {
 
   const CAN = {
     viewUsers: isOwner || isAdmin,
-    manageRoles: isOwner,
+    manageRoles: isOwner || isAdmin,
     viewReviews: isOwner || isAdmin || isStaff,
   };
 
@@ -394,7 +394,7 @@ const UserManagement = () => {
 
             {tab === "roles" && CAN.manageRoles && (
               filteredStaff.map(u => (
-                <div key={u.id} className={`user-summary-card ${selectedStaffId === u.id ? 'selected' : ''}`} onClick={() => setSelectedStaffId(u.id)}>
+                <div key={u.id} className={`user-summary-card ${selectedStaffId === u.id ? 'selected' : ''}`} onClick={() => setSelectedStaffId(prev => prev === u.id ? null : u.id)}>
                   <div className="user-avatar-sm" style={{ borderColor: ROLE_CONFIG[u.roles?.[0]]?.color }}>{u.name?.[0]?.toUpperCase() || "?"}</div>
                   <div className="user-summary-info">
                     <div className="user-summary-name">{u.name}</div>

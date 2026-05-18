@@ -19,6 +19,7 @@ const {
   createStaff,
   getAllReviews,
   deleteReview,
+  posSale,
 } = require("../controllers/adminController");
 
 const {
@@ -67,6 +68,9 @@ router.post("/admin/force-logout", ownerAuth, forceLogout);
 
 // ─── Security — Login Alerts ──────────────────────────────────────────────────
 router.get("/admin/login-alerts", ownerAuth, getLoginAlerts);
+
+// ─── POS ──────────────────────────────────────────────────────────────────────
+router.post("/admin/pos/sale", adminAuth, posSale);
 
 // ─── AI Analysis Proxy ────────────────────────────────────────────────────────
 router.post("/admin/ai/sales-analysis", adminAuth, async (req, res) => {

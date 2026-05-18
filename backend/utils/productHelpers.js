@@ -1,6 +1,7 @@
 const Product = require("../models/Product");
 
-const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+const SIMPLE_CATEGORIES = ["bags", "collectibles"];
+const WATCH_CATEGORIES  = ["watch"];
 const SHOE_SUBCATEGORIES = ["lifestyle", "running", "football", "basketball"];
 
 /**
@@ -101,7 +102,7 @@ const formatProduct = (product, topSellerIds = new Set()) => {
     sizes,
     priceRange: { min: minPrice, max: maxPrice },
     totalStock,
-    isNew: daysOld <= 30,
+    isNew: daysOld <= 7,
     isJustIn: daysOld > 7 && daysOld <= 14, // Refined logic
     isTopSellerInBrand: topSellerIds.has(String(product.id)),
   };
@@ -109,6 +110,7 @@ const formatProduct = (product, topSellerIds = new Set()) => {
 
 module.exports = {
   SIMPLE_CATEGORIES,
+  WATCH_CATEGORIES,
   SHOE_SUBCATEGORIES,
   normalizeBrandSlug,
   sanitizeSubCategories,

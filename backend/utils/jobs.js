@@ -6,7 +6,7 @@ const { ShoeSequence } = require("../models/index");
 async function autoUpdateNewStatus() {
   try {
     const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 7);
 
     const result = await Product.updateMany(
       { isNew: true, date: { $lt: thirtyDaysAgo } },

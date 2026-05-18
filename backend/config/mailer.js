@@ -1,29 +1,52 @@
-const nodemailer = require("nodemailer");
+const https = require("https");
 
-// Configure transporter using Gmail
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-});
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "sneakyconcepts123@gmail.com";
+const SENDER_NAME = process.env.BREVO_SENDER_NAME || "GoodSoles PH";
 
-const sendEmail = async (to, subject, htmlContent) => {
-  try {
-    const info = await transporter.sendMail({
-      from: `"GoodSoles PH" <${process.env.GMAIL_USER}>`,
-      to,
+const sendEmail = (to, subject, htmlContent) => {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({
+      sender: { name: SENDER_NAME, email: SENDER_EMAIL },
+      to: [{ email: to }],
       subject,
-      html: htmlContent,
+      htmlContent,
     });
 
-    console.log("✅ Email sent via Gmail:", info.messageId);
-    return info;
-  } catch (error) {
-    console.error("❌ Gmail email failed:", error?.message || error);
-    throw error;
-  }
+    const options = {
+      hostname: "api.brevo.com",
+      path: "/v3/smtp/email",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": BREVO_API_KEY,
+        "Content-Length": Buffer.byteLength(payload),
+      },
+    };
+
+    const req = https.request(options, (res) => {
+      let body = "";
+      res.on("data", (chunk) => { body += chunk; });
+      res.on("end", () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log("✅ Email sent via Brevo to:", to);
+          resolve(body);
+        } else {
+          const err = new Error(`Brevo API error ${res.statusCode}: ${body}`);
+          console.error("❌ Brevo send failed:", err.message);
+          reject(err);
+        }
+      });
+    });
+
+    req.on("error", (err) => {
+      console.error("❌ Brevo request error:", err.message);
+      reject(err);
+    });
+
+    req.write(payload);
+    req.end();
+  });
 };
 
 module.exports = sendEmail;

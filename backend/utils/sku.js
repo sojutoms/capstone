@@ -1,7 +1,7 @@
 const { SequenceCounter, ShoeSequence } = require("../models/index");
 const Product = require("../models/Product");
 
-const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 
 // ─── getNextSequences ─────────────────────────────────────────────────────────
 async function getNextSequences(count) {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import API_BASE_URL, { authorizedFetch } from "../../services/api";
 
 const FALLBACK_SHOE_SIZES = ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13", "13.5", "14"];
-const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 
 const sanitizeCurrencyInput = (raw) => {
   if (raw === null || raw === undefined) return "";

@@ -6,7 +6,7 @@ const Product = require("../models/Product");
 const { ShoeSequence } = require("../models/index");
 const { normalizeProductSizes, convertMapToDbShape, getSizePriceFromMap } = require("../utils/sizes");
 
-const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 const NCR_PSGC_CODE = "1300000000";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────

@@ -31,7 +31,8 @@ const ProductSkeleton = () => (
   </div>
 );
 
-const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+const SIMPLE_CATEGORIES = ["bags", "collectibles"];
+const WATCH_CATEGORIES  = ["watch"];
 
 const toNumber = (v) => {
   if (v === null || v === undefined || v === "") return NaN;
@@ -141,6 +142,8 @@ const ProductDisplay = ({ product, loading = false }) => {
   const [reviewCount, setReviewCount] = useState(0);
   const [mainImage, setMainImage] = useState(product?.image || "");
   const [showReviews, setShowReviews] = useState(false);
+  const [reviewPage, setReviewPage] = useState(1);
+  const REVIEWS_PER_PAGE = 3;
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
   const sizeDropdownRef = useRef(null);
   const [favoriteLocal, setFavoriteLocal] = useState(() => (product ? Boolean(isFavorite(product.id)) : false));
@@ -155,6 +158,8 @@ const ProductDisplay = ({ product, loading = false }) => {
 
   const isSimpleCategory = product && typeof product.category === "string"
     ? SIMPLE_CATEGORIES.includes(product.category.toLowerCase()) : false;
+  const isWatchCategory = product && typeof product.category === "string"
+    ? WATCH_CATEGORIES.includes(product.category.toLowerCase()) : false;
 
   const initialPrice = (() => {
     if (!product) return NaN;
@@ -260,7 +265,7 @@ const ProductDisplay = ({ product, loading = false }) => {
   const getSimpleRemaining = () => {
     if (!product) return 0;
     const total = Number.isFinite(toNumber(product.stock)) ? Number(toNumber(product.stock)) : 0;
-    const inCart = cartItems[`${product.id}_`] || 0;
+    const inCart = cartItems[`${product.id}_null`] || cartItems[`${product.id}_`] || 0;
     return Math.max(0, total - inCart);
   };
 
@@ -300,6 +305,7 @@ const ProductDisplay = ({ product, loading = false }) => {
       const data = await res.json();
       const list = Array.isArray(data) ? data : [];
       setReviews(list);
+      setReviewPage(1);
       const total = list.reduce((sum, r) => sum + (r.rating || 0), 0);
       setAverageRating(list.length ? total / list.length : 0);
       setReviewCount(list.length);
@@ -525,6 +531,15 @@ const ProductDisplay = ({ product, loading = false }) => {
   const hasSizes = product.sizes && (Array.isArray(product.sizes) ? product.sizes.length > 0 : Object.keys(product.sizes).length > 0);
   const selectedSizeRemaining = selectedSize ? getRemainingStock(selectedSize) : null;
 
+  // For watches, derive size list from product.sizes (object or array — backend normalizes to object)
+  const watchSizeList = isWatchCategory && hasSizes
+    ? (() => {
+        const sz = product.sizes;
+        if (Array.isArray(sz)) return [...new Set(sz.map((s) => String(s.size)))].sort((a, b) => parseFloat(a) - parseFloat(b));
+        return Object.keys(sz).sort((a, b) => parseFloat(a) - parseFloat(b));
+      })()
+    : [];
+
   const brandDisplay = product.brand || null;
   const subCategoryDisplay = (() => {
     if (product.subCategory) return product.subCategory;
@@ -615,20 +630,6 @@ const ProductDisplay = ({ product, loading = false }) => {
         <div className="product-entrance-stagger">
           <p className="product-category-brand">{brandDisplay || "STREETWEAR"}</p>
           <h1>{product.name}</h1>
-        </div>
-
-        <div className="product-authenticity-seal">
-          <div className="seal-content">
-            <div className="seal-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-            </div>
-            <div className="seal-text">
-              <span className="seal-title">AUTHENTIC GUARANTEED</span>
-              <span className="seal-sub">Verified by GOODSOLES experts</span>
-            </div>
-          </div>
         </div>
 
         {selectedColorway && !selectedColorway._isProductColorway && (
@@ -762,28 +763,112 @@ const ProductDisplay = ({ product, loading = false }) => {
           </div>
         )}
 
-        {/* Size selector — non-simple products */}
-        {!isSimpleCategory && hasSizes && (
+        {/* Size selector — watch products (case diameter) */}
+        {isWatchCategory && hasSizes && (
+          <div className="productdisplay-right-size">
+            <div className="size-header">
+              <h1>Select Case Size</h1>
+            </div>
+
+            {/* Dropdown */}
+            <div className="size-dropdown" ref={sizeDropdownRef}>
+              <button
+                className={`sz-trigger ${!selectedSize ? "placeholder" : ""} ${sizeDropdownOpen ? "open" : ""}`}
+                onClick={() => setSizeDropdownOpen((o) => !o)}
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={sizeDropdownOpen}
+              >
+                <div className="sz-trigger-left">
+                  <span className="sz-trigger-label">Case diameter</span>
+                  <span className={`sz-trigger-value ${!selectedSize ? "placeholder" : ""}`}>
+                    {selectedSize ? `${selectedSize}mm` : "Choose a size"}
+                  </span>
+                </div>
+                <svg className={`dropdown-chevron ${sizeDropdownOpen ? "open" : ""}`}
+                  width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              {sizeDropdownOpen && (
+                <div className="sz-dropdown-menu" role="listbox">
+                  {watchSizeList.map((size) => {
+                    const totalStock = getSizeStock(size);
+                    const remaining = getRemainingStock(size);
+                    const sizePrice = getSizePrice(size);
+                    const isOutOfStock = totalStock === 0;
+                    const isMaxedInCart = !isOutOfStock && remaining <= 0;
+                    return (
+                      <button key={size}
+                        className={`sz-dropdown-item ${selectedSize === size ? "active" : ""} ${isOutOfStock || isMaxedInCart ? "out-of-stock" : ""}`}
+                        onClick={() => !isOutOfStock && !isMaxedInCart && handleSizeClick(size)}
+                        disabled={isOutOfStock || isMaxedInCart}
+                        type="button" role="option" aria-selected={selectedSize === size}
+                      >
+                        <div className="sz-item-left">
+                          <span className="sz-item-size">{size}mm</span>
+                        </div>
+                        <div className="sz-item-right">
+                          {isOutOfStock ? (
+                            <span className="sz-item-oos">Out of stock</span>
+                          ) : isMaxedInCart ? (
+                            <span className="sz-item-oos">Max in bag</span>
+                          ) : (
+                            <>
+                              <span className="sz-item-price">₱{formatPrice(sizePrice)}</span>
+                              <span className="sz-item-stock">{remaining} left</span>
+                            </>
+                          )}
+                        </div>
+                        {selectedSize === size && (
+                          <svg className="sz-item-check" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                            <path d="M2.5 7l3 3 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {selectedSize && (
+              <div className="sz-selection-bar">
+                <span className="sz-selection-conversions">{selectedSize}mm case diameter</span>
+                <span className="sz-selection-price">
+                  {selectedSizeRemaining !== null && selectedSizeRemaining <= 3 && selectedSizeRemaining > 0 && (
+                    <span className="sz-low-stock-hint">{selectedSizeRemaining} left · </span>
+                  )}
+                  ₱{formatPrice(displayPrice)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Size selector — shoe / other sized products */}
+        {!isSimpleCategory && !isWatchCategory && hasSizes && (
           <div className="productdisplay-right-size">
             <div className="size-header">
               <h1>Select Size</h1>
-              <Link to="/size-guide" className="size-guide-link">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
-                  <path d="M8 7V11M8 5V5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-                Size Guide
-              </Link>
-            </div>
-
-            {/* System tabs */}
-            <div className="sz-tabs" role="tablist" aria-label="Size system">
-              {SYSTEMS.map((sys) => (
-                <button key={sys} className={`sz-tab ${sizeSystem === sys ? "active" : ""}`}
-                  onClick={() => setSizeSystem(sys)} role="tab" aria-selected={sizeSystem === sys} type="button">
-                  {sys}
-                </button>
-              ))}
+              <div className="size-header-right">
+                <div className="sz-unit-toggle" role="group" aria-label="Size system">
+                  {SYSTEMS.map((sys) => (
+                    <button key={sys}
+                      className={`sz-unit-btn ${sizeSystem === sys ? "active" : ""}`}
+                      onClick={() => setSizeSystem(sys)}
+                      type="button"
+                    >{sys}</button>
+                  ))}
+                </div>
+                <Link to="/size-guide" className="size-guide-link">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M8 7V11M8 5V5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </Link>
+              </div>
             </div>
 
             {/* Dropdown */}
@@ -922,23 +1007,40 @@ const ProductDisplay = ({ product, loading = false }) => {
                 <p className="no-reviews-subtitle">Purchase this product to leave a review.</p>
               </div>
             ) : (
-              <div className="reviews-list">
-                {reviews.map((r, i) => (
-                  <div key={i} className="review-card">
-                    <StarRow rating={r.rating} />
-                    {r.title && <p className="review-title"><strong>{r.title}</strong></p>}
-                    <p className="review-body">{r.review}</p>
-                    <div className="review-meta">
-                      {r.fit && <span className="review-tag">Fit: {r.fit}</span>}
-                      {r.comfort && <span className="review-tag">Comfort: {r.comfort}</span>}
-                      {r.recommend && <span className="review-tag">Recommends: {r.recommend}</span>}
+              <>
+                <div className="reviews-list">
+                  {reviews.slice((reviewPage - 1) * REVIEWS_PER_PAGE, reviewPage * REVIEWS_PER_PAGE).map((r, i) => (
+                    <div key={i} className="review-card">
+                      <StarRow rating={r.rating} />
+                      {r.title && <p className="review-title"><strong>{r.title}</strong></p>}
+                      <p className="review-body">{r.review}</p>
+                      <div className="review-meta">
+                        {r.fit && <span className="review-tag">Fit: {r.fit}</span>}
+                        {r.comfort && <span className="review-tag">Comfort: {r.comfort}</span>}
+                        {r.recommend && <span className="review-tag">Recommends: {r.recommend}</span>}
+                      </div>
+                      {r.userName && r.userName !== "Anonymous" && (
+                        <p className="review-author">— {r.userName}</p>
+                      )}
                     </div>
-                    {r.userName && r.userName !== "Anonymous" && (
-                      <p className="review-author">— {r.userName}</p>
-                    )}
+                  ))}
+                </div>
+                {Math.ceil(reviews.length / REVIEWS_PER_PAGE) > 1 && (
+                  <div className="reviews-pagination">
+                    <button
+                      className="reviews-page-btn"
+                      onClick={() => setReviewPage(p => Math.max(p - 1, 1))}
+                      disabled={reviewPage === 1}
+                    >‹</button>
+                    <span className="reviews-page-info">{reviewPage} / {Math.ceil(reviews.length / REVIEWS_PER_PAGE)}</span>
+                    <button
+                      className="reviews-page-btn"
+                      onClick={() => setReviewPage(p => Math.min(p + 1, Math.ceil(reviews.length / REVIEWS_PER_PAGE)))}
+                      disabled={reviewPage === Math.ceil(reviews.length / REVIEWS_PER_PAGE)}
+                    >›</button>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
         )}

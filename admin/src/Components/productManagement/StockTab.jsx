@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import API_BASE_URL, { authorizedFetch } from "../../services/api";
 
 const FALLBACK_SHOE_SIZES = ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13", "13.5", "14"];
-const SIMPLE_CATEGORIES = ["watch", "bags", "collectibles"];
+const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 const PRICE_REASONS = [
   { value: "clearance", label: "Clearance / Markdown", hint: "Lower prices to move old stock" },
   { value: "promo", label: "Promotion", hint: "Temporary discount" },
@@ -66,7 +66,10 @@ const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated })
     const live = getEffectiveSizes(product);
     const lines = {};
     const sizes = SIMPLE_CATEGORIES.includes((product.category || "").toLowerCase()) ? ["—"] : shoeSizes;
-    sizes.forEach((s) => { lines[s] = { qty: "", price: live[s]?.price || "" }; });
+    sizes.forEach((s) => {
+      const existingPrice = live[s]?.price || 0;
+      lines[s] = { qty: "", price: existingPrice > 0 ? existingPrice : "" };
+    });
     setSizeLines(lines);
     setBatchSupplier(""); setBatchCost(""); setBatchNotes("");
     setBatchDate(new Date().toISOString().split("T")[0]);
@@ -263,10 +266,6 @@ const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated })
               <input className="form-input-luxe" type="date" value={batchDate} onChange={(e) => setBatchDate(e.target.value)} />
             </div>
             <div className="form-section">
-              <label className="form-label">COST PER UNIT (₱)</label>
-              <input className="form-input-luxe" type="number" placeholder="0.00" value={batchCost} onChange={(e) => setBatchCost(e.target.value)} />
-            </div>
-            <div className="form-section">
               <label className="form-label">BATCH NOTES</label>
               <input className="form-input-luxe" type="text" placeholder="e.g. Deadstock condition" value={batchNotes} onChange={(e) => setBatchNotes(e.target.value)} />
             </div>
@@ -280,17 +279,29 @@ const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated })
             <div className="sized-inventory-grid">
               {shoeSizes.map((sz) => {
                 const currentQty = live[sz]?.quantity || 0;
+                const currentPrice = live[sz]?.price || 0;
                 const addingQty = Number(sizeLines[sz]?.qty || 0);
                 const hasInput = sizeLines[sz]?.qty !== "" && addingQty > 0;
+                const priceReadOnly = currentQty > 0 && currentPrice > 0;
                 return (
                   <div key={sz} className="size-row">
                     <div className="size-header">{sz}</div>
-                    <div 
-                      className="size-inputs" 
+                    <div
+                      className="size-inputs"
                       style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px", overflow: "visible" }}
                     >
                       <input className="luxe-num-input" type="number" placeholder="QTY" value={sizeLines[sz]?.qty || ""} onChange={(e) => setSizeLines((prev) => ({ ...prev, [sz]: { ...prev[sz], qty: e.target.value } }))} />
-                      <input className="luxe-num-input" type="number" placeholder="Price" value={sizeLines[sz]?.price || ""} onChange={(e) => setSizeLines((prev) => ({ ...prev, [sz]: { ...prev[sz], price: e.target.value } }))} />
+                      <input
+                        className="luxe-num-input"
+                        type="number"
+                        placeholder="Price"
+                        value={sizeLines[sz]?.price || ""}
+                        readOnly={priceReadOnly}
+                        tabIndex={priceReadOnly ? -1 : 0}
+                        onChange={priceReadOnly ? undefined : (e) => setSizeLines((prev) => ({ ...prev, [sz]: { ...prev[sz], price: e.target.value } }))}
+                        style={priceReadOnly ? { opacity: 0.5, cursor: "not-allowed", background: "rgba(255,255,255,0.03)" } : {}}
+                        title={priceReadOnly ? "Price is locked — size still has stock. Use Adjust Pricing to change." : "Set selling price for this size"}
+                      />
                     </div>
                     {hasInput && <div className="preview-indicator">NEW TOTAL: {currentQty + addingQty}</div>}
                   </div>
@@ -310,42 +321,6 @@ const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated })
 
       {mode === "editprice" && (
         <div className="ast-panel animate-in">
-          <div className="price-mode-selection">
-            <label className="form-label">WHICH UNITS SHOULD BE REPRICED?</label>
-            <div className="ast-price-modes">
-              <div className={`price-mode-card glass-medium ${priceMode === "all" ? "active" : ""}`} onClick={() => { setPriceMode("all"); setSelectedBatch(""); }}>
-                <div className="pm-title">ALL AVAILABLE UNITS</div>
-                <div className="pm-desc">Update every unsold unit of the selected size(s).</div>
-              </div>
-              <div className={`price-mode-card glass-medium ${priceMode === "older_than" ? "active" : ""}`} onClick={() => { setPriceMode("older_than"); setSelectedBatch(""); }}>
-                <div className="pm-title">OLD STOCK ONLY</div>
-                <div className="pm-desc">Older than <input className="inline-input" type="number" value={olderThanDays} onClick={(e) => e.stopPropagation()} onChange={(e) => setOlderThanDays(e.target.value)} /> days.</div>
-              </div>
-              <div className={`price-mode-card glass-medium ${priceMode === "batch" ? "active" : ""}`} onClick={() => setPriceMode("batch")}>
-                <div className="pm-title">SPECIFIC BATCH</div>
-                {priceMode === "batch" && (
-                  <select className="pm-select glass" value={selectedBatch} onClick={(e) => e.stopPropagation()} onChange={(e) => setSelectedBatch(e.target.value)}>
-                    <option value="">Select batch…</option>
-                    {batches.map((b) => (
-                      <option key={b._id} value={b._id}>Batch #{b.batchNumber} ({b.availableUnits} units)</option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="price-reason-selection">
-            <label className="form-label">REASON FOR ADJUSTMENT</label>
-            <div className="reason-grid">
-              {PRICE_REASONS.map((r) => (
-                <button key={r.value} className={`reason-chip ${priceReason === r.value ? "active" : ""}`} onClick={() => setPriceReason(r.value)}>
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="inventory-section glass-strong">
             <div className="section-header">
               <h3 className="section-title">PRICE ADJUSTMENTS {loadingPreview && <span className="loading-dots">...</span>}</h3>
