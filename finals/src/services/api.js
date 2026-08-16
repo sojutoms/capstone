@@ -260,6 +260,27 @@ export const requestRefund = (token, orderNumber, reason) =>
     body: JSON.stringify({ reason }),
   }).then((r) => r.json());
 
+export const getOrderByNumber = (token, orderNumber) =>
+  fetch(`${API_BASE_URL}/order/${orderNumber}`, {
+    headers: authHeaders(token),
+  }).then((r) => r.json());
+
+// ═════════════════════════════════════════════════════════════
+// PAYMENTS — PAYMONGO
+// ═════════════════════════════════════════════════════════════
+
+export const createCheckoutSession = (token, orderNumber) =>
+  fetch(`${API_BASE_URL}/create-checkout-session`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ orderNumber }),
+  }).then((r) => r.json());
+
+export const verifyPaymentStatus = (token, orderNumber) =>
+  fetch(`${API_BASE_URL}/payment/verify/${orderNumber}`, {
+    headers: authHeaders(token),
+  }).then((r) => r.json());
+
 export const requestReturn = (token, orderNumber, formData) =>
   // formData is a FormData object (contains reason, notes, optional image)
   fetch(`${API_BASE_URL}/order/${orderNumber}/return`, {

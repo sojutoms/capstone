@@ -1,33 +1,101 @@
-import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import './Orders.css';
+import { getOrderByNumber, verifyPaymentStatus } from '../../services/api';
+import { getShippingTier } from '../../services/shippingFee';
 
 const Orders = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const {
-    orderNumber = 'N/A',
-    purchasedItems = [],
-    discountAmount = 0,
-    discountPercent = 0,
-    voucherCode = null,
-    shippingFee = 0,
-    shippingTierLabel = '',
-    codFee = 0,
-    paymentMethod = '',
-  } = location.state || {};
+  const stateData = location.state || {};
+  const redirectOrderNumber = searchParams.get('orderNumber');
+  const paymentStatusParam = searchParams.get('paymentStatus');
+
+  // PayMongo's hosted checkout redirects back via a plain URL (success_url),
+  // so there's no React Router state to read — the order has to be fetched.
+  const needsFetch = Boolean(redirectOrderNumber) && !stateData.purchasedItems;
+
+  const [fetchedOrder, setFetchedOrder] = useState(null);
+  const [loading, setLoading] = useState(needsFetch);
+  const [fetchError, setFetchError] = useState('');
+
+  useEffect(() => {
+    if (!needsFetch) return;
+    const token = localStorage.getItem('auth-token');
+    if (!token) { setFetchError('Please log in to view this order.'); setLoading(false); return; }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        if (paymentStatusParam === 'success') {
+          await verifyPaymentStatus(token, redirectOrderNumber);
+        }
+        const res = await getOrderByNumber(token, redirectOrderNumber);
+        if (cancelled) return;
+        if (res.success) setFetchedOrder(res.order);
+        else setFetchError(res.error || 'Order not found.');
+      } catch {
+        if (!cancelled) setFetchError('Could not load your order.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsFetch, redirectOrderNumber, paymentStatusParam]);
 
   const formatPrice = (val) =>
     Number(val).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+  // ── Normalize into one shape regardless of source (navigate-state vs fetched order) ──
+  const orderNumber        = fetchedOrder?.orderNumber || stateData.orderNumber || 'N/A';
+  const purchasedItems     = fetchedOrder?.items || stateData.purchasedItems || [];
+  const discountAmount     = Number(fetchedOrder?.discountAmount ?? stateData.discountAmount ?? 0);
+  const discountPercent    = Number(fetchedOrder?.discountPercent ?? stateData.discountPercent ?? 0);
+  const voucherCode        = fetchedOrder?.voucherCode ?? stateData.voucherCode ?? null;
+  const shippingFee        = Number(fetchedOrder?.shippingFee ?? stateData.shippingFee ?? 0);
+  const codFee             = Number(fetchedOrder?.codFee ?? stateData.codFee ?? 0);
+  const paymentMethod      = fetchedOrder?.paymentMethod || stateData.paymentMethod || '';
+  const paymentStatus      = fetchedOrder?.paymentStatus || null;
+  const shippingTierLabel  = fetchedOrder
+    ? (getShippingTier(fetchedOrder.deliveryInfo?.region?.code)?.label || '')
+    : (stateData.shippingTierLabel || '');
+
   const subtotal    = purchasedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const discount    = Number(discountAmount) || 0;
-  const shipping    = Number(shippingFee) || 0;
-  const cod         = Number(codFee) || 0;
+  const discount    = discountAmount;
+  const shipping    = shippingFee;
+  const cod         = codFee;
   const total       = subtotal + shipping + cod - discount;
   const isCod       = paymentMethod === 'cash on delivery';
+  const isOnline    = paymentMethod === 'online';
   const isFreeShip  = shipping === 0;
+
+  if (loading) {
+    return (
+      <div className="confirmation-terminal">
+        <div className="receipt-wrapper">
+          <p className="empty-msg">Loading your order…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="confirmation-terminal">
+        <div className="receipt-wrapper">
+          <p className="empty-msg">{fetchError}</p>
+          <div className="receipt-footer-actions">
+            <button className="terminal-btn terminal-btn--primary" onClick={() => navigate('/orderhistory')}>
+              VIEW MY ORDERS
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="confirmation-terminal">
@@ -44,6 +112,26 @@ const Orders = () => {
             <p>FINALIZED: {new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
           </div>
         </header>
+
+        {isOnline && paymentStatus === 'paid' && (
+          <div className="gcash-paid-badge">
+            <span className="gcash-paid-icon">✓</span>
+            <div className="gcash-paid-text">
+              <strong>Payment Confirmed</strong>
+              <span>Paid via PayMongo</span>
+            </div>
+            <span className="gcash-paid-check">✓</span>
+          </div>
+        )}
+
+        {isOnline && paymentStatus && paymentStatus !== 'paid' && (
+          <div className="gcash-paid-badge" style={{ background: 'rgba(255, 176, 32, 0.12)', borderColor: 'rgba(255, 176, 32, 0.35)' }}>
+            <div className="gcash-paid-text">
+              <strong>Confirming Payment…</strong>
+              <span>This can take a minute — refresh the page to check again.</span>
+            </div>
+          </div>
+        )}
 
         <main className="receipt-content">
           <h3>[ ITEM LOG ]</h3>

@@ -7,6 +7,7 @@ const upload = require("../config/multer"); // Cloudinary multer config
 
 const {
   getOrderHistory,
+  getOrderByNumber,
   cancelOrder,
   confirmOrderReceived,
   requestReturn,
@@ -76,6 +77,7 @@ const refundUpload = (req, res, next) => {
 
 // ─── Customer routes ───────────────────────────────────────────────────────────
 router.get( "/orderhistory",                         fetchUser, getOrderHistory);
+router.get( "/order/:orderNumber",                    fetchUser, getOrderByNumber);
 router.post("/placeorder",                           fetchUser, placeOrder);
 router.post("/order/:orderNumber/cancel",            fetchUser, cancelOrder);
 router.post("/order/:orderNumber/confirm-received",  fetchUser, confirmOrderReceived);

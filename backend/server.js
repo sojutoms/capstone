@@ -17,6 +17,8 @@ const cartRoutes    = require("./routes/cartRoutes");
 const skuRoutes     = require("./routes/skuRoutes");
 const reviewRoutes  = require("./routes/reviewRoutes");
 const categoryBrandRoutes = require("./routes/categoryBrandRoutes")
+const paymentRoutes = require("./routes/paymentRoutes");
+const { handlePaymongoWebhook } = require("./controllers/paymentController");
 const { seedCategoryBrand } = require("./utils/seedCategoryBrand");
 const seedSizesSubcategories = require("./utils/seedSizesSubcategories");
 
@@ -49,6 +51,10 @@ app.use(
   })
 );
 
+// PayMongo webhook needs the raw request body to verify its signature, so it
+// must be mounted before the global JSON body parser below.
+app.post("/webhooks/paymongo", express.raw({ type: "application/json" }), handlePaymongoWebhook);
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
@@ -67,6 +73,7 @@ app.use("/", cartRoutes);
 app.use("/", skuRoutes);
 app.use("/", reviewRoutes);
 app.use("/", categoryBrandRoutes);
+app.use("/", paymentRoutes);
 // ─── Init & background jobs ───────────────────────────────────────────────────
 initializeSequenceCounter();
 seedCategoryBrand();

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import './PlaceOrder.css';
 import CartTotal from '../CartTotal/CartTotal';
 import { ShopContext } from '../../Context/ShopContext';
-import API_BASE_URL from '../../services/api';
+import API_BASE_URL, { createCheckoutSession } from '../../services/api';
 import { getShippingFee, getShippingTier, getCodFee } from '../../services/shippingFee';
 
 const NCR_REGION_CODE = '1300000000';
@@ -223,17 +223,41 @@ const ShippingBanner = ({ regionCode, subtotal }) => {
   );
 };
 
+// ─── Payment Cancelled Banner ───────────────────────────────────────────────────
+// Shown when PayMongo's hosted checkout redirects back here via cancel_url.
+const PaymentCancelledBanner = ({ orderNumber, onRetry, retrying }) => (
+  <div className="cod-fee-notice content-fade-in" style={{ marginBottom: '24px' }}>
+    <span className="cod-fee-icon">⚠</span>
+    <span>
+      Payment for order <strong>{orderNumber}</strong> was cancelled. Your items are held —{' '}
+      <button
+        type="button"
+        onClick={onRetry}
+        disabled={retrying}
+        style={{ background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer', color: 'inherit', font: 'inherit', padding: 0 }}
+      >
+        {retrying ? 'Starting payment...' : 'retry payment'}
+      </button>
+      {' '}or place a new order to try again.
+    </span>
+  </div>
+);
+
 // ─── PlaceOrder ───────────────────────────────────────────────────────────────
 const PlaceOrder = () => {
-  const [method, setMethod] = useState('card');
+  const [method, setMethod] = useState('online');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { cartItems, all_product, clearCart } = useContext(ShopContext);
 
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', street: '',
     region: '', province: '', cityOrMunicipality: '', barangay: '',
-    phone: '', cardName: '', cardNumber: '', expiry: '', cvv: '',
+    phone: '',
   });
+
+  const cancelledOrderNumber = searchParams.get('paymentStatus') === 'cancelled' ? searchParams.get('orderNumber') : null;
+  const [retryingPayment, setRetryingPayment] = useState(false);
 
   const [errors, setErrors] = useState({});
   const [saveAddress, setSaveAddress] = useState(false);
@@ -612,8 +636,9 @@ const PlaceOrder = () => {
     finally { setDeletingIndex(null); }
   };
 
-  const handlePlaceOrder = async (e) => {
-    e.preventDefault();
+  const pointsDeduction = pointsUsed * 0.5;
+
+  const buildOrderPayload = () => {
     const orderItems = Object.entries(cartItems).map(([key, quantity]) => {
       const [id, size] = key.split('_');
       const product = all_product.find((p) => p.id === Number(id));
@@ -633,51 +658,97 @@ const PlaceOrder = () => {
       barangay: { code: formData.barangay, name: findName(barangays, formData.barangay) },
     };
 
+    return {
+      orderItems,
+      deliveryInfo,
+      payload: {
+        items: orderItems,
+        deliveryInfo,
+        paymentMethod: method,
+        voucherCode: appliedVoucher?.code || null,
+        pointsUsed: pointsUsed > 0 ? pointsUsed : null,
+        shippingFee,
+        codFee,
+      },
+    };
+  };
+
+  // Redirects the browser to PayMongo's hosted checkout page for the given order.
+  const startPayMongoCheckout = async (orderNumber) => {
+    const authToken = localStorage.getItem('auth-token');
+    const sessionData = await createCheckoutSession(authToken, orderNumber);
+    if (sessionData.success && sessionData.checkoutUrl) {
+      window.location.href = sessionData.checkoutUrl;
+    } else {
+      alert(sessionData.error || 'Order placed, but payment could not be started. Please retry from your order history.');
+    }
+  };
+
+  const submitOrder = async (payload, orderItems, paymentMethod) => {
     const authToken = localStorage.getItem('auth-token');
     try {
-      if (saveAddress && authToken) {
-        try {
-          await fetch(`${API_BASE_URL}/saveaddress`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'auth-token': authToken },
-            body: JSON.stringify({ address: deliveryInfo }),
-          });
-        } catch (err) { console.error('Failed to save address:', err); }
-      }
-
       const res = await fetch(`${API_BASE_URL}/placeorder`, {
         method: 'POST',
         headers: { 'auth-token': authToken || '', 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: orderItems,
-          deliveryInfo,
-          paymentMethod: method,
-          voucherCode: appliedVoucher?.code || null,
-          pointsUsed: pointsUsed > 0 ? pointsUsed : null,
-          shippingFee,
-          codFee,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (data.success) {
-        clearCart();
-        navigate('/orders', {
-          state: {
-            orderNumber: data.orderNumber,
-            purchasedItems: orderItems,
-            discountAmount: appliedVoucher?.discountAmount || 0,
-            discountPercent: appliedVoucher?.discountPercent || 0,
-            voucherCode: appliedVoucher?.code || null,
-            shippingFee,
-            shippingTierLabel: shippingTier?.label || '',
-            codFee,
-            paymentMethod: method,
-          }
-        });
-      } else {
+      if (!data.success) {
         alert(data.error);
+        return;
       }
-    } catch (err) { alert('Checkout failed.'); }
+
+      clearCart();
+
+      if (paymentMethod === 'online') {
+        await startPayMongoCheckout(data.orderNumber);
+        return;
+      }
+
+      navigate('/orders', {
+        state: {
+          orderNumber: data.orderNumber,
+          purchasedItems: orderItems,
+          discountAmount: (appliedVoucher?.discountAmount || 0) + pointsDeduction,
+          discountPercent: appliedVoucher?.discountPercent || 0,
+          voucherCode: appliedVoucher?.code || null,
+          shippingFee,
+          shippingTierLabel: shippingTier?.label || '',
+          codFee,
+          paymentMethod,
+        },
+      });
+    } catch {
+      alert('Checkout failed.');
+    }
+  };
+
+  const handlePlaceOrder = async (e) => {
+    e.preventDefault();
+    const { orderItems, deliveryInfo, payload } = buildOrderPayload();
+    const authToken = localStorage.getItem('auth-token');
+
+    if (saveAddress && authToken) {
+      try {
+        await fetch(`${API_BASE_URL}/saveaddress`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'auth-token': authToken },
+          body: JSON.stringify({ address: deliveryInfo }),
+        });
+      } catch (err) { console.error('Failed to save address:', err); }
+    }
+
+    await submitOrder(payload, orderItems, method);
+  };
+
+  const handleRetryPayment = async () => {
+    if (!cancelledOrderNumber || retryingPayment) return;
+    setRetryingPayment(true);
+    try {
+      await startPayMongoCheckout(cancelledOrderNumber);
+    } finally {
+      setRetryingPayment(false);
+    }
   };
 
   return (
@@ -688,6 +759,14 @@ const PlaceOrder = () => {
             <h1 className="checkout-title">SECURE CHECKOUT</h1>
             <p className="checkout-subtitle">Identity & Payment Verification</p>
           </header>
+
+          {cancelledOrderNumber && (
+            <PaymentCancelledBanner
+              orderNumber={cancelledOrderNumber}
+              onRetry={handleRetryPayment}
+              retrying={retryingPayment}
+            />
+          )}
 
           <form onSubmit={handlePlaceOrder}>
             <section className="terminal-section">
@@ -863,10 +942,13 @@ const PlaceOrder = () => {
                 <h3>Payment Method</h3>
               </div>
               <div className="innovative-payment-grid">
-                {['card', 'gcash', 'cash on delivery'].map((m) => (
-                  <label key={m} className={`payment-pill ${method === m ? 'active' : ''}`}>
-                    <input type="radio" value={m} checked={method === m} onChange={() => setMethod(m)} />
-                    <span className="pill-text">{m === 'cod' ? 'C.O.D' : m.toUpperCase()}</span>
+                {[
+                  { value: 'online', label: 'CARD / GCASH / MAYA' },
+                  { value: 'cash on delivery', label: 'C.O.D' },
+                ].map((m) => (
+                  <label key={m.value} className={`payment-pill ${method === m.value ? 'active' : ''}`}>
+                    <input type="radio" value={m.value} checked={method === m.value} onChange={() => setMethod(m.value)} />
+                    <span className="pill-text">{m.label}</span>
                   </label>
                 ))}
               </div>
@@ -879,10 +961,10 @@ const PlaceOrder = () => {
                   </span>
                 </div>
               )}
-              {method === 'card' && (
-                <div className="card-console content-fade-in">
-                  <div className="field-group"><label>Card Name</label><input name="cardName" placeholder="NAME ON CARD" onChange={handleInputChange} /></div>
-                  <div className="field-group"><label>Card Number</label><input name="cardNumber" maxLength="16" placeholder="0000 0000 0000 0000" onChange={handleInputChange} /></div>
+              {method === 'online' && (
+                <div className="cod-fee-notice content-fade-in">
+                  <span className="cod-fee-icon">🔒</span>
+                  <span>You'll be redirected to PayMongo's secure checkout to pay by Card, GCash, or Maya.</span>
                 </div>
               )}
             </section>

@@ -85,6 +85,16 @@ const orderSchema = new mongoose.Schema(
     paymentMethod: { type: String, required: true },
     orderNumber:   { type: String, required: true, unique: true, index: true },
 
+    // ── PayMongo payment tracking ─────────────────────────────────────────────
+    paymentStatus: {
+      type: String,
+      default: "unpaid",
+      enum: ["unpaid", "awaiting_payment", "paid", "failed"],
+    },
+    checkoutSessionId: { type: String, default: null },
+    paymentIntentId:   { type: String, default: null },
+    paidAt:             { type: Date, default: null },
+
     status: {
       type: String,
       default: "pending",

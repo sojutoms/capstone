@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "finals",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "finals", "start"],
+      "port": 3000
+    }
+  ]
+}

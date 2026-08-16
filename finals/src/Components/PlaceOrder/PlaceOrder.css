@@ -532,3 +532,364 @@
   font-size: 13px;
   color: var(--text-secondary);
 }
+
+/* ── GCash Modal ─────────────────────────────────────────────────────────── */
+.gcash-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: gcashFadeIn 0.3s ease both;
+}
+
+@keyframes gcashFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.gcash-modal {
+  position: relative;
+  background: linear-gradient(160deg, #0d1117 0%, #111827 100%);
+  border: 1px solid rgba(0, 125, 252, 0.35);
+  border-radius: 24px;
+  padding: 36px 32px 32px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 0 60px rgba(0, 125, 252, 0.18), 0 24px 48px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  animation: gcashSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes gcashSlideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.gcash-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.6);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.gcash-close-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* ── Header ── */
+.gcash-modal-header {
+  text-align: center;
+}
+
+.gcash-logo-badge {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, #007DFC, #00C2FF);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 900;
+  color: #fff;
+  font-family: var(--font-display, 'Bebas Neue', sans-serif);
+  margin: 0 auto 12px;
+  box-shadow: 0 0 24px rgba(0, 125, 252, 0.45);
+}
+
+.gcash-title {
+  font-family: var(--font-display, 'Bebas Neue', sans-serif);
+  font-size: 26px;
+  color: #fff;
+  letter-spacing: 0.05em;
+  margin: 0 0 4px;
+}
+
+.gcash-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+/* ── Timer Ring ── */
+.gcash-timer-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.gcash-timer-svg {
+  filter: drop-shadow(0 0 10px rgba(0, 125, 252, 0.3));
+}
+
+/* ── QR + Timer side-by-side row ── */
+.gcash-qr-timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+}
+
+/* ── QR Code ── */
+.gcash-qr-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.gcash-qr-inner {
+  padding: 10px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 0 30px rgba(0, 125, 252, 0.25);
+  border: 3px solid rgba(0, 125, 252, 0.45);
+  overflow: hidden;
+}
+
+.gcash-qr-static-img {
+  display: block;
+  width: 170px;
+  height: 170px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+/* ── Merchant info ── */
+.gcash-merchant-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.gcash-merchant-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.gcash-merchant-name {
+  font-family: var(--font-display, 'Bebas Neue', sans-serif);
+  font-size: 18px;
+  color: #ffffff;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.gcash-merchant-via {
+  font-size: 10px;
+  color: rgba(0, 194, 255, 0.8);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* ── Amount pill ── */
+.gcash-amount-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(0, 125, 252, 0.18), rgba(0, 194, 255, 0.10));
+  border: 1px solid rgba(0, 125, 252, 0.4);
+  border-radius: 12px;
+  padding: 10px 24px;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.gcash-amount-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: rgba(0, 194, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.gcash-amount-value {
+  font-family: var(--font-display, 'Bebas Neue', sans-serif);
+  font-size: 26px;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.gcash-ref-text {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* ── Steps list ── */
+.gcash-steps {
+  width: 100%;
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: decimal;
+}
+
+.gcash-steps li {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.5;
+}
+
+.gcash-steps li strong {
+  color: #ffffff;
+  font-weight: 800;
+}
+
+/* ── Processing overlay ── */
+.gcash-modal--processing {
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  gap: 20px;
+}
+
+@keyframes gcashSpin {
+  to { transform: rotate(360deg); }
+}
+
+.gcash-processing-spinner {
+  width: 56px;
+  height: 56px;
+  border: 5px solid rgba(0, 125, 252, 0.2);
+  border-top-color: #007DFC;
+  border-radius: 50%;
+  animation: gcashSpin 0.9s linear infinite;
+}
+
+.gcash-processing-title {
+  font-family: var(--font-display, 'Bebas Neue', sans-serif);
+  font-size: 24px;
+  color: #fff;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.gcash-processing-msg {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: 0;
+  text-align: center;
+}
+
+.gcash-hint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+  text-align: center;
+  margin: 0;
+  letter-spacing: 0.03em;
+}
+
+/* ── Expired State ── */
+.gcash-expired-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  text-align: center;
+}
+
+.gcash-expired-icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.gcash-expired-title {
+  font-family: var(--font-display, 'Bebas Neue', sans-serif);
+  font-size: 24px;
+  color: #ff4d4d;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.gcash-expired-msg {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  max-width: 280px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.gcash-retry-btn {
+  background: linear-gradient(135deg, #007DFC, #00C2FF);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 13px 28px;
+  font-family: var(--font-display, 'Bebas Neue', sans-serif);
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 4px;
+}
+
+.gcash-retry-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 125, 252, 0.45);
+}
+
+.gcash-cancel-link {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.gcash-cancel-link:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .gcash-modal {
+    padding: 28px 20px 24px;
+  }
+  .gcash-qr-timer-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .gcash-qr-static-img {
+    width: 150px !important;
+    height: 150px !important;
+  }
+}

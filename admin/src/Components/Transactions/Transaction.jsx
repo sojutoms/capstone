@@ -101,6 +101,31 @@ const ConfirmModal = ({ open, title, message, onConfirm, onCancel, confirmLabel 
   );
 };
 
+// ─── Payment method badge ─────────────────────────────────────────────────────
+const PAYMENT_CONFIG = {
+  gcash:              { label: "GCash",            color: "#007DFC", bg: "rgba(0,125,252,0.12)", border: "rgba(0,125,252,0.35)", icon: "G" },
+  "cash on delivery": { label: "Cash on Delivery", color: "#f59e0b", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.35)", icon: "₱" },
+  cod:                { label: "Cash on Delivery", color: "#f59e0b", bg: "rgba(245,158,11,0.10)", border: "rgba(245,158,11,0.35)", icon: "₱" },
+  card:               { label: "Card",             color: "#a78bfa", bg: "rgba(167,139,250,0.10)", border: "rgba(167,139,250,0.35)", icon: "💳" },
+};
+
+const PaymentMethodBadge = ({ method }) => {
+  if (!method) return <span style={{ color: "var(--text-tertiary)" }}>—</span>;
+  const key = String(method).toLowerCase();
+  const cfg = PAYMENT_CONFIG[key] || { label: method.toUpperCase(), color: "#aaa", bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.2)", icon: "?" };
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 6,
+      background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color,
+      borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 800,
+      letterSpacing: "0.05em", textTransform: "uppercase",
+    }}>
+      <span style={{ fontSize: 13, fontWeight: 900, fontFamily: "'Bebas Neue', sans-serif", lineHeight: 1 }}>{cfg.icon}</span>
+      {cfg.label}
+    </span>
+  );
+};
+
 // ─── ProcessedBy badge ────────────────────────────────────────────────────────
 const ProcessedByBadge = ({ processedBy }) => {
   if (!processedBy || !processedBy.email) return null;
@@ -688,6 +713,7 @@ const Transactions = () => {
                     <div className="transaction-summary-left">
                       <div className="transaction-number">#{order.orderNumber}</div>
                       <div className="transaction-buyer">{order.buyer?.name || order.userId || "GUEST"}</div>
+                      <div style={{ marginTop: 4 }}><PaymentMethodBadge method={order.paymentMethod} /></div>
                     </div>
                     <div className="transaction-summary-right">
                       <div className="transaction-total">₱{Number(order.total || 0).toLocaleString()}</div>
@@ -733,7 +759,7 @@ const Transactions = () => {
                 <div><strong>UPDATED</strong> {new Date(selectedOrder.updatedAt || selectedOrder.timestamp).toLocaleString()}</div>
                 <div><strong>CUSTOMER</strong> {selectedOrder.buyer?.name || "—"} ({selectedOrder.buyer?.email || "—"})</div>
                 <div><strong>PHONE</strong> {selectedOrder.buyer?.phone || selectedOrder.deliveryInfo?.phone || "—"}</div>
-                <div><strong>PAYMENT</strong> {selectedOrder.paymentMethod || "—"}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><strong>PAYMENT</strong> <PaymentMethodBadge method={selectedOrder.paymentMethod} /></div>
                 <div><strong>ADDRESS</strong> {buildFullAddress(selectedOrder.deliveryInfo)}</div>
                 {selectedOrder.processedBy?.email && (
                   <div style={{ marginTop: 12 }}>

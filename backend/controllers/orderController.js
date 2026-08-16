@@ -173,6 +173,28 @@ const getOrderHistory = async (req, res) => {
   }
 };
 
+// ─── GET /order/:orderNumber ───────────────────────────────────────────────────
+// Owner-scoped lookup used by the post-checkout receipt page (including the
+// redirect back from a PayMongo hosted checkout session, which lands on a
+// fresh page load with no React Router state).
+const getOrderByNumber = async (req, res) => {
+  try {
+    const { orderNumber } = req.params;
+    const userId = req.user && req.user.id;
+    if (!userId) return res.status(401).json({ success: false, error: "Unauthorized" });
+
+    const order = await Orders.findOne({ orderNumber }).lean();
+    if (!order) return res.status(404).json({ success: false, error: "Order not found" });
+    if (String(order.userId || "") !== String(userId))
+      return res.status(403).json({ success: false, error: "Not allowed to view this order" });
+
+    return res.json({ success: true, order: { ...order, displayStatus: deriveDisplayStatus(order) } });
+  } catch (err) {
+    console.error("getOrderByNumber error:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
 // ─── ADMIN: GET /admin/orders ─────────────────────────────────────────────────
 const adminGetOrders = async (req, res) => {
   try {
@@ -1157,6 +1179,7 @@ const autoCompleteDeliveredOrders = async () => {
 
 module.exports = {
   getOrderHistory,
+  getOrderByNumber,
   cancelOrder,
   confirmOrderReceived,
   requestReturn,

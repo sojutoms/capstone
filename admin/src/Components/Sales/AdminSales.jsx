@@ -73,6 +73,7 @@ const AdminSales = () => {
   const [logsError, setLogsError] = useState(null);
   const [search, setSearch] = useState("");
   const [filterVoucher, setFilterVoucher] = useState("all");
+  const [filterPayment, setFilterPayment] = useState("all");
   const [sortKey, setSortKey] = useState("soldAt");
   const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(1);
@@ -144,10 +145,16 @@ const AdminSales = () => {
   const filtered = logs
     .filter((r) => {
       if (channelTab !== "all" && getChannel(r) !== channelTab) return false;
-      if (search && ![r.product, r.buyer, r.soldBy, r.orderId, r.brand, r.category]
+      if (search && ![r.product, r.buyer, r.soldBy, r.orderId, r.brand, r.category, r.payment]
         .filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase())) return false;
       if (filterVoucher === "with" && !(r.voucherCode || r.voucher)) return false;
       if (filterVoucher === "without" && (r.voucherCode || r.voucher)) return false;
+      if (filterPayment !== "all") {
+        const pm = String(r.payment || "").toLowerCase();
+        if (filterPayment === "gcash" && pm !== "gcash") return false;
+        if (filterPayment === "cod" && pm !== "cash on delivery" && pm !== "cod") return false;
+        if (filterPayment === "card" && pm !== "card") return false;
+      }
       return true;
     })
     .sort((a, b) => {
@@ -172,6 +179,16 @@ const AdminSales = () => {
     acc[ch] = (acc[ch] || 0) + 1;
     return acc;
   }, {});
+
+  const paymentBreakdown = filtered.reduce((acc, r) => {
+    const pm = String(r.payment || "other").toLowerCase();
+    const key = pm === "cash on delivery" || pm === "cod" ? "cod" : pm === "gcash" ? "gcash" : pm === "card" ? "card" : "other";
+    acc[key] = (acc[key] || 0) + (Number(r.total) || 0);
+    return acc;
+  }, {});
+  const gcashRevenue = paymentBreakdown.gcash || 0;
+  const codRevenue = paymentBreakdown.cod || 0;
+  const cardRevenue = paymentBreakdown.card || 0;
 
   const topBrand = brandPerformance[0] || null;
 
@@ -246,6 +263,26 @@ const AdminSales = () => {
             </div>
             <div className="stat-subtext">
               {topBrand ? `${fmt(topBrand.salesTotal)} Revenue` : "No data"}
+            </div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ borderColor: "rgba(0,125,252,0.3)" }}>💳</div>
+          <div className="stat-content">
+            <div className="stat-label">Payment Mix</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700 }}>
+                <span style={{ color: "#007DFC" }}>GCash</span>
+                <span style={{ color: "#ffffff" }}>{fmtFull(gcashRevenue)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700 }}>
+                <span style={{ color: "#f59e0b" }}>COD</span>
+                <span style={{ color: "#ffffff" }}>{fmtFull(codRevenue)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700 }}>
+                <span style={{ color: "#a78bfa" }}>Card</span>
+                <span style={{ color: "#ffffff" }}>{fmtFull(cardRevenue)}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -324,6 +361,16 @@ const AdminSales = () => {
                     onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                   />
                 </div>
+                <select
+                  value={filterPayment}
+                  onChange={(e) => { setFilterPayment(e.target.value); setPage(1); }}
+                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer" }}
+                >
+                  <option value="all">All Payments</option>
+                  <option value="gcash">GCash</option>
+                  <option value="cod">Cash on Delivery</option>
+                  <option value="card">Card</option>
+                </select>
                 <button className="action-btn-luxe" onClick={exportCSV}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
                   Export
@@ -372,6 +419,7 @@ const AdminSales = () => {
                       <th style={{ minWidth: "200px" }}>Product Details</th>
                       <th style={{ width: "110px", textAlign: "right" }}>Total</th>
                       <th style={{ width: "150px" }}>{getWhoHeader(channelTab)}</th>
+                      <th style={{ width: "110px", textAlign: "center" }}>Payment</th>
                       <th style={{ width: "90px", textAlign: "center" }}>Status</th>
                     </tr>
                   </thead>
@@ -399,6 +447,23 @@ const AdminSales = () => {
                                 {who.tag && <span className="badge badge-staff" style={{ fontSize: "8px", padding: "2px 6px" }}>{who.tag}</span>}
                               </div>
                             ) : <span style={{ fontWeight: 500 }}>{who}</span>}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            {(() => {
+                              const pm = String(row.payment || "").toLowerCase();
+                              const isGCash = pm === "gcash";
+                              const isCod = pm === "cash on delivery" || pm === "cod";
+                              const isCard = pm === "card";
+                              const color = isGCash ? "#007DFC" : isCod ? "#f59e0b" : isCard ? "#a78bfa" : "#aaa";
+                              const bg = isGCash ? "rgba(0,125,252,0.12)" : isCod ? "rgba(245,158,11,0.10)" : isCard ? "rgba(167,139,250,0.10)" : "rgba(255,255,255,0.05)";
+                              const border = isGCash ? "rgba(0,125,252,0.35)" : isCod ? "rgba(245,158,11,0.35)" : isCard ? "rgba(167,139,250,0.35)" : "rgba(255,255,255,0.2)";
+                              const label = isGCash ? "GCash" : isCod ? "COD" : isCard ? "Card" : (row.payment || "—");
+                              return (
+                                <span style={{ display: "inline-block", background: bg, border: `1px solid ${border}`, color, borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                                  {label}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td style={{ textAlign: "center" }}>
                             <span className={`badge badge-${ch}`}>
