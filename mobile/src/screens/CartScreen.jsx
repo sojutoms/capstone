@@ -13,6 +13,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
+import { colors, fonts, radius, typography } from "../theme";
 
 export default function CartScreen({ navigation }) {
   const { cart, addToCart, decreaseQuantity, removeFromCart, refreshCart } = useCart();
@@ -49,10 +50,10 @@ export default function CartScreen({ navigation }) {
       <ScrollView
         contentContainerStyle={styles.emptyContainer}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
         }
       >
-        <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
+        <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
         <Text style={styles.emptyIcon}>🛒</Text>
         <Text style={styles.emptyTitle}>YOUR CART IS EMPTY</Text>
         <Text style={styles.emptySubtitle}>
@@ -70,7 +71,7 @@ export default function CartScreen({ navigation }) {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
 
       {/* ── HEADER ── */}
       <View style={styles.header}>
@@ -85,7 +86,7 @@ export default function CartScreen({ navigation }) {
         keyExtractor={(item) => `${item.id}_${item.selectedSize}`}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
         }
         renderItem={({ item, index }) => {
           const sizeData = item?.sizes?.[item.selectedSize];
@@ -158,7 +159,7 @@ export default function CartScreen({ navigation }) {
                       <Text
                         style={[
                           styles.qtyBtnText,
-                          item.quantity >= availableStock && { color: "#444" },
+                          item.quantity >= availableStock && { color: colors.textMuted },
                         ]}
                       >
                         +
@@ -220,14 +221,14 @@ export default function CartScreen({ navigation }) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0a0a0a",
+    backgroundColor: colors.bgPrimary,
   },
 
   // ── EMPTY STATE ──
   emptyContainer: {
     flex: 1,
     flexGrow: 1,
-    backgroundColor: "#0a0a0a",
+    backgroundColor: colors.bgPrimary,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,
@@ -237,32 +238,32 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "900",
-    letterSpacing: 3,
+    color: colors.textPrimary,
+    fontSize: 22,
+    fontFamily: fonts.display,
+    letterSpacing: 2,
     marginBottom: 10,
     textAlign: "center",
   },
   emptySubtitle: {
-    color: "#666",
+    color: colors.textMuted,
     fontSize: 14,
+    fontFamily: fonts.bodyRegular,
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 36,
   },
   shopBtn: {
     borderWidth: 1,
-    borderColor: "#fff",
+    borderColor: colors.textPrimary,
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 2,
+    borderRadius: radius.sm,
   },
   shopBtnText: {
-    color: "#fff",
-    fontWeight: "800",
+    ...typography.button,
+    color: colors.textPrimary,
     fontSize: 13,
-    letterSpacing: 2,
   },
 
   // ── HEADER ──
@@ -274,16 +275,16 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "space-between",
     borderBottomWidth: 1,
-    borderBottomColor: "#1e1e1e",
+    borderBottomColor: colors.borderSubtle,
   },
   headerLabel: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "900",
-    letterSpacing: 3,
+    color: colors.textPrimary,
+    fontSize: 26,
+    fontFamily: fonts.display,
+    letterSpacing: 1.5,
   },
   headerCount: {
-    color: "#666",
+    color: colors.textMuted,
     fontSize: 12,
     letterSpacing: 1,
     marginBottom: 2,
@@ -296,15 +297,15 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: colors.borderSubtle,
     marginVertical: 4,
   },
 
   // ── CARD ──
   card: {
     flexDirection: "row",
-    backgroundColor: "#111",
-    borderRadius: 4,
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.md,
     padding: 14,
     gap: 14,
   },
@@ -312,9 +313,9 @@ const styles = StyleSheet.create({
     position: "relative",
     width: 90,
     height: 90,
-    borderRadius: 4,
+    borderRadius: radius.sm,
     overflow: "hidden",
-    backgroundColor: "#1a1a1a",
+    backgroundColor: colors.bgTertiary,
   },
   image: {
     width: "100%",
@@ -328,7 +329,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   outOfStockOverlayText: {
-    color: "#fff",
+    color: colors.textPrimary,
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1,
@@ -343,44 +344,44 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   productName: {
-    color: "#fff",
-    fontWeight: "800",
+    color: colors.textPrimary,
+    fontFamily: fonts.bodyBold,
     fontSize: 14,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     marginBottom: 6,
   },
   sizeBadge: {
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: colors.borderLight,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 2,
+    borderRadius: radius.sm,
   },
   sizeText: {
-    color: "#888",
+    color: colors.textSecondary,
     fontSize: 10,
-    fontWeight: "700",
+    fontFamily: fonts.bodyBold,
     letterSpacing: 1,
   },
   priceText: {
-    color: "#fff",
+    color: colors.accentGold,
     fontWeight: "900",
     fontSize: 15,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   lowStockText: {
-    color: "#ff4444",
+    color: colors.danger,
     fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 0.3,
     marginBottom: 8,
   },
   outOfStockText: {
-    color: "#ff4444",
+    color: colors.danger,
     fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.5,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 0.3,
     marginBottom: 8,
   },
   cardBottom: {
@@ -394,8 +395,8 @@ const styles = StyleSheet.create({
   qtyRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1a1a1a",
-    borderRadius: 4,
+    backgroundColor: colors.bgTertiary,
+    borderRadius: radius.sm,
     overflow: "hidden",
   },
   qtyBtn: {
@@ -408,12 +409,12 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   qtyBtnText: {
-    color: "#fff",
+    color: colors.textPrimary,
     fontSize: 16,
     fontWeight: "600",
   },
   qtyValue: {
-    color: "#fff",
+    color: colors.textPrimary,
     fontSize: 14,
     fontWeight: "800",
     minWidth: 28,
@@ -423,15 +424,15 @@ const styles = StyleSheet.create({
   // ── REMOVE ──
   removeBtn: {
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: colors.borderLight,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 2,
+    borderRadius: radius.sm,
   },
   removeBtnText: {
-    color: "#888",
+    color: colors.textSecondary,
     fontSize: 10,
-    fontWeight: "800",
+    fontFamily: fonts.bodyBold,
     letterSpacing: 1.5,
   },
 
@@ -441,16 +442,16 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#111",
+    backgroundColor: colors.bgCard,
     padding: 20,
     paddingBottom: 28,
     borderTopWidth: 1,
-    borderTopColor: "#1e1e1e",
+    borderTopColor: colors.borderSubtle,
   },
   summaryTitle: {
-    color: "#444",
+    color: colors.textMuted,
     fontSize: 10,
-    fontWeight: "800",
+    fontFamily: fonts.bodyBold,
     letterSpacing: 2.5,
     marginBottom: 14,
   },
@@ -461,52 +462,52 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   summaryLabel: {
-    color: "#888",
+    color: colors.textSecondary,
     fontSize: 13,
     letterSpacing: 0.5,
   },
   summaryValue: {
-    color: "#ccc",
+    color: colors.textSecondary,
     fontSize: 13,
-    fontWeight: "700",
+    fontFamily: fonts.bodyBold,
   },
   freeBadge: {
-    backgroundColor: "#1a1a1a",
+    backgroundColor: colors.bgTertiary,
     borderWidth: 1,
-    borderColor: "#2a2a2a",
+    borderColor: colors.borderLight,
     paddingHorizontal: 10,
     paddingVertical: 3,
-    borderRadius: 2,
+    borderRadius: radius.sm,
   },
   freeBadgeText: {
-    color: "#4caf50",
+    color: colors.success,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
   divider: {
     height: 1,
-    backgroundColor: "#1e1e1e",
+    backgroundColor: colors.borderSubtle,
     marginVertical: 12,
   },
   totalLabel: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "900",
-    letterSpacing: 2,
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontFamily: fonts.display,
+    letterSpacing: 1,
   },
   totalValue: {
-    color: "#fff",
+    color: colors.accentGold,
     fontSize: 18,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
 
   // ── CHECKOUT ──
   checkoutBtn: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.textPrimary,
     paddingVertical: 16,
-    borderRadius: 2,
+    borderRadius: radius.sm,
     marginTop: 16,
     flexDirection: "row",
     justifyContent: "center",
@@ -514,13 +515,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   checkoutText: {
-    color: "#0a0a0a",
-    fontWeight: "900",
+    ...typography.button,
+    color: colors.textInverse,
     fontSize: 13,
-    letterSpacing: 2.5,
   },
   checkoutArrow: {
-    color: "#0a0a0a",
+    color: colors.textInverse,
     fontWeight: "900",
     fontSize: 15,
   },

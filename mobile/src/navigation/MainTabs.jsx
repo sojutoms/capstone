@@ -19,6 +19,7 @@ import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../context/AuthContext";
 import ShopStack from "./ShopStack";
+import { colors, fonts } from "../theme";
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get("window");
@@ -28,7 +29,7 @@ const { width } = Dimensions.get("window");
 ══════════════════════════════════════ */
 
 const HomeIcon = ({ on }) => {
-  const c = on ? "#FFF" : "#484848";
+  const c = on ? colors.accentGold : "#484848";
   return (
     <View style={styles.icon}>
       <View style={[styles.homeBase, { borderColor: c }]} />
@@ -40,7 +41,7 @@ const HomeIcon = ({ on }) => {
 };
 
 const ShopIcon = ({ on }) => {
-  const c = on ? "#FFF" : "#484848";
+  const c = on ? colors.accentGold : "#484848";
   return (
     <View style={styles.icon}>
       <View style={[styles.bagHandle, { borderColor: c }]} />
@@ -50,13 +51,13 @@ const ShopIcon = ({ on }) => {
 };
 
 const CameraIcon = ({ on }) => {
-  const c = on ? "#FFF" : "#888";
+  const c = on ? colors.accentGold : "#888";
   return (
     <View style={styles.cameraWrap}>
       <View style={[styles.cameraTop, { borderColor: c }]} />
       <View style={[styles.cameraBody, { borderColor: c }]}>
         <View style={[styles.lensOuter, { borderColor: c }]}>
-          <View style={[styles.lensInner, { backgroundColor: on ? "#FFF" : "#888" }]} />
+          <View style={[styles.lensInner, { backgroundColor: c }]} />
         </View>
       </View>
     </View>
@@ -64,7 +65,7 @@ const CameraIcon = ({ on }) => {
 };
 
 const CartIcon = ({ on }) => {
-  const c = on ? "#FFF" : "#484848";
+  const c = on ? colors.accentGold : "#484848";
   return (
     <View style={styles.icon}>
       <View style={[styles.cartBasket, { borderColor: c }]} />
@@ -74,7 +75,7 @@ const CartIcon = ({ on }) => {
 };
 
 const PersonIcon = ({ on }) => {
-  const c = on ? "#FFF" : "#484848";
+  const c = on ? colors.accentGold : "#484848";
   return (
     <View style={styles.icon}>
       <View style={[styles.personHead, { borderColor: c }]} />
@@ -200,7 +201,7 @@ function ElegantTabBar({ state, navigation }) {
                   {
                     color: ops[i].interpolate({
                       inputRange: [0, 1],
-                      outputRange: ["#383838", "#FFFFFF"],
+                      outputRange: ["#383838", colors.accentGold],
                     }),
                   },
                 ]}>
@@ -240,7 +241,7 @@ export default function MainTabs() {
 const styles = StyleSheet.create({
   bar: {
     height: Platform.OS === "ios" ? 82 : 64,
-    backgroundColor: "#0A0A0A",
+    backgroundColor: colors.bgPrimary,
     flexDirection: "row",
     alignItems: "flex-end",
     paddingBottom: Platform.OS === "ios" ? 22 : 8,
@@ -249,14 +250,17 @@ const styles = StyleSheet.create({
   tabCenter: { overflow: "visible" },
   tabInner: { alignItems: "center", gap: 5 },
   tabInnerCenter: { marginBottom: 14 },
-  label: { fontSize: 7, fontWeight: "600", letterSpacing: 1.4 },
+  // Matches web's .nav-link: Bebas Neue, uppercase, ~0.12em tracking.
+  label: { fontFamily: fonts.display, fontSize: 9, letterSpacing: 1 },
 
+  // Web's active-tab indicator is a 20px gold underline; this mirrors that
+  // at bottom-nav scale (a small centered gold dot per tab).
   dot: {
     position: "absolute",
     top: 0,
     width: 4,
     height: 2,
-    backgroundColor: "#FFF",
+    backgroundColor: colors.accentGold,
   },
 
   topLine: {
@@ -264,7 +268,7 @@ const styles = StyleSheet.create({
     top: 0,
     height: 1,
     width: "100%",
-    backgroundColor: "#1C1C1C",
+    backgroundColor: colors.bgTertiary,
   },
 
   iconWrap: { width: 20, height: 18 },

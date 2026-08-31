@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -14,10 +14,12 @@ import {
   ActivityIndicator,
   Modal,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
+import { colors, fonts, radius, typography } from "../theme";
 
 const BASE_URL =
   Platform.OS === "web"
@@ -59,11 +61,41 @@ function Section({ title, children }) {
 export default function ProfileScreen({ navigation }) {
   const { logout, userToken, userProfile: user, refreshUserProfile } = useAuth();
   const { refreshCart } = useCart();
-  const { refreshFavorites } = useFavorites();
+  const { favorites, refreshFavorites } = useFavorites();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState(false);
+  const [orderCount, setOrderCount] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
+
+  // limit=1 — this only needs the `total` count, not the actual order list.
+  const fetchOrderCount = async () => {
+    if (!userToken) return;
+    try {
+      const res  = await fetch(`${BASE_URL}/orderhistory?page=1&limit=1&status=all`, {
+        headers: { "auth-token": userToken },
+      });
+      const data = await res.json();
+      if (data.success) setOrderCount(data.total ?? (data.orders || []).length);
+    } catch {}
+  };
+
+  const fetchReviewCount = async () => {
+    if (!userToken) return;
+    try {
+      const res  = await fetch(`${BASE_URL}/myreviews`, { headers: { "auth-token": userToken } });
+      const data = await res.json();
+      if (data.success) setReviewCount((data.reviews || []).length);
+    } catch {}
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrderCount();
+      fetchReviewCount();
+    }, [userToken])
+  );
 
   const handleAvatarLongPress = () => {
     if (user?.photoURL) setViewingPhoto(true);
@@ -71,7 +103,7 @@ export default function ProfileScreen({ navigation }) {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refreshUserProfile(), refreshCart(), refreshFavorites()]);
+    await Promise.all([refreshUserProfile(), refreshCart(), refreshFavorites(), fetchOrderCount(), fetchReviewCount()]);
     setRefreshing(false);
   };
 
@@ -169,19 +201,19 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const stats = [
-    { label: "ORDERS", value: "12" },
-    { label: "SAVED", value: "34" },
-    { label: "REVIEWS", value: "5" },
+    { label: "ORDERS", value: String(orderCount), onPress: () => navigation.navigate("OrderHistory") },
+    { label: "SAVED", value: String(favorites.length), onPress: () => navigation.navigate("Favorites") },
+    { label: "REVIEWS", value: String(reviewCount), onPress: () => navigation.navigate("MyReviews") },
   ];
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
         }
       >
         <View style={styles.heroSection}>
@@ -196,7 +228,7 @@ export default function ProfileScreen({ navigation }) {
           >
             <View style={styles.avatarInner}>
               {uploadingPhoto ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={colors.accentGold} />
               ) : user?.photoURL ? (
                 <Image source={{ uri: user.photoURL }} style={styles.avatarImage} />
               ) : (
@@ -230,21 +262,27 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
 
           <View style={styles.statsRow}>
-            {stats.map((s, i) => (
-              <React.Fragment key={s.label}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{s.value}</Text>
-                  <Text style={styles.statLabel}>{s.label}</Text>
-                </View>
-                {i < stats.length - 1 && <View style={styles.statDivider} />}
-              </React.Fragment>
-            ))}
+            {stats.map((s, i) => {
+              const StatWrapper = s.onPress ? TouchableOpacity : View;
+              return (
+                <React.Fragment key={s.label}>
+                  <StatWrapper
+                    style={styles.statItem}
+                    {...(s.onPress ? { onPress: s.onPress, activeOpacity: 0.6 } : {})}
+                  >
+                    <Text style={styles.statValue}>{s.value}</Text>
+                    <Text style={styles.statLabel}>{s.label}</Text>
+                  </StatWrapper>
+                  {i < stats.length - 1 && <View style={styles.statDivider} />}
+                </React.Fragment>
+              );
+            })}
           </View>
         </View>
 
         <Section title="ACCOUNT">
           
-          <MenuItem icon="📦" label="My Orders" sublabel="Track, return or buy again" onPress={() => navigation.navigate("OrderHistory")} />
+         
           <View style={styles.itemDivider} />
           <MenuItem icon="🏠" label="Delivery Addresses" sublabel="Manage saved addresses" onPress={() => navigation.navigate("Addresses")} />
           <View style={styles.itemDivider} />
@@ -263,9 +301,9 @@ export default function ProfileScreen({ navigation }) {
               <Switch
                 value={notificationsEnabled}
                 onValueChange={setNotificationsEnabled}
-                trackColor={{ false: "#2a2a2a", true: "#fff" }}
-                thumbColor={notificationsEnabled ? "#0a0a0a" : "#888"}
-                ios_backgroundColor="#2a2a2a"
+                trackColor={{ false: colors.borderLight, true: colors.accentGold }}
+                thumbColor={notificationsEnabled ? colors.textPrimary : colors.textSecondary}
+                ios_backgroundColor={colors.borderLight}
               />
             }
           />
@@ -315,7 +353,7 @@ export default function ProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#0a0a0a" },
+  root: { flex: 1, backgroundColor: colors.bgPrimary },
   scroll: { paddingBottom: 40 },
   heroSection: {
     alignItems: "center",
@@ -323,14 +361,14 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#1a1a1a",
+    borderBottomColor: colors.borderSubtle,
     marginBottom: 10,
   },
-  heroEyebrow: { color: "#444", fontSize: 10, fontWeight: "900", letterSpacing: 3, marginBottom: 20 },
-  avatarRing: { width: 90, height: 90, borderRadius: 45, borderWidth: 1, borderColor: "#333", justifyContent: "center", alignItems: "center", marginBottom: 14, position: "relative" },
-  avatarInner: { width: 78, height: 78, borderRadius: 39, backgroundColor: "#1a1a1a", justifyContent: "center", alignItems: "center", overflow: "hidden" },
+  heroEyebrow: { color: colors.textMuted, fontSize: 10, fontWeight: "900", letterSpacing: 3, marginBottom: 20 },
+  avatarRing: { width: 90, height: 90, borderRadius: 45, borderWidth: 1, borderColor: colors.accentGold, justifyContent: "center", alignItems: "center", marginBottom: 14, position: "relative" },
+  avatarInner: { width: 78, height: 78, borderRadius: 39, backgroundColor: colors.bgTertiary, justifyContent: "center", alignItems: "center", overflow: "hidden" },
   avatarImage: { width: "100%", height: "100%" },
-  avatarInitial: { color: "#fff", fontSize: 30, fontWeight: "900" },
+  avatarInitial: { color: colors.textPrimary, fontSize: 30, fontFamily: fonts.display },
   avatarEditBadge: {
     position: "absolute",
     bottom: 0,
@@ -338,38 +376,38 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "#fff",
+    backgroundColor: colors.accentGold,
     borderWidth: 2,
-    borderColor: "#0a0a0a",
+    borderColor: colors.bgPrimary,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarEditBadgeText: { color: "#0a0a0a", fontSize: 12 },
-  heroName: { color: "#fff", fontSize: 22, fontWeight: "900", letterSpacing: 1, marginBottom: 4 },
+  avatarEditBadgeText: { color: colors.textInverse, fontSize: 12 },
+  heroName: { color: colors.textPrimary, fontSize: 24, fontFamily: fonts.display, letterSpacing: 1, marginBottom: 4 },
   heroInfoBlock: { alignItems: "center", marginBottom: 18 },
-  heroEmail: { color: "#555", fontSize: 13, letterSpacing: 0.3, marginBottom: 4 },
-  heroPlace: { color: "#777", fontSize: 12, marginBottom: 8 },
-  heroBio: { color: "#999", fontSize: 13, lineHeight: 19, textAlign: "center", paddingHorizontal: 24 },
-  editBtn: { borderWidth: 1, borderColor: "#333", paddingVertical: 8, paddingHorizontal: 24, borderRadius: 2, marginBottom: 28 },
-  editBtnText: { color: "#aaa", fontSize: 10, fontWeight: "900", letterSpacing: 2.5 },
-  statsRow: { flexDirection: "row", width: "100%", backgroundColor: "#111", borderRadius: 4, paddingVertical: 18, paddingHorizontal: 10 },
+  heroEmail: { color: colors.textMuted, fontSize: 13, letterSpacing: 0.3, marginBottom: 4 },
+  heroPlace: { color: colors.textSecondary, fontSize: 12, marginBottom: 8 },
+  heroBio: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, textAlign: "center", paddingHorizontal: 24 },
+  editBtn: { borderWidth: 1, borderColor: colors.borderLight, paddingVertical: 8, paddingHorizontal: 24, borderRadius: radius.sm, marginBottom: 28 },
+  editBtnText: { color: colors.textSecondary, fontSize: 10, fontWeight: "900", letterSpacing: 2.5 },
+  statsRow: { flexDirection: "row", width: "100%", backgroundColor: colors.bgCard, borderRadius: radius.md, paddingVertical: 18, paddingHorizontal: 10 },
   statItem: { flex: 1, alignItems: "center" },
-  statValue: { color: "#fff", fontSize: 22, fontWeight: "900", letterSpacing: 1 },
-  statLabel: { color: "#555", fontSize: 9, fontWeight: "800", letterSpacing: 2, marginTop: 3 },
-  statDivider: { width: 1, backgroundColor: "#222", marginVertical: 4 },
+  statValue: { color: colors.accentGold, fontSize: 22, fontWeight: "900", letterSpacing: 1 },
+  statLabel: { color: colors.textMuted, fontSize: 9, fontWeight: "800", letterSpacing: 2, marginTop: 3 },
+  statDivider: { width: 1, backgroundColor: colors.borderLight, marginVertical: 4 },
   section: { marginHorizontal: 16, marginTop: 20 },
-  sectionTitle: { color: "#444", fontSize: 9, fontWeight: "900", letterSpacing: 3, marginBottom: 10, marginLeft: 2 },
-  sectionCard: { backgroundColor: "#111", borderRadius: 4, overflow: "hidden" },
+  sectionTitle: { color: colors.textMuted, fontSize: 9, fontWeight: "900", letterSpacing: 3, marginBottom: 10, marginLeft: 2 },
+  sectionCard: { backgroundColor: colors.bgCard, borderRadius: radius.md, overflow: "hidden" },
   menuItem: { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16, gap: 14 },
-  menuIcon: { width: 36, height: 36, borderRadius: 4, backgroundColor: "#1a1a1a", justifyContent: "center", alignItems: "center" },
+  menuIcon: { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.bgTertiary, justifyContent: "center", alignItems: "center" },
   menuIconDanger: { backgroundColor: "#1a0a0a" },
   menuIconText: { fontSize: 16 },
-  menuLabel: { color: "#e0e0e0", fontSize: 14, fontWeight: "700", letterSpacing: 0.3 },
-  menuLabelDanger: { color: "#ff4444" },
-  menuSublabel: { color: "#555", fontSize: 11, marginTop: 2 },
-  menuArrow: { color: "#444", fontSize: 22, fontWeight: "300" },
-  itemDivider: { height: 1, backgroundColor: "#1a1a1a", marginLeft: 66 },
-  version: { color: "#2a2a2a", fontSize: 10, letterSpacing: 1, textAlign: "center", marginTop: 30 },
+  menuLabel: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.bodyBold, letterSpacing: 0.3 },
+  menuLabelDanger: { color: colors.danger },
+  menuSublabel: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
+  menuArrow: { color: colors.textMuted, fontSize: 22, fontWeight: "300" },
+  itemDivider: { height: 1, backgroundColor: colors.borderSubtle, marginLeft: 66 },
+  version: { color: colors.bgTertiary, fontSize: 10, letterSpacing: 1, textAlign: "center", marginTop: 30 },
 
   photoViewerOverlay: {
     flex: 1,
@@ -389,5 +427,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  photoViewerCloseText: { color: "#fff", fontSize: 18 },
+  photoViewerCloseText: { color: colors.textPrimary, fontSize: 18 },
 });

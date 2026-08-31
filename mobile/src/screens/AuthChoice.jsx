@@ -11,6 +11,7 @@ import { useEffect, useRef } from "react";
 import { Video } from "expo-av";
 import { useFonts, BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
 import { BlurView } from "expo-blur";
+import { colors, fonts } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 const videoWidth = height * (16 / 9);
@@ -336,11 +337,11 @@ darkOverlay: {
 
   // ── Title ──
 title: {
-  color: "#f0f0f0",
-  fontSize: 24,
-  fontWeight: "700",
-  lineHeight: 30,
-  letterSpacing: -0.5,
+  color: colors.textPrimary,
+  fontFamily: fonts.display,
+  fontSize: 30,
+  lineHeight: 32,
+  letterSpacing: 0.5,
   marginBottom: 4,
 },
 subtitle: {

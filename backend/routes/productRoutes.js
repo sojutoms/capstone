@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { validateProduct, validate } = require("../middleware/validator");
-const { requireRole } = require("../middleware/auth");
+const { requireRole, fetchUser } = require("../middleware/auth");
 const {
   getAllProducts,
   addProduct,
@@ -17,6 +17,7 @@ const {
   migrateSizesWithPrices,
   addReview,
   getReviews,
+  getMyReviews,
   addColorway,
   getAllReviews,
   deleteReview,
@@ -39,5 +40,6 @@ router.get("/fix-all-sizes", adminAuth, fixAllSizes);
 router.post("/migrate-sizes-with-prices", adminAuth, migrateSizesWithPrices);
 router.post("/addreview", addReview);
 router.get("/getreviews/:productId", getReviews);
+router.get("/myreviews", fetchUser, getMyReviews);
 
 module.exports = router;

@@ -11,6 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
+import { colors, fonts, radius, typography } from "../theme";
 
 const BASE_URL =
   Platform.OS === "web"
@@ -108,7 +109,7 @@ export default function EditProfileScreen({ navigation }) {
   if (loading) {
     return (
       <View style={s.center}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color={colors.accentGold} />
       </View>
     );
   }
@@ -134,7 +135,7 @@ export default function EditProfileScreen({ navigation }) {
             value={form.firstName}
             onChangeText={(v) => handleChange("firstName", v)}
             placeholder="First name"
-            placeholderTextColor="#3A3A3A"
+            placeholderTextColor={colors.bgTertiary}
             maxLength={54}
           />
           <FieldError msg={errors.firstName} />
@@ -146,7 +147,7 @@ export default function EditProfileScreen({ navigation }) {
             value={form.lastName}
             onChangeText={(v) => handleChange("lastName", v)}
             placeholder="Last name"
-            placeholderTextColor="#3A3A3A"
+            placeholderTextColor={colors.bgTertiary}
             maxLength={54}
           />
           <FieldError msg={errors.lastName} />
@@ -165,7 +166,7 @@ export default function EditProfileScreen({ navigation }) {
           value={form.email}
           editable={false}
           placeholder="email@example.com"
-          placeholderTextColor="#3A3A3A"
+          placeholderTextColor={colors.bgTertiary}
         />
         <Text style={s.lockedHint}>Email cannot be changed</Text>
       </View>
@@ -177,7 +178,7 @@ export default function EditProfileScreen({ navigation }) {
           value={form.phone}
           onChangeText={(v) => handleChange("phone", v)}
           placeholder="09XXXXXXXXX"
-          placeholderTextColor="#3A3A3A"
+          placeholderTextColor={colors.bgTertiary}
           keyboardType="number-pad"
           maxLength={11}
         />
@@ -191,7 +192,7 @@ export default function EditProfileScreen({ navigation }) {
           value={form.place}
           onChangeText={(v) => handleChange("place", v)}
           placeholder="e.g. Quezon City"
-          placeholderTextColor="#3A3A3A"
+          placeholderTextColor={colors.bgTertiary}
           maxLength={80}
         />
       </View>
@@ -208,7 +209,7 @@ export default function EditProfileScreen({ navigation }) {
           value={form.bio}
           onChangeText={(v) => handleChange("bio", v)}
           placeholder="Tell us a bit about yourself (max. 15 words)…"
-          placeholderTextColor="#3A3A3A"
+          placeholderTextColor={colors.bgTertiary}
           multiline
           textAlignVertical="top"
         />
@@ -221,7 +222,7 @@ export default function EditProfileScreen({ navigation }) {
         activeOpacity={0.88}
         disabled={saving}
       >
-        {saving ? <ActivityIndicator size="small" color="#000000" /> : <Text style={s.saveText}>SAVE CHANGES</Text>}
+        {saving ? <ActivityIndicator size="small" color={colors.textInverse} /> : <Text style={s.saveText}>SAVE CHANGES</Text>}
       </TouchableOpacity>
 
       <View style={{ height: 48 }} />
@@ -230,29 +231,29 @@ export default function EditProfileScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#080808" },
-  center: { flex: 1, backgroundColor: "#080808", alignItems: "center", justifyContent: "center" },
+  root: { flex: 1, backgroundColor: colors.bgPrimary },
+  center: { flex: 1, backgroundColor: colors.bgPrimary, alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 20 },
 
   backBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 20, alignSelf: "flex-start" },
-  backArrow: { color: "#FFFFFF", fontSize: 20, fontWeight: "300" },
-  backLabel: { color: "#888", fontSize: 14, fontWeight: "500" },
+  backArrow: { color: colors.textPrimary, fontSize: 20, fontWeight: "300" },
+  backLabel: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.bodyMedium },
 
-  pageTitle: { fontSize: 28, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.4, marginBottom: 20 },
+  pageTitle: { fontSize: 30, fontFamily: fonts.display, color: colors.textPrimary, letterSpacing: 1, marginBottom: 20 },
 
   row: { flexDirection: "row", gap: 10 },
   fieldGroup: { marginBottom: 14 },
 
   bioLabelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  wordCount: { fontSize: 11, color: "#555", marginBottom: 7 },
-  wordCountLow: { color: "#E84A4A" },
+  wordCount: { fontSize: 11, color: colors.textMuted, marginBottom: 7 },
+  wordCountLow: { color: colors.danger },
   bioInput: { minHeight: 96, paddingTop: 14 },
 
   label: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: fonts.bodyBold,
     letterSpacing: 1.5,
-    color: "#555",
+    color: colors.textMuted,
     marginBottom: 7,
     textTransform: "uppercase",
   },
@@ -260,36 +261,36 @@ const s = StyleSheet.create({
   labelRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 7 },
   lockedBadge: {
     borderWidth: 1,
-    borderColor: "#333",
+    borderColor: colors.borderLight,
     borderRadius: 3,
     paddingHorizontal: 6,
     paddingVertical: 2,
     marginBottom: 7,
   },
-  lockedBadgeText: { fontSize: 8, fontWeight: "800", letterSpacing: 1, color: "#666" },
-  lockedHint: { fontSize: 11, color: "#555", marginTop: 5, letterSpacing: 0.3 },
+  lockedBadgeText: { fontSize: 8, fontWeight: "800", letterSpacing: 1, color: colors.textMuted },
+  lockedHint: { fontSize: 11, color: colors.textMuted, marginTop: 5, letterSpacing: 0.3 },
 
   input: {
-    backgroundColor: "#141414",
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: "#1E1E1E",
-    borderRadius: 10,
+    borderColor: colors.borderSubtle,
+    borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 14,
-    color: "#FFFFFF",
+    color: colors.textPrimary,
   },
-  inputDisabled: { color: "#666", opacity: 0.6 },
-  inputError: { borderColor: "#E84A4A" },
-  errorText: { fontSize: 11, color: "#E84A4A", marginTop: 5, letterSpacing: 0.3 },
+  inputDisabled: { color: colors.textMuted, opacity: 0.6 },
+  inputError: { borderColor: colors.danger },
+  errorText: { fontSize: 11, color: colors.danger, marginTop: 5, letterSpacing: 0.3 },
 
   saveBtn: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    backgroundColor: colors.textPrimary,
+    borderRadius: radius.lg,
     paddingVertical: 18,
     alignItems: "center",
     marginTop: 10,
   },
   saveBtnDisabled: { opacity: 0.6 },
-  saveText: { color: "#000000", fontWeight: "900", fontSize: 14, letterSpacing: 3 },
+  saveText: { ...typography.button, color: colors.textInverse, fontSize: 14 },
 });

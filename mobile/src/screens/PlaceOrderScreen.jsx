@@ -19,6 +19,7 @@ import { Picker } from "@react-native-picker/picker";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { getShippingFee, getShippingTier } from "../services/shippingFee";
+import { colors, fonts, radius, typography } from "../theme";
 
 const NCR_REGION_CODE = "1300000000";
 const { width } = Dimensions.get("window");
@@ -371,14 +372,14 @@ export default function PlaceOrderScreen({ navigation }) {
       <View style={[s.pickerWrapper, (!enabled || loading) && s.pickerDisabled]}>
         {loading ? (
           <View style={s.pickerLoading}>
-            <ActivityIndicator size="small" color="#555" />
+            <ActivityIndicator size="small" color={colors.textMuted} />
             <Text style={s.loadingText}>Loading {label.toLowerCase()}…</Text>
           </View>
         ) : (
           <Picker
             style={s.picker}
             mode="dropdown"
-            dropdownIconColor="#666"
+            dropdownIconColor={colors.textMuted}
             selectedValue={form[field]}
             onValueChange={(v) => handleChange(field, v)}
             enabled={enabled && !loading}
@@ -386,16 +387,16 @@ export default function PlaceOrderScreen({ navigation }) {
             <Picker.Item
               label={`Select ${label}`}
               value=""
-              color={Platform.OS === "android" ? "#888888" : "#555"}
-              style={Platform.OS === "android" ? { backgroundColor: "#141414", color: "#888888" } : {}}
+              color={Platform.OS === "android" ? colors.textSecondary : colors.textMuted}
+              style={Platform.OS === "android" ? { backgroundColor: colors.bgCard, color: colors.textSecondary } : {}}
             />
             {items.map((item) => (
               <Picker.Item
                 key={item.code}
                 label={item.name}
                 value={item.code}
-                color="#fff"
-                style={Platform.OS === "android" ? { backgroundColor: "#141414", color: "#ffffff" } : {}}
+                color={colors.textPrimary}
+                style={Platform.OS === "android" ? { backgroundColor: colors.bgCard, color: colors.textPrimary } : {}}
               />
             ))}
           </Picker>
@@ -481,7 +482,7 @@ export default function PlaceOrderScreen({ navigation }) {
               value={form.firstName}
               onChangeText={(v) => handleChange("firstName", v)}
               placeholder="First name"
-              placeholderTextColor="#3A3A3A"
+              placeholderTextColor={colors.bgTertiary}
               maxLength={54}
             />
             <FieldError msg={errors.firstName} />
@@ -493,7 +494,7 @@ export default function PlaceOrderScreen({ navigation }) {
               value={form.lastName}
               onChangeText={(v) => handleChange("lastName", v)}
               placeholder="Last name"
-              placeholderTextColor="#3A3A3A"
+              placeholderTextColor={colors.bgTertiary}
               maxLength={54}
             />
             <FieldError msg={errors.lastName} />
@@ -508,7 +509,7 @@ export default function PlaceOrderScreen({ navigation }) {
             value={form.email}
             onChangeText={(v) => handleChange("email", v)}
             placeholder="email@example.com"
-            placeholderTextColor="#3A3A3A"
+            placeholderTextColor={colors.bgTertiary}
             keyboardType="email-address"
             autoCapitalize="none"
           />
@@ -523,7 +524,7 @@ export default function PlaceOrderScreen({ navigation }) {
             value={form.street}
             onChangeText={(v) => handleChange("street", v)}
             placeholder="House no., Street, Subdivision"
-            placeholderTextColor="#3A3A3A"
+            placeholderTextColor={colors.bgTertiary}
           />
           <FieldError msg={errors.street} />
         </View>
@@ -541,25 +542,25 @@ export default function PlaceOrderScreen({ navigation }) {
                 mode="dropdown"
                 selectedValue={NCR_REGION_CODE}
                 enabled={false}
-                dropdownIconColor="#666"
+                dropdownIconColor={colors.textMuted}
               >
                 <Picker.Item
                   label="Metro Manila"
                   value={NCR_REGION_CODE}
-                  color="#fff"
-                  style={Platform.OS === "android" ? { backgroundColor: "#141414", color: "#ffffff" } : {}}
+                  color={colors.textPrimary}
+                  style={Platform.OS === "android" ? { backgroundColor: colors.bgCard, color: colors.textPrimary } : {}}
                 />
               </Picker>
             ) : loadingProvinces ? (
               <View style={s.pickerLoading}>
-                <ActivityIndicator size="small" color="#555" />
+                <ActivityIndicator size="small" color={colors.textMuted} />
                 <Text style={s.loadingText}>Loading provinces…</Text>
               </View>
             ) : (
               <Picker
                 style={s.picker}
                 mode="dropdown"
-                dropdownIconColor="#666"
+                dropdownIconColor={colors.textMuted}
                 selectedValue={form.province}
                 onValueChange={(v) => handleChange("province", v)}
                 enabled={!!form.region && !loadingProvinces}
@@ -567,16 +568,16 @@ export default function PlaceOrderScreen({ navigation }) {
                 <Picker.Item
                   label="Select Province"
                   value=""
-                  color={Platform.OS === "android" ? "#888888" : "#555"}
-                  style={Platform.OS === "android" ? { backgroundColor: "#141414", color: "#888888" } : {}}
+                  color={Platform.OS === "android" ? colors.textSecondary : colors.textMuted}
+                  style={Platform.OS === "android" ? { backgroundColor: colors.bgCard, color: colors.textSecondary } : {}}
                 />
                 {provinces.map((p) => (
                   <Picker.Item
                     key={p.code}
                     label={p.name}
                     value={p.code}
-                    color="#fff"
-                    style={Platform.OS === "android" ? { backgroundColor: "#141414", color: "#ffffff" } : {}}
+                    color={colors.textPrimary}
+                    style={Platform.OS === "android" ? { backgroundColor: colors.bgCard, color: colors.textPrimary } : {}}
                   />
                 ))}
               </Picker>
@@ -611,7 +612,7 @@ export default function PlaceOrderScreen({ navigation }) {
             value={form.phone}
             onChangeText={(v) => handleChange("phone", v)}
             placeholder="09XXXXXXXXX"
-            placeholderTextColor="#3A3A3A"
+            placeholderTextColor={colors.bgTertiary}
             keyboardType="number-pad"
             maxLength={11}
           />
@@ -725,7 +726,7 @@ export default function PlaceOrderScreen({ navigation }) {
         disabled={placingOrder}
       >
         {placingOrder ? (
-          <ActivityIndicator size="small" color="#000000" />
+          <ActivityIndicator size="small" color={colors.textInverse} />
         ) : (
           <Text style={s.ctaText}>PLACE ORDER</Text>
         )}
@@ -736,7 +737,7 @@ export default function PlaceOrderScreen({ navigation }) {
       {/* ── WAITING ON EXTERNAL BROWSER PAYMENT ── */}
       <Modal visible={!!pendingOrderNumber && !verifying} transparent animationType="fade">
         <View style={s.verifyOverlay}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
+          <ActivityIndicator size="large" color={colors.accentGold} />
           <Text style={s.verifyText}>Complete your payment in the browser, then come back here.</Text>
         </View>
       </Modal>
@@ -744,7 +745,7 @@ export default function PlaceOrderScreen({ navigation }) {
       {/* ── VERIFYING PAYMENT OVERLAY ── */}
       <Modal visible={verifying} transparent animationType="fade">
         <View style={s.verifyOverlay}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
+          <ActivityIndicator size="large" color={colors.accentGold} />
           <Text style={s.verifyText}>Confirming your payment…</Text>
         </View>
       </Modal>
@@ -757,7 +758,7 @@ export default function PlaceOrderScreen({ navigation }) {
 ═══════════════════════════════════════════════════════════════════════════ */
 
 const s = StyleSheet.create({
-  root:    { flex: 1, backgroundColor: "#080808" },
+  root:    { flex: 1, backgroundColor: colors.bgPrimary },
   content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 20 },
 
   /* ── nav ── */
@@ -768,23 +769,23 @@ const s = StyleSheet.create({
     marginBottom: 20,
     alignSelf: "flex-start",
   },
-  backArrow: { color: "#FFFFFF", fontSize: 20, fontWeight: "300" },
-  backLabel: { color: "#888",    fontSize: 14, fontWeight: "500" },
+  backArrow: { color: colors.textPrimary, fontSize: 20, fontWeight: "300" },
+  backLabel: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.bodyMedium },
 
   pageTitle: {
-    fontSize: 28,
-    fontWeight: "900",
-    color: "#FFFFFF",
-    letterSpacing: 0.4,
+    fontSize: 30,
+    fontFamily: fonts.display,
+    color: colors.textPrimary,
+    letterSpacing: 1,
     marginBottom: 20,
   },
 
   /* ── section card ── */
   sectionCard: {
-    backgroundColor: "#0F0F0F",
-    borderRadius: 16,
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: "#1A1A1A",
+    borderColor: colors.borderSubtle,
     padding: 18,
     marginBottom: 14,
   },
@@ -797,9 +798,9 @@ const s = StyleSheet.create({
   sectionIcon:  { fontSize: 16 },
   sectionTitle: {
     fontSize: 13,
-    fontWeight: "700",
+    fontFamily: fonts.bodyBold,
     letterSpacing: 2,
-    color: "#666",
+    color: colors.textMuted,
     textTransform: "uppercase",
   },
 
@@ -808,31 +809,31 @@ const s = StyleSheet.create({
   savedToggleBtn: {
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: "#2A2A2A",
-    borderRadius: 8,
+    borderColor: colors.accentGold,
+    borderRadius: radius.sm,
     paddingVertical: 9,
     paddingHorizontal: 14,
-    backgroundColor: "#141414",
+    backgroundColor: colors.accentGoldWash,
   },
-  savedToggleText: { fontSize: 13, fontWeight: "700", color: "#FFFFFF", letterSpacing: 0.5 },
+  savedToggleText: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.accentGoldLight, letterSpacing: 0.5 },
   savedList: {
     marginTop: 10,
-    borderRadius: 10,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: colors.borderLight,
     overflow: "hidden",
-    backgroundColor: "#111111",
+    backgroundColor: colors.bgCard,
   },
   savedItem: {
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#222222",
-    backgroundColor: "#111111",
+    borderBottomColor: colors.borderSubtle,
+    backgroundColor: colors.bgCard,
     gap: 2,
   },
-  savedName:  { fontSize: 14, fontWeight: "700", color: "#EEEEEE" },
-  savedMeta:  { fontSize: 12, color: "#888888" },
-  savedPhone: { fontSize: 12, color: "#AAAAAA", marginTop: 2 },
+  savedName:  { fontSize: 14, fontFamily: fonts.bodyBold, color: colors.textPrimary },
+  savedMeta:  { fontSize: 12, color: colors.textSecondary },
+  savedPhone: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
 
   /* ── form ── */
   row:       { flexDirection: "row", gap: 10 },
@@ -840,43 +841,43 @@ const s = StyleSheet.create({
 
   label: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: fonts.bodyBold,
     letterSpacing: 1.5,
-    color: "#555",
+    color: colors.textMuted,
     marginBottom: 7,
     textTransform: "uppercase",
   },
 
   input: {
-    backgroundColor: "#141414",
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: "#1E1E1E",
-    borderRadius: 10,
+    borderColor: colors.borderSubtle,
+    borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: isSmall ? 12 : 14,
     fontSize: 14,
-    color: "#FFFFFF",
+    color: colors.textPrimary,
   },
-  inputError: { borderColor: "#E84A4A" },
-  errorText:  { fontSize: 11, color: "#E84A4A", marginTop: 5, letterSpacing: 0.3 },
+  inputError: { borderColor: colors.danger },
+  errorText:  { fontSize: 11, color: colors.danger, marginTop: 5, letterSpacing: 0.3 },
 
   /* ── pickers ── */
   pickerWrapper: {
-    backgroundColor: "#141414",
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: "#1E1E1E",
-    borderRadius: 10,
+    borderColor: colors.borderSubtle,
+    borderRadius: radius.md,
     overflow: "hidden",
   },
-  pickerDisabled: { backgroundColor: "#0D0D0D", opacity: 0.5 },
-  picker:         { height: 50, width: "100%", color: "#FFFFFF", backgroundColor: "#141414" },
+  pickerDisabled: { backgroundColor: colors.bgPrimary, opacity: 0.5 },
+  picker:         { height: 50, width: "100%", color: colors.textPrimary, backgroundColor: colors.bgCard },
   pickerLoading: {
     flexDirection: "row",
     alignItems: "center",
     padding: 14,
     gap: 10,
   },
-  loadingText: { fontSize: 13, color: "#555" },
+  loadingText: { fontSize: 13, color: colors.textMuted },
 
   /* ── checkbox ── */
   checkRow: {
@@ -889,15 +890,15 @@ const s = StyleSheet.create({
     width: 22,
     height: 22,
     borderWidth: 1.5,
-    borderColor: "#2E2E2E",
-    borderRadius: 6,
+    borderColor: colors.borderLight,
+    borderRadius: radius.sm,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#141414",
+    backgroundColor: colors.bgCard,
   },
-  checkboxOn: { backgroundColor: "#FFFFFF", borderColor: "#FFFFFF" },
-  checkmark:  { color: "#000", fontSize: 13, fontWeight: "800" },
-  checkLabel: { fontSize: 13, color: "#666", flex: 1 },
+  checkboxOn: { backgroundColor: colors.accentGold, borderColor: colors.accentGold },
+  checkmark:  { color: colors.textInverse, fontSize: 13, fontWeight: "800" },
+  checkLabel: { fontSize: 13, color: colors.textMuted, flex: 1 },
 
   /* ── payment methods ── */
   methodRow: {
@@ -908,16 +909,16 @@ const s = StyleSheet.create({
   },
   methodChip: {
     borderWidth: 1,
-    borderColor: "#222",
-    borderRadius: 8,
+    borderColor: colors.borderSubtle,
+    borderRadius: radius.sm,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: "#141414",
+    backgroundColor: colors.bgCard,
   },
-  methodChipActive:     { borderColor: "#FFFFFF", backgroundColor: "#FFFFFF" },
-  methodChipText:       { fontSize: 12, fontWeight: "700", color: "#555", letterSpacing: 0.5 },
-  methodChipTextActive: { color: "#000" },
-  methodNote:           { fontSize: 12, color: "#666", marginTop: 12, lineHeight: 18 },
+  methodChipActive:     { borderColor: colors.accentGold, backgroundColor: colors.accentGoldWash },
+  methodChipText:       { fontSize: 12, fontFamily: fonts.bodyBold, color: colors.textMuted, letterSpacing: 0.5 },
+  methodChipTextActive: { color: colors.accentGoldLight },
+  methodNote:           { fontSize: 12, color: colors.textMuted, fontFamily: fonts.bodyRegular, marginTop: 12, lineHeight: 18 },
 
   /* ── order summary ── */
   summaryItem: {
@@ -926,17 +927,17 @@ const s = StyleSheet.create({
     alignItems: "flex-start",
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#141414",
+    borderBottomColor: colors.borderSubtle,
     gap: 10,
   },
   summaryLeft:  { flex: 1, gap: 3 },
-  summaryName:  { fontSize: 13, fontWeight: "600", color: "#CCCCCC" },
-  summarySize:  { fontSize: 11, color: "#444", letterSpacing: 0.5 },
+  summaryName:  { fontSize: 13, fontFamily: fonts.bodySemibold, color: colors.textSecondary },
+  summarySize:  { fontSize: 11, color: colors.textMuted, letterSpacing: 0.5 },
   summaryRight: { alignItems: "flex-end", gap: 2 },
-  summaryQty:   { fontSize: 11, color: "#555" },
-  summaryPrice: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
+  summaryQty:   { fontSize: 11, color: colors.textMuted },
+  summaryPrice: { fontSize: 14, fontFamily: fonts.bodyBold, color: colors.textPrimary },
 
-  divider: { height: 1, backgroundColor: "#141414", marginVertical: 14 },
+  divider: { height: 1, backgroundColor: colors.borderSubtle, marginVertical: 14 },
 
   subRow: {
     flexDirection: "row",
@@ -944,30 +945,29 @@ const s = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  subLabel: { fontSize: 12, color: "#777" },
-  subValue: { fontSize: 13, fontWeight: "600", color: "#CCCCCC" },
+  subLabel: { fontSize: 12, color: colors.textSecondary },
+  subValue: { fontSize: 13, fontFamily: fonts.bodySemibold, color: colors.textSecondary },
 
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  totalLabel:  { fontSize: 13, fontWeight: "700", color: "#666", letterSpacing: 1 },
-  totalAmount: { fontSize: 22, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.3 },
+  totalLabel:  { fontSize: 14, fontFamily: fonts.display, color: colors.textSecondary, letterSpacing: 1 },
+  totalAmount: { fontSize: 22, fontWeight: "900", color: colors.accentGold, letterSpacing: 0.3 },
 
   /* ── CTA ── */
   ctaBtn: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    backgroundColor: colors.textPrimary,
+    borderRadius: radius.lg,
     paddingVertical: 18,
     alignItems: "center",
     marginTop: 6,
   },
   ctaText: {
-    color: "#000000",
-    fontWeight: "900",
+    ...typography.button,
+    color: colors.textInverse,
     fontSize: 14,
-    letterSpacing: 3,
   },
   ctaBtnDisabled: { opacity: 0.6 },
 
@@ -979,5 +979,5 @@ const s = StyleSheet.create({
     gap: 14,
     paddingHorizontal: 40,
   },
-  verifyText: { color: "#CCCCCC", fontSize: 13, letterSpacing: 0.5, textAlign: "center" },
+  verifyText: { color: colors.textSecondary, fontSize: 13, letterSpacing: 0.5, textAlign: "center" },
 });

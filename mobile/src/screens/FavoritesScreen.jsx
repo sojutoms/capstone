@@ -15,6 +15,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useFavorites } from "../context/FavoritesContext";
 import { useCart }      from "../context/CartContext";
 import Toast            from "react-native-toast-message";
+import { colors, fonts, radius, typography } from "../theme";
 
 export default function FavoritesScreen({ navigation }) {
   const { favorites, removeFromFavorites, clearFavorites, refreshFavorites } = useFavorites();
@@ -87,11 +88,11 @@ export default function FavoritesScreen({ navigation }) {
   if (!favorites.length) {
     return (
       <SafeAreaView style={styles.safe}>
-        <StatusBar barStyle="light-content" backgroundColor="#0A0A0A" />
+        <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
         <ScrollView
           contentContainerStyle={styles.emptyWrap}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
           }
         >
           {/* heart icon */}
@@ -220,7 +221,7 @@ export default function FavoritesScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#0A0A0A",
+    backgroundColor: colors.bgPrimary,
   },
 
   /* ── header ── */
@@ -235,24 +236,24 @@ const styles = StyleSheet.create({
   eyebrow: {
     fontSize: 9,
     letterSpacing: 3,
-    color: "#555",
-    fontWeight: "400",
+    color: colors.textMuted,
+    fontFamily: fonts.bodyRegular,
     marginBottom: 2,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    letterSpacing: 2,
+    fontSize: 30,
+    fontFamily: fonts.display,
+    color: colors.textPrimary,
+    letterSpacing: 1.5,
   },
   clearBtn: {
     paddingBottom: 4,
   },
   clearText: {
     fontSize: 8,
-    fontWeight: "600",
+    fontFamily: fonts.bodySemibold,
     letterSpacing: 2,
-    color: "#444",
+    color: colors.textMuted,
   },
 
   /* ── count strip ── */
@@ -267,13 +268,13 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.accentGold,
   },
   countText: {
     fontSize: 10,
-    color: "#555",
+    color: colors.textMuted,
     letterSpacing: 1,
-    fontWeight: "400",
+    fontFamily: fonts.bodyRegular,
   },
 
   /* ── list ── */
@@ -286,10 +287,10 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#141414",
-    borderRadius: 14,
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: "#1E1E1E",
+    borderColor: colors.borderSubtle,
     paddingHorizontal: 12,
     paddingVertical: 14,
     gap: 10,
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
   cardIndex: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#2A2A2A",
+    color: colors.bgTertiary,
     letterSpacing: 1,
     width: 22,
   },
@@ -306,8 +307,8 @@ const styles = StyleSheet.create({
   imageWrap: {
     width: 70,
     height: 70,
-    backgroundColor: "#1A1A1A",
-    borderRadius: 10,
+    backgroundColor: colors.bgTertiary,
+    borderRadius: radius.md,
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
@@ -323,25 +324,25 @@ const styles = StyleSheet.create({
   },
   brand: {
     fontSize: 8,
-    fontWeight: "600",
+    fontFamily: fonts.bodySemibold,
     letterSpacing: 2,
-    color: "#555",
+    color: colors.textMuted,
   },
   name: {
     fontSize: 13,
-    fontWeight: "700",
-    color: "#FFFFFF",
+    fontFamily: fonts.bodyBold,
+    color: colors.textPrimary,
     lineHeight: 18,
   },
   price: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: colors.accentGold,
     letterSpacing: 0.5,
   },
   oos: {
     fontSize: 11,
-    color: "#E53E1A",
+    color: colors.danger,
     fontWeight: "500",
     letterSpacing: 0.5,
   },
@@ -352,16 +353,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cartBtn: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: 6,
+    borderRadius: radius.sm,
   },
   cartBtnDim: {
     opacity: 0.25,
   },
   cartBtnText: {
-    color: "#000",
+    color: colors.textInverse,
     fontWeight: "700",
     fontSize: 9,
     letterSpacing: 1.5,
@@ -369,14 +370,14 @@ const styles = StyleSheet.create({
   removeBtn: {
     width: 28,
     height: 28,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: colors.borderLight,
     justifyContent: "center",
     alignItems: "center",
   },
   removeBtnText: {
-    color: "#555",
+    color: colors.textMuted,
     fontSize: 11,
     fontWeight: "400",
   },
@@ -399,24 +400,25 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: "#222",
+    borderColor: colors.borderLight,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
   },
   emptyHeart: {
     fontSize: 22,
-    color: "#333",
+    color: colors.textMuted,
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
+    fontSize: 17,
+    fontFamily: fonts.display,
+    color: colors.textPrimary,
     letterSpacing: 1,
   },
   emptySub: {
     fontSize: 11,
-    color: "#444",
+    color: colors.textMuted,
+    fontFamily: fonts.bodyRegular,
     textAlign: "center",
     lineHeight: 17,
     letterSpacing: 0.5,

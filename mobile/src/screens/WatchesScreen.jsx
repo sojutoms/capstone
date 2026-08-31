@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
+import { colors, fonts, radius, typography } from "../theme";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 48) / 2;
@@ -246,7 +247,7 @@ export default function WatchesScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.loader}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color={colors.accentGold} />
         <Text style={styles.loaderText}>Loading drops…</Text>
       </View>
     );
@@ -254,7 +255,7 @@ export default function WatchesScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#0A0A0A" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
 
       {/* ── TOP NAV ── */}
       <View style={styles.topNav}>
@@ -293,7 +294,7 @@ export default function WatchesScreen({ navigation }) {
           <TextInput
             style={styles.searchInput}
             placeholder="Search watches, brands…"
-            placeholderTextColor="#444"
+            placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCapitalize="none"
@@ -313,7 +314,7 @@ export default function WatchesScreen({ navigation }) {
         contentContainerStyle={{ paddingBottom: 32 }}
         stickyHeaderIndices={[0]}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
         }
       >
         {/* ── STICKY SORT ROW ── */}
@@ -404,10 +405,10 @@ export default function WatchesScreen({ navigation }) {
 /* ─────────────────── STYLES ─────────────────── */
 
 const styles = StyleSheet.create({
-  safe:       { flex: 1, backgroundColor: "#0A0A0A" },
-  loader:     { flex: 1, backgroundColor: "#0A0A0A", justifyContent: "center", alignItems: "center" },
-  loaderText: { color: "#555", fontSize: 12, letterSpacing: 2, textTransform: "uppercase", marginTop: 12 },
-  container:  { flex: 1, backgroundColor: "#0A0A0A" },
+  safe:       { flex: 1, backgroundColor: colors.bgPrimary },
+  loader:     { flex: 1, backgroundColor: colors.bgPrimary, justifyContent: "center", alignItems: "center" },
+  loaderText: { color: colors.textMuted, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", marginTop: 12 },
+  container:  { flex: 1, backgroundColor: colors.bgPrimary },
 
   topNav: {
     flexDirection: "row",
@@ -416,37 +417,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 4,
-    backgroundColor: "#0A0A0A",
+    backgroundColor: colors.bgPrimary,
   },
   backBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: "#1A1A1A", borderWidth: 1, borderColor: "#2A2A2A",
+    backgroundColor: colors.bgSurface, borderWidth: 1, borderColor: colors.borderLight,
     justifyContent: "center", alignItems: "center",
   },
-  backText:  { color: "#fff", fontSize: 16 },
-  eyebrow:   { fontSize: 9, letterSpacing: 3, color: "#555", fontWeight: "400", marginBottom: 1 },
-  navTitle:  { fontSize: 28, fontWeight: "800", color: "#FFFFFF", letterSpacing: 2 },
+  backText:  { color: colors.textPrimary, fontSize: 16 },
+  eyebrow:   { fontSize: 9, letterSpacing: 3, color: colors.textMuted, fontFamily: fonts.bodyRegular, marginBottom: 1 },
+  navTitle:  { fontSize: 30, fontFamily: fonts.display, color: colors.textPrimary, letterSpacing: 1.5 },
   navIcons:  { flexDirection: "row", gap: 8, paddingTop: 6 },
   iconBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: "#1A1A1A", borderWidth: 1, borderColor: "#2A2A2A",
+    backgroundColor: colors.bgSurface, borderWidth: 1, borderColor: colors.borderLight,
     justifyContent: "center", alignItems: "center",
   },
   iconText: { fontSize: 14 },
 
-  searchBarWrap: { overflow: "hidden", backgroundColor: "#0A0A0A", paddingHorizontal: 16 },
+  searchBarWrap: { overflow: "hidden", backgroundColor: colors.bgPrimary, paddingHorizontal: 16 },
   searchBar: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#141414", borderWidth: 1, borderColor: "#2A2A2A",
-    borderRadius: 10, paddingHorizontal: 12, height: 42, marginBottom: 8, gap: 8,
+    backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.borderLight,
+    borderRadius: radius.md, paddingHorizontal: 12, height: 42, marginBottom: 8, gap: 8,
   },
   searchIcon:  { fontSize: 13 },
-  searchInput: { flex: 1, color: "#fff", fontSize: 14 },
-  searchClear: { color: "#444", fontSize: 14, paddingLeft: 4 },
+  searchInput: { flex: 1, color: colors.textPrimary, fontSize: 14 },
+  searchClear: { color: colors.textMuted, fontSize: 14, paddingLeft: 4 },
 
-  stickyFilters: { backgroundColor: "#0A0A0A", paddingTop: 4, paddingBottom: 0 },
+  stickyFilters: { backgroundColor: colors.bgPrimary, paddingTop: 4, paddingBottom: 0 },
 
-  divider: { height: 1, backgroundColor: "#1E1E1E" },
+  divider: { height: 1, backgroundColor: colors.borderSubtle },
 
   sortRow: {
     flexDirection: "row",
@@ -455,53 +456,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
-  resultCount: { color: "#555", fontSize: 12, fontWeight: "500" },
+  resultCount: { color: colors.textMuted, fontSize: 12, fontWeight: "500" },
   sortBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
-    backgroundColor: "#141414",
+    borderColor: colors.borderLight,
+    backgroundColor: colors.bgCard,
   },
-  sortBtnText: { color: "#fff", fontSize: 12, fontWeight: "600" },
-  sortBtnIcon: { color: "#fff", fontSize: 10 },
+  sortBtnText: { color: colors.textPrimary, fontSize: 12, fontWeight: "600" },
+  sortBtnIcon: { color: colors.textPrimary, fontSize: 10 },
 
   grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 12, gap: 10, paddingTop: 4 },
 
-  card:          { width: CARD_WIDTH, backgroundColor: "#141414", borderRadius: 16, borderWidth: 1, borderColor: "#2A2A2A", overflow: "hidden" },
-  cardImageWrap: { width: "100%", aspectRatio: 1, backgroundColor: "#1A1A1A", justifyContent: "center", alignItems: "center", position: "relative" },
+  card:          { width: CARD_WIDTH, backgroundColor: colors.bgCard, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderLight, overflow: "hidden" },
+  cardImageWrap: { width: "100%", aspectRatio: 1, backgroundColor: colors.bgSurface, justifyContent: "center", alignItems: "center", position: "relative" },
   cardImage:     { width: "80%", height: "80%" },
   heartBtn:      { position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
-  heartIcon:     { color: "#fff", fontSize: 12 },
+  heartIcon:     { color: colors.textPrimary, fontSize: 12 },
 
   badge:           { position: "absolute", top: 8, left: 8, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 4, zIndex: 1 },
-  badge_new:       { backgroundColor: "#FFFFFF" },
+  badge_new:       { backgroundColor: colors.accentGold },
   badge_hot:       { backgroundColor: "#E53E1A" },
-  badge_sale:      { backgroundColor: "#1A1A1A", borderWidth: 1, borderColor: "#333" },
+  badge_sale:      { backgroundColor: colors.bgSurface, borderWidth: 1, borderColor: colors.borderLight },
   badgeText:       { fontSize: 7, fontWeight: "700", letterSpacing: 1.5 },
-  badgeText_new:   { color: "#000" },
-  badgeText_hot:   { color: "#fff" },
-  badgeText_sale:  { color: "#666" },
+  badgeText_new:   { color: colors.textInverse },
+  badgeText_hot:   { color: colors.textPrimary },
+  badgeText_sale:  { color: colors.textMuted },
 
   cardBody:    { padding: 10 },
-  cardBrand:   { fontSize: 8, fontWeight: "600", letterSpacing: 2, color: "#555", marginBottom: 2 },
-  cardName:    { fontSize: 13, fontWeight: "700", color: "#FFFFFF", lineHeight: 18, marginBottom: 8 },
+  cardBrand:   { fontSize: 8, fontFamily: fonts.bodySemibold, letterSpacing: 2, color: colors.textMuted, marginBottom: 2 },
+  cardName:    { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.textPrimary, lineHeight: 18, marginBottom: 8 },
   cardFooter:  { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
-  oldPrice:    { fontSize: 10, color: "#444", textDecorationLine: "line-through", marginBottom: 1 },
-  newPrice:    { fontSize: 13, fontWeight: "700", color: "#FFFFFF" },
-  addBtn:      { width: 28, height: 28, backgroundColor: "#FFFFFF", borderRadius: 7, justifyContent: "center", alignItems: "center" },
-  addBtnText:  { color: "#000", fontSize: 18, fontWeight: "300", lineHeight: 22 },
+  oldPrice:    { fontSize: 10, color: colors.textMuted, textDecorationLine: "line-through", marginBottom: 1 },
+  newPrice:    { fontSize: 13, fontWeight: "700", color: colors.accentGold },
+  addBtn:      { width: 28, height: 28, backgroundColor: colors.textPrimary, borderRadius: 7, justifyContent: "center", alignItems: "center" },
+  addBtnText:  { color: colors.textInverse, fontSize: 18, fontWeight: "300", lineHeight: 22 },
 
   emptyState:    { paddingVertical: 60, alignItems: "center", paddingHorizontal: 40 },
   emptyIcon:     { fontSize: 48, marginBottom: 16 },
-  emptyTitle:    { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 3, marginBottom: 8 },
-  emptySubtitle: { color: "#444", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 28 },
-  resetBtn:      { borderWidth: 1, borderColor: "#2a2a2a", paddingVertical: 12, paddingHorizontal: 28, borderRadius: 6 },
-  resetBtnText:  { color: "#fff", fontSize: 11, fontWeight: "800", letterSpacing: 2 },
+  emptyTitle:    { color: colors.textPrimary, fontSize: 17, fontFamily: fonts.display, letterSpacing: 2, marginBottom: 8 },
+  emptySubtitle: { color: colors.textMuted, fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 28 },
+  resetBtn:      { borderWidth: 1, borderColor: colors.borderLight, paddingVertical: 12, paddingHorizontal: 28, borderRadius: radius.sm },
+  resetBtnText:  { ...typography.button, color: colors.textPrimary, fontSize: 11 },
 
   modalOverlay: {
     flex: 1,
@@ -509,17 +510,17 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   dropdownMenu: {
-    backgroundColor: "#1A1A1A",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: colors.bgSurface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
     paddingTop: 20,
     paddingBottom: 36,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: colors.borderLight,
   },
   dropdownTitle: {
-    color: "#555",
+    color: colors.textMuted,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 2,
@@ -531,10 +532,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#2A2A2A",
+    borderBottomColor: colors.borderLight,
   },
   dropdownItemActive: {},
-  dropdownItemText: { fontSize: 15, color: "#888", fontWeight: "500" },
-  dropdownItemTextActive: { color: "#FFFFFF", fontWeight: "700" },
-  dropdownCheck: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
+  dropdownItemText: { fontSize: 15, color: colors.textSecondary, fontWeight: "500" },
+  dropdownItemTextActive: { color: colors.accentGold, fontWeight: "700" },
+  dropdownCheck: { color: colors.accentGold, fontSize: 14, fontWeight: "700" },
 });

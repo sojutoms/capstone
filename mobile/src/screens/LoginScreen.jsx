@@ -17,6 +17,7 @@ import {
   Alert,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
+import { colors, fonts } from "../theme";
 
 // ─── Password rules ────────────────────────────────────────────────────────────
 const PASSWORD_RULES = [
@@ -297,26 +298,26 @@ const fi = StyleSheet.create({
 const PrimaryBtn = ({ label, onPress, loading }) => (
   <TouchableOpacity style={pb.btn} onPress={onPress} disabled={loading} activeOpacity={0.85}>
     {loading
-      ? <ActivityIndicator color="#0a0a0a" />
+      ? <ActivityIndicator color={colors.textInverse} />
       : <Text style={pb.label}>{label}</Text>}
   </TouchableOpacity>
 );
 
 const pb = StyleSheet.create({
-  btn: { backgroundColor: "#e8e8e8", borderRadius: 11, paddingVertical: 14, alignItems: "center", marginTop: 6 },
-  label: { color: "#0a0a0a", fontWeight: "700", fontSize: 12, letterSpacing: 2 },
+  btn: { backgroundColor: colors.textPrimary, borderRadius: 11, paddingVertical: 14, alignItems: "center", marginTop: 6 },
+  label: { color: colors.textInverse, fontWeight: "700", fontSize: 12, letterSpacing: 2 },
 });
 
 const LinkBtn = ({ label, onPress }) => (
   <TouchableOpacity onPress={onPress} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-    <Text style={{ color: "#c0c0c0", fontSize: 12 }}>{label}</Text>
+    <Text style={{ color: colors.accentGold, fontSize: 12 }}>{label}</Text>
   </TouchableOpacity>
 );
 
 const PwdChecklist = ({ checks }) => (
   <View style={{ marginTop: 6, marginLeft: 2, gap: 3 }}>
     {checks.map((c) => (
-      <Text key={c.key} style={{ fontSize: 11, color: c.passed ? "#4caf50" : "#555" }}>
+      <Text key={c.key} style={{ fontSize: 11, color: c.passed ? colors.success : "#555" }}>
         {c.passed ? "✓" : "✗"}  {c.label}
       </Text>
     ))}
@@ -709,14 +710,14 @@ const s = StyleSheet.create({
   content: { flexGrow: 1, justifyContent: "center", padding: 20 },
   card: { backgroundColor: "rgba(10,10,10,0.85)", borderWidth: 0.5, borderColor: "rgba(255,255,255,0.06)", borderRadius: 20, padding: 22 },
   eyebrow: { textAlign: "center", fontSize: 9, letterSpacing: 2.5, color: "#383838", textTransform: "uppercase", marginBottom: 4 },
-  heading: { textAlign: "center", fontSize: 30, fontWeight: "900", color: "#f0f0f0", letterSpacing: -1 },
+  heading: { textAlign: "center", fontSize: 34, fontFamily: fonts.display, color: colors.textPrimary, letterSpacing: 0.5 },
   subheading: { textAlign: "center", color: "#383838", fontSize: 12, marginTop: 4, marginBottom: 2 },
   forgotRow: { alignItems: "flex-end", marginBottom: 10, marginTop: 2 },
   divider: { flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 16 },
   dividerLine: { flex: 1, height: 0.5, backgroundColor: "#161616" },
   dividerText: { color: "#2a2a2a", fontSize: 10, letterSpacing: 1.5 },
   switchText: { textAlign: "center", color: "#333", fontSize: 12 },
-  switchAccent: { color: "#c0c0c0" },
+  switchAccent: { color: colors.accentGold },
   row: { flexDirection: "row" },
   strength: { fontSize: 11, marginTop: 4, marginLeft: 2, fontWeight: "600" },
   termsRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginTop: 10, marginBottom: 4 },
@@ -724,8 +725,8 @@ const s = StyleSheet.create({
   pseudoCheckDone: { borderColor: "#444", backgroundColor: "#161616" },
   pseudoCheckMark: { color: "#aaa", fontSize: 10, fontWeight: "800" },
   termsText: { flex: 1, color: "#555", fontSize: 12, lineHeight: 18 },
-  termsLink: { color: "#888", textDecorationLine: "underline" },
-  termsLinkDone: { color: "#4a8a4a" },
+  termsLink: { color: colors.accentGoldLight, textDecorationLine: "underline" },
+  termsLinkDone: { color: colors.success },
   fieldError: { color: "#8b2020", fontSize: 11, marginBottom: 4, marginLeft: 2 },
   otpHint: { color: "#444", fontSize: 12, textAlign: "center", marginBottom: 8 },
   backBtn: { color: "#555", fontSize: 12 },

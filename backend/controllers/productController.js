@@ -303,6 +303,29 @@ const getReviews = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false }); }
 };
 
+// ─── GET /myreviews — mobile-only: every review the logged-in user wrote,
+// enriched with the product's name/image so it can be displayed without a
+// second round-trip per item. ─────────────────────────────────────────────
+const getMyReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find({ userId: String(req.user.id) }).sort({ date: -1 }).lean();
+    const productIds = [...new Set(reviews.map((r) => r.productId))];
+    const products = await Product.find({ id: { $in: productIds } }, "id name image").lean();
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    const enriched = reviews.map((r) => ({
+      ...r,
+      productName:  productMap.get(r.productId)?.name  || "Product",
+      productImage: productMap.get(r.productId)?.image || null,
+    }));
+
+    res.json({ success: true, reviews: enriched });
+  } catch (err) {
+    console.error("getMyReviews error:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
 const getNewCollections = async (req, res) => {
   try {
     const products = await Product.find({ isDeleted: { $ne: true } }).sort({ date: -1 }).limit(8);
@@ -370,5 +393,5 @@ module.exports = {
   getAllProducts, addProduct, editProduct, removeProduct, restoreProduct, getFeatured,
   getNewCollections, toggleNew, bulkUpdateNew, addColorway,
   fixSizes, fixAllSizes, migrateSizesWithPrices, migrateSkuNumbers,
-  addReview, getReviews
+  addReview, getReviews, getMyReviews
 };

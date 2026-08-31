@@ -9,6 +9,7 @@ import {
   GestureResponderEvent,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { colors, fonts, typography } from "../theme";
 
 export default function CameraScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
@@ -146,41 +147,40 @@ const styles = StyleSheet.create({
   // ── PERMISSION ──
   permContainer: {
     flex: 1,
-    backgroundColor: "#0a0a0a",
+    backgroundColor: colors.bgPrimary,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,
   },
   permIcon: { fontSize: 48, marginBottom: 20 },
   permTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "900",
-    letterSpacing: 3,
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontFamily: fonts.display,
+    letterSpacing: 2,
     marginBottom: 12,
   },
   permMessage: {
-    color: "#555",
+    color: colors.textMuted,
     fontSize: 13,
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 32,
   },
   permBtn: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.textPrimary,
     paddingVertical: 14,
     paddingHorizontal: 36,
-    borderRadius: 2,
+    borderRadius: 6,
     marginBottom: 14,
   },
   permBtnText: {
-    color: "#0a0a0a",
-    fontWeight: "900",
+    ...typography.button,
+    color: colors.textInverse,
     fontSize: 11,
-    letterSpacing: 2.5,
   },
   permBack: { paddingVertical: 10 },
-  permBackText: { color: "#444", fontSize: 12, letterSpacing: 1 },
+  permBackText: { color: colors.textMuted, fontSize: 12, letterSpacing: 1 },
 
   // ── TOP BAR ──
   topBar: {

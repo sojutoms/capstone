@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
+import { colors, fonts, radius, typography } from "../theme";
 
 const { width } = Dimensions.get("window");
 
@@ -310,7 +311,7 @@ export default function ShopScreen({ navigation }) {
 
 const tileStyles = StyleSheet.create({
   wrapper: {
-    backgroundColor: "#0A0A0A",
+    backgroundColor: colors.bgPrimary,
   },
   tile: {
     flexDirection: "row",
@@ -318,36 +319,36 @@ const tileStyles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 18,
-    backgroundColor: "#0A0A0A",
+    backgroundColor: colors.bgPrimary,
   },
   tileDisabled: { opacity: 0.4 },
   label: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    letterSpacing: 0.3,
+    fontSize: 22,
+    color: colors.textPrimary,
+    letterSpacing: 0.5,
+    fontFamily: fonts.display,
   },
-  labelDisabled: { color: "#444" },
+  labelDisabled: { color: colors.textMuted },
   chevron: {
     fontSize: 28,
-    color: "#FFFFFF",
+    color: colors.accentGold,
     fontWeight: "300",
     lineHeight: 30,
     transform: [{ rotate: "90deg" }],
   },
   comingSoon: {
     fontSize: 8,
-    fontWeight: "700",
+    fontFamily: fonts.bodyBold,
     letterSpacing: 1.5,
-    color: "#444",
+    color: colors.textMuted,
   },
   divider: {
     height: 1,
-    backgroundColor: "#1E1E1E",
+    backgroundColor: colors.bgTertiary,
     marginHorizontal: 0,
   },
   subList: {
-    backgroundColor: "#0A0A0A",
+    backgroundColor: colors.bgPrimary,
   },
   brandRow: {
     flexDirection: "row",
@@ -358,18 +359,18 @@ const tileStyles = StyleSheet.create({
   },
   brandLabel: {
     fontSize: 16,
-    fontWeight: "500",
-    color: "#CCCCCC",
+    fontFamily: fonts.bodyMedium,
+    color: colors.textSecondary,
     letterSpacing: 0.2,
   },
   brandArrow: {
     fontSize: 22,
-    color: "#555",
+    color: colors.textMuted,
     fontWeight: "300",
   },
   brandDivider: {
     height: 1,
-    backgroundColor: "#141414",
+    backgroundColor: colors.bgCard,
     marginLeft: 28,
   },
 });
@@ -379,67 +380,67 @@ const tileStyles = StyleSheet.create({
 const mapStyles = StyleSheet.create({
   container:      { marginTop: 32, paddingHorizontal: 12 },
   sectionHeader:  { marginBottom: 14, paddingHorizontal: 4 },
-  sectionEyebrow: { fontSize: 9, letterSpacing: 3, color: "#555", fontWeight: "400", marginBottom: 2 },
-  sectionTitle:   { fontSize: 22, fontWeight: "800", color: "#FFFFFF", letterSpacing: 1 },
+  sectionEyebrow: { fontSize: 9, letterSpacing: 3, color: colors.textMuted, fontFamily: fonts.bodyRegular, marginBottom: 2 },
+  sectionTitle:   { fontSize: 26, color: colors.textPrimary, letterSpacing: 1, fontFamily: fonts.display },
   mapCard: {
-    height: 180, backgroundColor: "#141414", borderRadius: 20,
-    borderWidth: 1, borderColor: "#2A2A2A", overflow: "hidden",
+    height: 180, backgroundColor: colors.bgCard, borderRadius: radius.xl,
+    borderWidth: 1, borderColor: colors.borderLight, overflow: "hidden",
     marginBottom: 10, position: "relative",
   },
-  mapBg:      { flex: 1, backgroundColor: "#141414", position: "relative" },
-  gridLine:   { position: "absolute", backgroundColor: "#1e1e1e" },
+  mapBg:      { flex: 1, backgroundColor: colors.bgCard, position: "relative" },
+  gridLine:   { position: "absolute", backgroundColor: colors.bgTertiary },
   gridLineH:  { left: 0, right: 0, height: 1 },
   gridLineV:  { top: 0, bottom: 0, width: 1 },
-  road:       { position: "absolute", backgroundColor: "#242424" },
+  road:       { position: "absolute", backgroundColor: colors.bgSurface },
   roadH:      { left: 0, right: 0, height: 8 },
   roadV:      { top: 0, bottom: 0, width: 8 },
   pinContainer: { position: "absolute", top: "38%", left: "48%", alignItems: "center" },
   pin: {
     width: 28, height: 28, borderRadius: 14, borderBottomRightRadius: 0,
-    backgroundColor: "#FFFFFF", transform: [{ rotate: "-45deg" }],
+    backgroundColor: colors.accentGold, transform: [{ rotate: "-45deg" }],
     alignItems: "center", justifyContent: "center",
-    borderWidth: 2, borderColor: "#0A0A0A",
+    borderWidth: 2, borderColor: colors.bgPrimary,
   },
-  pinDot:   { width: 8, height: 8, borderRadius: 4, backgroundColor: "#0A0A0A", transform: [{ rotate: "45deg" }] },
+  pinDot:   { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.bgPrimary, transform: [{ rotate: "45deg" }] },
   pinShadow:{ width: 10, height: 4, borderRadius: 5, backgroundColor: "rgba(0,0,0,0.4)", marginTop: 2 },
   mapHint: {
     position: "absolute", bottom: 10, right: 12,
     backgroundColor: "rgba(0,0,0,0.7)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6,
   },
-  mapHintText:  { fontSize: 8, letterSpacing: 1.5, color: "#a8a49c", fontWeight: "600" },
+  mapHintText:  { fontSize: 8, letterSpacing: 1.5, color: colors.textSecondary, fontFamily: fonts.bodySemibold },
   infoCard: {
-    backgroundColor: "#141414", borderRadius: 20, borderWidth: 1,
-    borderColor: "#2A2A2A", padding: 16, marginBottom: 12,
+    backgroundColor: colors.bgCard, borderRadius: radius.xl, borderWidth: 1,
+    borderColor: colors.borderLight, padding: 16, marginBottom: 12,
   },
   storeNameRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
-  liveDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: "#4ade80" },
-  storeName:    { fontSize: 15, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.5 },
-  divider:      { height: 1, backgroundColor: "#1e1e1e", marginBottom: 12 },
+  liveDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
+  storeName:    { fontSize: 17, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display },
+  divider:      { height: 1, backgroundColor: colors.bgTertiary, marginBottom: 12 },
   infoRow:      { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 10 },
   infoIcon:     { fontSize: 13, marginTop: 1 },
-  infoText:     { fontSize: 12, color: "#a8a49c", flex: 1, lineHeight: 18, letterSpacing: 0.3 },
-  infoTextLink: { color: "#FFFFFF", textDecorationLine: "underline" },
+  infoText:     { fontSize: 12, color: colors.textSecondary, flex: 1, lineHeight: 18, letterSpacing: 0.3, fontFamily: fonts.bodyRegular },
+  infoTextLink: { color: colors.accentGold, textDecorationLine: "underline" },
   directionsBtn: {
-    backgroundColor: "#F5F3EF", borderRadius: 14,
+    backgroundColor: colors.textPrimary, borderRadius: radius.full,
     paddingVertical: 14, alignItems: "center", justifyContent: "center", marginBottom: 8,
   },
-  directionsBtnText: { fontSize: 11, fontWeight: "800", letterSpacing: 2, color: "#0A0A0A" },
+  directionsBtnText: { ...typography.button, fontSize: 11, color: colors.bgPrimary },
 });
 
 /* ─────────────────── MAIN STYLES ─────────────────── */
 
 const styles = StyleSheet.create({
-  safe:          { flex: 1, backgroundColor: "#0A0A0A" },
+  safe:          { flex: 1, backgroundColor: colors.bgPrimary },
   scrollContent: { paddingBottom: 48 },
   topNav: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start",
     paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4,
   },
-  eyebrow:      { fontSize: 9, letterSpacing: 3, color: "#555", fontWeight: "400", marginBottom: 1 },
-  navTitle:     { fontSize: 28, fontWeight: "800", color: "#FFFFFF", letterSpacing: 2 },
+  eyebrow:      { fontSize: 9, letterSpacing: 3, color: colors.textMuted, fontFamily: fonts.bodyRegular, marginBottom: 1 },
+  navTitle:     { fontSize: 32, color: colors.textPrimary, letterSpacing: 2, fontFamily: fonts.display },
   subtitle:     { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 16 },
-  subtitleText: { fontSize: 13, color: "#444", letterSpacing: 0.5 },
-  categoryList: { borderTopWidth: 1, borderTopColor: "#1E1E1E" },
+  subtitleText: { fontSize: 13, color: colors.textMuted, letterSpacing: 0.5, fontFamily: fonts.bodyRegular },
+  categoryList: { borderTopWidth: 1, borderTopColor: colors.bgTertiary },
   footer:       { alignItems: "center", paddingTop: 24, paddingBottom: 8 },
-  footerText:   { fontSize: 8, letterSpacing: 2.5, color: "#2a2a2a", fontWeight: "700" },
+  footerText:   { fontSize: 8, letterSpacing: 2.5, color: colors.bgTertiary, fontFamily: fonts.bodyBold },
 });

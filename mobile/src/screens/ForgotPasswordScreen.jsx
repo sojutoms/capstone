@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { CommonActions } from "@react-navigation/native";
 import { BASE_URL } from "../api/config";
+import { colors, fonts } from "../theme";
 
 export default function ForgotPasswordScreen({ navigation }) {
   const [step,        setStep]        = useState(1);
@@ -103,7 +104,7 @@ export default function ForgotPasswordScreen({ navigation }) {
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f0f0f0" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -192,7 +193,7 @@ export default function ForgotPasswordScreen({ navigation }) {
                   activeOpacity={0.88}
                 >
                   {loading
-                    ? <ActivityIndicator color="#000" size="small" />
+                    ? <ActivityIndicator color={colors.textInverse} size="small" />
                     : <Text style={s.primaryBtnText}>SEND OTP</Text>
                   }
                 </TouchableOpacity>
@@ -252,7 +253,7 @@ export default function ForgotPasswordScreen({ navigation }) {
                   activeOpacity={0.88}
                 >
                   {loading
-                    ? <ActivityIndicator color="#000" size="small" />
+                    ? <ActivityIndicator color={colors.textInverse} size="small" />
                     : <Text style={s.primaryBtnText}>RESET PASSWORD</Text>
                   }
                 </TouchableOpacity>
@@ -283,10 +284,9 @@ export default function ForgotPasswordScreen({ navigation }) {
 }
 
 const s = StyleSheet.create({
-  // ── Root: white background ──
   root: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: colors.bgPrimary,
   },
 
   scroll: {
@@ -329,7 +329,7 @@ const s = StyleSheet.create({
     backgroundColor: "transparent",
   },
   stepCircleActive: {
-    borderColor: "#fff",
+    borderColor: colors.accentGold,
     backgroundColor: "transparent",
   },
   stepCircleText: {
@@ -338,7 +338,7 @@ const s = StyleSheet.create({
     color: "#3a3a3a",
   },
   stepCircleTextActive: {
-    color: "#fff",
+    color: colors.accentGold,
   },
   stepLine: {
     flex: 1,
@@ -347,7 +347,7 @@ const s = StyleSheet.create({
     marginHorizontal: 8,
   },
   stepLineActive: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.accentGold,
   },
 
   // ── Heading ──
@@ -360,10 +360,10 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontSize: 36,
-    fontWeight: "900",
-    color: "#f0f0f0",
-    letterSpacing: -0.5,
+    fontSize: 40,
+    fontFamily: fonts.display,
+    color: colors.textPrimary,
+    letterSpacing: 0.5,
     lineHeight: 42,
     marginBottom: 10,
   },
@@ -423,7 +423,7 @@ const s = StyleSheet.create({
 
   // ── Primary button ──
   primaryBtn: {
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.textPrimary,
     height: 48,
     borderRadius: 10,
     justifyContent: "center",
@@ -432,7 +432,7 @@ const s = StyleSheet.create({
   },
   primaryBtnDim: { opacity: 0.6 },
   primaryBtnText: {
-    color: "#0a0a0a",
+    color: colors.textInverse,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2.5,
@@ -463,5 +463,5 @@ const s = StyleSheet.create({
     marginTop: 24,
   },
   bottomText: { color: "#333", fontSize: 12 },
-  bottomLink: { color: "#c0c0c0", fontSize: 12, fontWeight: "700" },
+  bottomLink: { color: colors.accentGold, fontSize: 12, fontWeight: "700" },
 });

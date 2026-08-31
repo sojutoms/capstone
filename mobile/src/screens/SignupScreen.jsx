@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { BASE_URL, API_HEADERS } from "../api/config";
+import { colors, fonts } from "../theme";
 
 // ─── Floating Label Input ────────────────────────────────────────────────────
 function FloatingInput({
@@ -276,9 +277,9 @@ const heroStyles = StyleSheet.create({
   },
   char: {
     fontSize: 50,
-    fontWeight: "900",
-    color: "#f0f0f0",
-    letterSpacing: -3,
+    fontFamily: fonts.display,
+    color: colors.textPrimary,
+    letterSpacing: -1,
     lineHeight: 56,
   },
 });
@@ -313,11 +314,11 @@ function StepBar({ step }) {
 const stepStyles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", marginBottom: 28 },
   dot: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
-  dotActive: { backgroundColor: "#fff" },
+  dotActive: { backgroundColor: colors.accentGold },
   dotDone: { backgroundColor: "rgba(28,28,28,0.8)", borderWidth: 0.5, borderColor: "#2e2e2e" },
   dotIdle: { backgroundColor: "rgba(17,17,17,0.6)", borderWidth: 0.5, borderColor: "#1a1a1a" },
   dotText: { fontSize: 9, fontWeight: "700", color: "#2a2a2a" },
-  dotTextActive: { color: "#000" },
+  dotTextActive: { color: colors.textInverse },
   line: { flex: 1, height: 1, backgroundColor: "#1a1a1a" },
   lineDone: { backgroundColor: "#2a2a2a" },
 });
@@ -374,7 +375,7 @@ function ShimmerButton({ label, onPress, disabled, loading }) {
       disabled={loading}
     >
       {loading ? (
-        <ActivityIndicator color="#000" />
+        <ActivityIndicator color={colors.textInverse} />
       ) : (
         <Text style={[btnStyles.text, disabled && btnStyles.textOff]}>{label}</Text>
       )}
@@ -408,9 +409,9 @@ const btnStyles = StyleSheet.create({
     marginTop: 4,
     overflow: "hidden",
   },
-  on: { backgroundColor: "#fff" },
+  on: { backgroundColor: colors.textPrimary },
   off: { backgroundColor: "rgba(14,14,14,0.7)" },
-  text: { color: "#000", fontWeight: "700", fontSize: 11, letterSpacing: 2 },
+  text: { color: colors.textInverse, fontWeight: "700", fontSize: 11, letterSpacing: 2 },
   textOff: { color: "#2a2a2a" },
   shimmer: {
     position: "absolute",
@@ -580,16 +581,16 @@ const lm = StyleSheet.create({
   scrollHint: { backgroundColor: "rgba(255,255,255,0.03)", borderRadius: 6, paddingVertical: 6, paddingHorizontal: 10, marginBottom: 8 },
   scrollHintText: { color: "#444", fontSize: 10, letterSpacing: 0.5 },
   progressBg: { height: 2, backgroundColor: "#1a1a1a", borderRadius: 2, marginBottom: 12, overflow: "hidden" },
-  progressFill: { height: 2, backgroundColor: "#fff" },
+  progressFill: { height: 2, backgroundColor: colors.accentGold },
   termsBox: { maxHeight: 260 },
   section: { marginBottom: 14 },
   sectionHeading: { color: "#b0b0b0", fontSize: 11, fontWeight: "700", marginBottom: 4 },
   sectionBody: { color: "#555", fontSize: 11, lineHeight: 18 },
   modalActions: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 16 },
   declineText: { color: "#555", fontSize: 13 },
-  acceptBtn: { backgroundColor: "#fff", paddingVertical: 11, paddingHorizontal: 24, borderRadius: 99 },
+  acceptBtn: { backgroundColor: colors.textPrimary, paddingVertical: 11, paddingHorizontal: 24, borderRadius: 99 },
   acceptBtnOff: { backgroundColor: "#1a1a1a" },
-  acceptText: { color: "#000", fontWeight: "600", fontSize: 12 },
+  acceptText: { color: colors.textInverse, fontWeight: "600", fontSize: 12 },
   acceptTextOff: { color: "#2a2a2a" },
 });
 
@@ -841,11 +842,11 @@ const s = StyleSheet.create({
   pseudoCheckDone: { backgroundColor: "#1a1a1a", borderColor: "#444" },
   pseudoCheckMark: { color: "#aaa", fontSize: 9, fontWeight: "800" },
   cboxText: { color: "#444", fontSize: 11, flex: 1, lineHeight: 18 },
-  cboxLink: { color: "#666", textDecorationLine: "underline" },
-  cboxLinkDone: { color: "#4a8a4a" },
+  cboxLink: { color: colors.accentGoldLight, textDecorationLine: "underline" },
+  cboxLinkDone: { color: colors.success },
   errorBanner: { backgroundColor: "rgba(20,20,20,0.8)", borderWidth: 0.5, borderColor: "#2a2a2a", borderRadius: 8, padding: 10, marginBottom: 12 },
-  errorText: { color: "#666", fontSize: 11, lineHeight: 17 },
+  errorText: { color: colors.danger, fontSize: 11, lineHeight: 17 },
   signinLink: { textAlign: "center", color: "#333", fontSize: 11, marginTop: 14 },
-  signinAccent: { color: "#c0c0c0" },
+  signinAccent: { color: colors.accentGold },
   backLink: { textAlign: "center", color: "#555", fontSize: 11, marginTop: 14 },
 });

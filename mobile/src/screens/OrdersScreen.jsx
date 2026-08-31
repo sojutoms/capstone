@@ -9,6 +9,7 @@ import {
   Dimensions,
   Platform,
 } from "react-native";
+import { colors, fonts, radius, typography } from "../theme";
 
 const { width } = Dimensions.get("window");
 const isSmall = width < 380;
@@ -122,7 +123,7 @@ export default function OrdersScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   contentContainer: { padding: isSmall ? 16 : 20 },
 
   // Header
@@ -131,30 +132,34 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "#111",
+    backgroundColor: colors.accentGoldWash,
+    borderWidth: 1,
+    borderColor: colors.accentGold,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
   },
-  checkIcon: { color: "#fff", fontSize: 36, fontWeight: "700" },
+  checkIcon: { color: colors.accentGold, fontSize: 36, fontWeight: "700" },
   title: {
-    fontSize: isSmall ? 22 : isTablet ? 32 : 26,
-    fontWeight: "800",
-    color: "#111",
+    fontSize: isSmall ? 24 : isTablet ? 34 : 28,
+    fontFamily: fonts.display,
+    color: colors.textPrimary,
+    letterSpacing: 1,
     marginBottom: 6,
   },
-  subtitle: { fontSize: 15, color: "#666", marginBottom: 16 },
+  subtitle: { fontSize: 15, color: colors.textMuted, marginBottom: 16 },
   orderNumberBadge: {
     borderWidth: 1.5,
-    borderColor: "#111",
-    borderRadius: 8,
+    borderColor: colors.borderLight,
+    borderRadius: radius.sm,
     paddingVertical: 10,
     paddingHorizontal: 20,
     alignItems: "center",
+    backgroundColor: colors.bgCard,
   },
   orderNumberLabel: {
     fontSize: 11,
-    color: "#888",
+    color: colors.textMuted,
     letterSpacing: 1.5,
     fontWeight: "600",
     marginBottom: 2,
@@ -162,24 +167,25 @@ const styles = StyleSheet.create({
   orderNumber: {
     fontSize: isSmall ? 16 : 18,
     fontWeight: "800",
-    color: "#111",
+    color: colors.textPrimary,
     letterSpacing: 0.5,
   },
 
   divider: {
     height: 1,
-    backgroundColor: "#eee",
+    backgroundColor: colors.borderSubtle,
     marginVertical: 20,
   },
 
   sectionTitle: {
-    fontSize: isSmall ? 15 : 17,
-    fontWeight: "700",
-    color: "#111",
+    fontSize: isSmall ? 16 : 18,
+    fontFamily: fonts.display,
+    color: colors.textPrimary,
+    letterSpacing: 1,
     marginBottom: 14,
   },
 
-  emptyMsg: { color: "#888", fontSize: 14, textAlign: "center", marginTop: 20 },
+  emptyMsg: { color: colors.textMuted, fontSize: 14, textAlign: "center", marginTop: 20 },
 
   // Item card
   itemCard: {
@@ -187,33 +193,33 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: colors.borderSubtle,
     gap: 12,
   },
   itemImage: {
     width: isSmall ? 60 : 80,
     height: isSmall ? 60 : 80,
-    borderRadius: 8,
-    backgroundColor: "#f5f5f5",
+    borderRadius: radius.sm,
+    backgroundColor: colors.bgTertiary,
   },
   imagePlaceholder: { alignItems: "center", justifyContent: "center" },
-  imagePlaceholderText: { fontSize: 11, color: "#bbb" },
+  imagePlaceholderText: { fontSize: 11, color: colors.textMuted },
 
   itemDetails: { flex: 1 },
   itemName: {
     fontSize: isSmall ? 13 : 14,
-    fontWeight: "700",
-    color: "#111",
+    fontFamily: fonts.bodyBold,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
-  itemMeta: { fontSize: 12, color: "#666", marginBottom: 2 },
-  itemPrice: { fontSize: 12, color: "#888", marginTop: 2 },
+  itemMeta: { fontSize: 12, color: colors.textMuted, marginBottom: 2 },
+  itemPrice: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
 
   lineTotal: { justifyContent: "center" },
   lineTotalAmount: {
     fontSize: isSmall ? 13 : 15,
     fontWeight: "700",
-    color: "#111",
+    color: colors.accentGold,
   },
 
   // Grand total
@@ -223,23 +229,22 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginTop: 8,
     borderTopWidth: 2,
-    borderTopColor: "#111",
+    borderTopColor: colors.accentGold,
   },
-  grandTotalLabel: { fontSize: 16, fontWeight: "700", color: "#111" },
-  grandTotalAmount: { fontSize: 20, fontWeight: "800", color: "#111" },
+  grandTotalLabel: { fontSize: 16, fontFamily: fonts.display, color: colors.textPrimary, letterSpacing: 0.5 },
+  grandTotalAmount: { fontSize: 20, fontWeight: "800", color: colors.accentGold },
 
   // Actions
   actions: { marginTop: 28 },
   homeBtn: {
-    backgroundColor: "#111",
-    borderRadius: 25,
+    backgroundColor: colors.textPrimary,
+    borderRadius: radius.full,
     paddingVertical: 16,
     alignItems: "center",
   },
   homeBtnText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: isSmall ? 14 : 16,
-    letterSpacing: 1,
+    ...typography.button,
+    color: colors.textInverse,
+    fontSize: isSmall ? 12 : 13,
   },
 });

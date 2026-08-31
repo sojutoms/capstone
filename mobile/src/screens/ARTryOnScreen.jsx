@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { colors, fonts, radius, typography } from '../theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -139,7 +140,7 @@ const ARTryOnScreen = ({ route, navigation }) => {
   ══════════════════════════════════════ */
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
 
       {/* ── CAMERA ── */}
       <CameraView style={StyleSheet.absoluteFill} facing={facing} />
@@ -254,14 +255,14 @@ const ARTryOnScreen = ({ route, navigation }) => {
    STYLES
 ══════════════════════════════════════ */
 const s = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: '#000' },
-  center: { flex: 1, backgroundColor: '#0D0D0D', justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 },
+  safe:   { flex: 1, backgroundColor: colors.bgPrimary },
+  center: { flex: 1, backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 },
 
   /* ── permission ── */
-  permTitle:   { color: '#FFF', fontSize: 20, fontWeight: '800', letterSpacing: 0.5 },
-  permText:    { color: '#666', fontSize: 14, textAlign: 'center', lineHeight: 22 },
-  permBtn:     { marginTop: 8, backgroundColor: '#00C8FF', paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12 },
-  permBtnText: { color: '#000', fontWeight: '800', fontSize: 12, letterSpacing: 2 },
+  permTitle:   { color: colors.textPrimary, fontSize: 20, fontFamily: fonts.display, letterSpacing: 1 },
+  permText:    { color: colors.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22 },
+  permBtn:     { marginTop: 8, backgroundColor: colors.accentGold, paddingVertical: 14, paddingHorizontal: 32, borderRadius: radius.lg },
+  permBtnText: { ...typography.button, color: colors.textInverse, fontSize: 12 },
 
   /* ── top bar ── */
   topBar: {
@@ -271,9 +272,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
   },
   navBtn:      { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20 },
-  navArrow:    { color: '#FFF', fontSize: 20 },
-  navIcon:     { color: '#FFF', fontSize: 20 },
-  topBarTitle: { flex: 1, color: '#FFF', fontSize: 13, fontWeight: '800', letterSpacing: 3, textAlign: 'center' },
+  navArrow:    { color: colors.textPrimary, fontSize: 20 },
+  navIcon:     { color: colors.textPrimary, fontSize: 20 },
+  topBarTitle: { flex: 1, color: colors.textPrimary, fontSize: 13, fontFamily: fonts.display, letterSpacing: 2, textAlign: 'center' },
 
   /* ── vignette ── */
   vigTop: {
@@ -298,7 +299,7 @@ const s = StyleSheet.create({
   corner: {
     position: 'absolute',
     width: 28, height: 28,
-    borderColor: '#00C8FF',
+    borderColor: colors.accentGold,
   },
   cornerTL: { top: 0, left: 0,  borderTopWidth: 3,    borderLeftWidth: 3  },
   cornerTR: { top: 0, right: 0, borderTopWidth: 3,    borderRightWidth: 3 },
@@ -311,9 +312,9 @@ const s = StyleSheet.create({
     left: width * 0.08,
     right: width * 0.08,
     height: 2,
-    backgroundColor: '#00C8FF',
+    backgroundColor: colors.accentGold,
     opacity: 0.8,
-    shadowColor: '#00C8FF',
+    shadowColor: colors.accentGold,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 8,
@@ -328,7 +329,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   instructionText: {
-    color: '#FFF',
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -353,7 +354,7 @@ const s = StyleSheet.create({
   shoeGlow: {
     width: width * 0.55,
     height: 18,
-    backgroundColor: 'rgba(0,200,255,0.18)',
+    backgroundColor: colors.accentGoldWash,
     borderRadius: 40,
     marginTop: -6,
     alignSelf: 'center',
@@ -368,10 +369,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0,200,255,0.3)',
+    borderColor: colors.accentGoldWash,
   },
-  arBadgeText: { color: '#00C8FF', fontSize: 10, fontWeight: '800', letterSpacing: 2 },
-  arDot:       { width: 6, height: 6, borderRadius: 3, backgroundColor: '#00FF88' },
+  arBadgeText: { color: colors.accentGold, fontSize: 10, fontWeight: '800', letterSpacing: 2 },
+  arDot:       { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success },
 
   /* ── bottom bar ── */
   bottomBar: {
@@ -379,7 +380,7 @@ const s = StyleSheet.create({
     bottom: 0, left: 0, right: 0,
     backgroundColor: 'rgba(13,13,13,0.96)',
     borderTopWidth: 1,
-    borderTopColor: '#1A1A1A',
+    borderTopColor: colors.borderSubtle,
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: Platform.OS === 'ios' ? 36 : 20,
@@ -393,12 +394,12 @@ const s = StyleSheet.create({
   thumbImg: {
     width: 52,
     height: 52,
-    borderRadius: 10,
-    backgroundColor: '#141414',
+    borderRadius: radius.md,
+    backgroundColor: colors.bgCard,
   },
   productInfo: { flex: 1, gap: 3 },
-  productName:  { color: '#FFF', fontSize: 15, fontWeight: '800', letterSpacing: 0.3 },
-  productPrice: { color: '#00C8FF', fontSize: 14, fontWeight: '700' },
+  productName:  { color: colors.textPrimary, fontSize: 15, fontFamily: fonts.bodyBold, letterSpacing: 0.3 },
+  productPrice: { color: colors.accentGold, fontSize: 14, fontWeight: '700' },
 
   actionRow: {
     flexDirection: 'row',
@@ -406,25 +407,25 @@ const s = StyleSheet.create({
   },
   resetBtn: {
     flex: 1,
-    backgroundColor: '#141414',
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: colors.borderLight,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     alignItems: 'center',
   },
-  resetText: { color: '#666', fontWeight: '700', fontSize: 11, letterSpacing: 1.5 },
+  resetText: { color: colors.textMuted, fontWeight: '700', fontSize: 11, letterSpacing: 1.5 },
   addBtn: {
     flex: 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.textPrimary,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     alignItems: 'center',
   },
-  addText: { color: '#000', fontWeight: '800', fontSize: 12, letterSpacing: 2 },
+  addText: { ...typography.button, color: colors.textInverse, fontSize: 12 },
 
   disclaimer: {
-    color: '#2A2A2A',
+    color: colors.bgTertiary,
     fontSize: 10,
     textAlign: 'center',
     letterSpacing: 0.3,

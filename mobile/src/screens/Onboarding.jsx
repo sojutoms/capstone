@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Video } from "expo-av";
 import { useAuth } from "../context/AuthContext";
+import { colors, fonts, typography } from "../theme";
 
 const { width, height } = Dimensions.get("window");
 
@@ -349,11 +350,11 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#fff",
-    fontSize: 34,
-    fontWeight: "700",
-    lineHeight: 40,
-    letterSpacing: -0.5,
+    color: colors.textPrimary,
+    fontFamily: fonts.display,
+    fontSize: 40,
+    lineHeight: 42,
+    letterSpacing: 0.5,
     marginBottom: 10,
   },
 
@@ -397,9 +398,8 @@ const styles = StyleSheet.create({
   },
 
   buttonText: {
-    color: "#000",
-    fontWeight: "700",
-    fontSize: 15,
-    letterSpacing: 1,
+    ...typography.button,
+    color: colors.textInverse,
+    fontSize: 14,
   },
 });

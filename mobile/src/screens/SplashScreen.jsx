@@ -5,6 +5,7 @@ import {
   View,
   Easing,
 } from "react-native";
+import { colors } from "../theme";
 
 const SplashScreen = ({ navigation }) => {
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
@@ -58,7 +59,7 @@ export default SplashScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: colors.bgPrimary,
     justifyContent: "center",
     alignItems: "center",
   },

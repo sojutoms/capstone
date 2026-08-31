@@ -14,6 +14,7 @@ import {
   ImageBackground,
 } from "react-native";
 import { BASE_URL } from "../api/config";
+import { colors, fonts } from "../theme";
 
 export default function VerifyOTPScreen({ navigation, route }) {
   const email = route?.params?.email || "";
@@ -136,7 +137,7 @@ export default function VerifyOTPScreen({ navigation, route }) {
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -228,7 +229,7 @@ export default function VerifyOTPScreen({ navigation, route }) {
                 activeOpacity={0.88}
               >
                 {loading
-                  ? <ActivityIndicator color="#000" size="small" />
+                  ? <ActivityIndicator color={colors.textInverse} size="small" />
                   : <Text style={s.primaryBtnText}>VERIFY CODE</Text>
                 }
               </TouchableOpacity>
@@ -269,7 +270,7 @@ export default function VerifyOTPScreen({ navigation, route }) {
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0a0a0a",
+    backgroundColor: colors.bgPrimary,
   },
   scroll: {
     flexGrow: 1,
@@ -321,10 +322,10 @@ const s = StyleSheet.create({
     textAlign: "center",
   },
   title: {
-    fontSize: 36,
-    fontWeight: "900",
-    color: "#f0f0f0",
-    letterSpacing: -0.5,
+    fontSize: 40,
+    fontFamily: fonts.display,
+    color: colors.textPrimary,
+    letterSpacing: 0.5,
     lineHeight: 42,
     marginBottom: 10,
     textAlign: "center",
@@ -373,7 +374,7 @@ const s = StyleSheet.create({
     fontSize: 28,
     fontWeight: "700",
     letterSpacing: 12,
-    color: "#f0f0f0",
+    color: colors.textPrimary,
   },
 
   // ── Error / Success ──
@@ -394,7 +395,7 @@ const s = StyleSheet.create({
 
   // ── Primary button ──
   primaryBtn: {
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.textPrimary,
     height: 48,
     borderRadius: 10,
     justifyContent: "center",
@@ -403,7 +404,7 @@ const s = StyleSheet.create({
   },
   primaryBtnDim: { opacity: 0.45 },
   primaryBtnText: {
-    color: "#0a0a0a",
+    color: colors.textInverse,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 2.5,
@@ -417,7 +418,7 @@ const s = StyleSheet.create({
     marginTop: -2,
   },
   resendLabel: { color: "#333", fontSize: 12 },
-  resendLink:  { color: "#c0c0c0", fontSize: 12, fontWeight: "700" },
+  resendLink:  { color: colors.accentGold, fontSize: 12, fontWeight: "700" },
   resendTimer: { color: "#3a3a3a", fontSize: 12 },
 
   // ── Divider ──

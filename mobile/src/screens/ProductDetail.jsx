@@ -20,6 +20,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useCart }      from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import Toast            from "react-native-toast-message";
+import { colors, fonts, radius, typography } from "../theme";
 
 const { width } = Dimensions.get("window");
 
@@ -69,7 +70,7 @@ const StarRow = ({ rating, size = 13, onPress }) => (
       const half   = !filled && i - 0.5 <= rating;
       return (
         <TouchableOpacity key={i} onPress={() => onPress?.(i)} disabled={!onPress}>
-          <Text style={{ fontSize: size, color: filled || half ? "#E8C84A" : "#333" }}>
+          <Text style={{ fontSize: size, color: filled || half ? colors.accentGold : colors.bgTertiary }}>
             {filled ? "★" : half ? "⯨" : "★"}
           </Text>
         </TouchableOpacity>
@@ -107,7 +108,7 @@ export default function ProductDetailScreen({ route }) {
   if (!product) {
     return (
       <View style={s.center}>
-        <Text style={{ color: "#fff" }}>No product found</Text>
+        <Text style={{ color: colors.textPrimary }}>No product found</Text>
       </View>
     );
   }
@@ -194,7 +195,7 @@ export default function ProductDetailScreen({ route }) {
   ═══════════════════════════════════════════════ */
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#0D0D0D" />
+      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
 
       {/* ══ TOP NAV BAR ══ */}
       <View style={s.topBar}>
@@ -226,7 +227,7 @@ export default function ProductDetailScreen({ route }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 130 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
         }
       >
 
@@ -412,7 +413,7 @@ export default function ProductDetailScreen({ route }) {
           {showReviews && (
             <View style={s.reviewsList}>
               {loadingReviews ? (
-                <ActivityIndicator color="#fff" style={{ marginVertical: 24 }} />
+                <ActivityIndicator color={colors.accentGold} style={{ marginVertical: 24 }} />
               ) : reviews.length === 0 ? (
                 <Text style={s.noReviews}>No reviews yet. Be the first!</Text>
               ) : (
@@ -466,8 +467,8 @@ export default function ProductDetailScreen({ route }) {
 const HERO_H = width * 0.88;
 
 const s = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: "#0D0D0D" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0D0D0D" },
+  safe:   { flex: 1, backgroundColor: colors.bgPrimary },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.bgPrimary },
 
   /* ── top nav ── */
   topBar: {
@@ -476,7 +477,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 10,
-    backgroundColor: "#0D0D0D",
+    backgroundColor: colors.bgPrimary,
   },
   navBtn: {
     width: 36,
@@ -485,24 +486,24 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   navArrow: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 22,
     fontWeight: "300",
   },
   navIcon: {
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 18,
     lineHeight: 22,
   },
   heartActive: {
-    color: "#E84A4A",
+    color: colors.danger,
   },
   topBarTitle: {
     flex: 1,
-    color: "#FFFFFF",
+    color: colors.textPrimary,
     fontSize: 15,
-    fontWeight: "800",
-    letterSpacing: 0.8,
+    fontFamily: fonts.display,
+    letterSpacing: 1.2,
     textAlign: "center",
   },
   navRight: {
@@ -514,7 +515,7 @@ const s = StyleSheet.create({
   heroWrapper: {
     width,
     height: HERO_H,
-    backgroundColor: "#141414",
+    backgroundColor: colors.bgCard,
     position: "relative",
   },
   slideItem: {
@@ -522,7 +523,7 @@ const s = StyleSheet.create({
     height: HERO_H,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#141414",
+    backgroundColor: colors.bgCard,
   },
   slideImage: {
     width: "80%",
@@ -544,13 +545,13 @@ const s = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#333",
+    backgroundColor: colors.bgTertiary,
   },
   dotActive: {
     width: 22,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.accentGold,
   },
 
   /* ── info block ── */
@@ -559,19 +560,19 @@ const s = StyleSheet.create({
     paddingTop: 22,
     paddingBottom: 20,
     gap: 8,
-    backgroundColor: "#0D0D0D",
+    backgroundColor: colors.bgPrimary,
   },
   productName: {
-    fontSize: 26,
-    fontWeight: "900",
-    color: "#FFFFFF",
-    letterSpacing: 0.5,
+    fontSize: 28,
+    fontFamily: fonts.display,
+    color: colors.textPrimary,
+    letterSpacing: 0.8,
     lineHeight: 32,
   },
   categoryLabel: {
     fontSize: 14,
-    color: "#888",
-    fontWeight: "400",
+    color: colors.textSecondary,
+    fontFamily: fonts.bodyRegular,
     marginTop: -2,
   },
   ratingRow: {
@@ -582,8 +583,8 @@ const s = StyleSheet.create({
   },
   ratingCount: {
     fontSize: 12,
-    color: "#666",
-    fontWeight: "500",
+    color: colors.textMuted,
+    fontFamily: fonts.bodyMedium,
   },
   priceRow: {
     flexDirection: "row",
@@ -599,37 +600,37 @@ const s = StyleSheet.create({
   priceValue: {
     fontSize: 26,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: colors.accentGold,
     letterSpacing: 0.3,
   },
   taxLabel: {
     fontSize: 12,
-    color: "#555",
-    fontWeight: "400",
+    color: colors.textMuted,
+    fontFamily: fonts.bodyRegular,
   },
   brandBadge: {
     borderWidth: 1,
-    borderColor: "#2E2E2E",
-    borderRadius: 4,
+    borderColor: colors.borderLight,
+    borderRadius: radius.sm,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   brandBadgeText: {
     fontSize: 10,
-    color: "#666",
-    fontWeight: "700",
+    color: colors.textMuted,
+    fontFamily: fonts.bodyBold,
     letterSpacing: 1.5,
   },
   oldPrice: {
     fontSize: 13,
-    color: "#3A3A3A",
+    color: colors.textMuted,
     textDecorationLine: "line-through",
     marginTop: -2,
   },
 
   divider: {
     height: 1,
-    backgroundColor: "#1A1A1A",
+    backgroundColor: colors.borderSubtle,
     marginHorizontal: 20,
   },
 
@@ -646,13 +647,13 @@ const s = StyleSheet.create({
   },
   sizeTitle: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: fonts.bodyBold,
     letterSpacing: 2,
-    color: "#888",
+    color: colors.textSecondary,
   },
   sizeGuide: {
     fontSize: 12,
-    color: "#666",
+    color: colors.accentGold,
     letterSpacing: 0.3,
   },
   sizeScroll: {
@@ -663,10 +664,10 @@ const s = StyleSheet.create({
   sizeChip: {
     minWidth: 58,
     height: 48,
-    borderRadius: 10,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#222",
-    backgroundColor: "#181818",
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.bgCard,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 8,
@@ -674,30 +675,30 @@ const s = StyleSheet.create({
     overflow: "hidden",
   },
   sizeChipActive: {
-    backgroundColor: "transparent",
+    backgroundColor: colors.accentGoldWash,
     borderWidth: 2,
-    borderColor: "#00C8FF",
+    borderColor: colors.accentGold,
   },
   sizeChipOos: {
     opacity: 0.3,
   },
   sizeChipText: {
     fontSize: 13,
-    fontWeight: "600",
-    color: "#888",
+    fontFamily: fonts.bodySemibold,
+    color: colors.textSecondary,
   },
   sizeChipTextActive: {
-    color: "#00C8FF",
-    fontWeight: "700",
+    color: colors.accentGold,
+    fontFamily: fonts.bodyBold,
   },
   sizeChipTextOos: {
-    color: "#2A2A2A",
+    color: colors.textMuted,
   },
   oosLine: {
     position: "absolute",
     width: "140%",
     height: 1,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: colors.borderLight,
     transform: [{ rotate: "-45deg" }],
   },
 
@@ -709,10 +710,10 @@ const s = StyleSheet.create({
   arBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#0A1A2A",
+    backgroundColor: colors.accentGoldWash,
     borderWidth: 1,
-    borderColor: "#00C8FF33",
-    borderRadius: 12,
+    borderColor: colors.accentGold,
+    borderRadius: radius.lg,
     paddingVertical: 14,
     paddingHorizontal: 18,
     gap: 10,
@@ -724,13 +725,13 @@ const s = StyleSheet.create({
   arBtnText: {
     flex: 1,
     fontSize: 12,
-    fontWeight: "800",
+    fontFamily: fonts.bodyBold,
     letterSpacing: 2,
-    color: "#00C8FF",
+    color: colors.accentGoldLight,
   },
   arBtnChev: {
     fontSize: 18,
-    color: "#00C8FF",
+    color: colors.accentGoldLight,
     fontWeight: "300",
   },
 
@@ -746,19 +747,20 @@ const s = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: fonts.bodyBold,
     letterSpacing: 2,
-    color: "#888",
+    color: colors.textSecondary,
   },
   sectionChev: {
     fontSize: 12,
-    color: "#444",
+    color: colors.textMuted,
     fontWeight: "600",
   },
   descText: {
     marginTop: 12,
     fontSize: 14,
-    color: "#777",
+    color: colors.textSecondary,
+    fontFamily: fonts.bodyRegular,
     lineHeight: 22,
   },
 
@@ -771,29 +773,30 @@ const s = StyleSheet.create({
   },
   reviewsSubText: {
     fontSize: 12,
-    color: "#666",
-    fontWeight: "500",
+    color: colors.textMuted,
+    fontFamily: fonts.bodyMedium,
   },
   reviewsList: {
     marginTop: 16,
     gap: 10,
   },
   reviewCard: {
-    backgroundColor: "#141414",
-    borderRadius: 10,
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: "#1E1E1E",
+    borderColor: colors.borderSubtle,
     padding: 14,
     gap: 8,
   },
   reviewText: {
     fontSize: 13,
-    color: "#666",
+    color: colors.textSecondary,
+    fontFamily: fonts.bodyRegular,
     lineHeight: 20,
   },
   noReviews: {
     fontSize: 13,
-    color: "#333",
+    color: colors.textMuted,
     letterSpacing: 0.3,
     paddingVertical: 12,
   },
@@ -854,9 +857,9 @@ const s = StyleSheet.create({
     right: 0,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#0D0D0D",
+    backgroundColor: colors.bgPrimary,
     borderTopWidth: 1,
-    borderTopColor: "#1A1A1A",
+    borderTopColor: colors.borderSubtle,
     paddingHorizontal: 16,
     paddingVertical: 14,
     paddingBottom: Platform.OS === "ios" ? 30 : 14,
@@ -869,55 +872,53 @@ const s = StyleSheet.create({
   stickyLabel: {
     fontSize: 9,
     letterSpacing: 2,
-    color: "#555",
-    fontWeight: "700",
+    color: colors.textMuted,
+    fontFamily: fonts.bodyBold,
   },
   stickyPrice: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: colors.accentGold,
     letterSpacing: 0.3,
   },
   addBtn: {
     flex: 1,
-    backgroundColor: "#111",
+    backgroundColor: colors.bgCard,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: colors.borderLight,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     alignItems: "center",
   },
   addBtnDim: {
-    backgroundColor: "#111",
-    borderColor: "#1E1E1E",
+    backgroundColor: colors.bgCard,
+    borderColor: colors.borderSubtle,
   },
   addBtnText: {
-    color: "#FFFFFF",
-    fontWeight: "800",
+    ...typography.button,
+    color: colors.textPrimary,
     fontSize: 12,
-    letterSpacing: 2,
   },
   addBtnTextDim: {
-    color: "#555",
+    color: colors.textMuted,
   },
   payBtn: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.textPrimary,
     paddingVertical: 16,
     paddingHorizontal: 18,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
   payIcon: {
     fontSize: 14,
-    color: "#000",
+    color: colors.textInverse,
     lineHeight: 18,
   },
   payText: {
-    color: "#000",
-    fontWeight: "800",
+    ...typography.button,
+    color: colors.textInverse,
     fontSize: 13,
-    letterSpacing: 1.5,
   },
 });

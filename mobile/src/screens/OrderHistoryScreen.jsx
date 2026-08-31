@@ -18,9 +18,11 @@ import {
   AppState,
   RefreshControl,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
+import { colors, fonts, radius, typography } from "../theme";
 
 const { width } = Dimensions.get("window");
 const isSmall = width < 380;
@@ -61,6 +63,40 @@ const prettyStatus = (s) =>
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 
+// ─── Delivered → Completed auto-transition + refund window (matches web) ──────
+// A "delivered" order counts as "completed" once this many days have passed,
+// even though the DB status field itself never changes until the customer
+// taps "Confirm Received" (or the refund endpoint promotes it as a side
+// effect). This is purely a client-side display/gating computation.
+const DELIVERED_AUTO_COMPLETE_DAYS = 3;
+// How long after completion a refund can still be requested. Web's own
+// client enforces 1 day here even though the backend allows 3 — matching
+// web's actual behavior means matching its (stricter) client constant.
+const REFUND_WINDOW_DAYS = 1;
+
+const daysElapsed = (isoTimestamp, days) => {
+  if (!isoTimestamp) return false;
+  const ms = days * 24 * 60 * 60 * 1000;
+  return Date.now() - new Date(isoTimestamp).getTime() >= ms;
+};
+
+const effectiveStatus = (order) => {
+  const raw = normalizeStatus(order.displayStatus || order.status);
+  if (raw === "delivered") {
+    const deliveredAt = order.deliveredAt || order.updatedAt;
+    if (daysElapsed(deliveredAt, DELIVERED_AUTO_COMPLETE_DAYS)) return "completed";
+    return "shipping";
+  }
+  return raw;
+};
+
+const canRequestRefund = (order) => {
+  if (effectiveStatus(order) !== "completed") return false;
+  if (order.refundStatus || order.refundReason) return false;
+  const completedAt = order.completedAt || order.updatedAt;
+  return !daysElapsed(completedAt, REFUND_WINDOW_DAYS);
+};
+
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
 function ToastItem({ toast, onRemove }) {
@@ -91,10 +127,10 @@ function ToastItem({ toast, onRemove }) {
 
 function StatusPill({ status }) {
   const normalized = normalizeStatus(status);
-  const colors = STATUS_COLORS[normalized] || STATUS_COLORS.pending;
+  const statusColors = STATUS_COLORS[normalized] || STATUS_COLORS.pending;
   return (
-    <View style={[styles.pill, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-      <Text style={[styles.pillText, { color: colors.text }]}>{prettyStatus(normalized)}</Text>
+    <View style={[styles.pill, { backgroundColor: statusColors.bg, borderColor: statusColors.border }]}>
+      <Text style={[styles.pillText, { color: statusColors.text }]}>{prettyStatus(normalized)}</Text>
     </View>
   );
 }
@@ -151,7 +187,7 @@ function PaymentPendingBanner({ order, nowTick, onRetry, retrying }) {
         disabled={retrying}
       >
         {retrying
-          ? <ActivityIndicator size="small" color="#0a0a0a" />
+          ? <ActivityIndicator size="small" color={colors.textInverse} />
           : <Text style={styles.paymentRetryBtnText}>COMPLETE PAYMENT</Text>
         }
       </TouchableOpacity>
@@ -201,45 +237,101 @@ function Timeline({ status }) {
 
 // ─── Refund Modal ─────────────────────────────────────────────────────────────
 
+// Matches web's RefundModal.jsx select options exactly.
 const REFUND_REASONS = [
   "Item not as described",
   "Wrong item received",
-  "Damaged / defective item",
-  "Item not received",
-  "Changed my mind",
+  "Damaged or defective",
+  "Size/fit issue",
   "Other",
 ];
+
+const MAX_REFUND_MEDIA = 6;
 
 function RefundModal({ visible, order, onClose, onSubmit, submitting }) {
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
+  const [media, setMedia] = useState([]);
 
   useEffect(() => {
-    if (visible) { setReason(""); setNotes(""); }
+    if (visible) { setReason(""); setNotes(""); setMedia([]); }
   }, [visible]);
+
+  const addPhotos = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Permission Needed", "Photo library access is required to attach evidence.");
+      return;
+    }
+    const remaining = MAX_REFUND_MEDIA - media.length;
+    if (remaining <= 0) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets?.length) {
+      setMedia((prev) => [...prev, ...result.assets.slice(0, remaining)].slice(0, MAX_REFUND_MEDIA));
+    }
+  };
+
+  const removePhoto = (idx) => setMedia((prev) => prev.filter((_, i) => i !== idx));
+
+  const canSubmit = !!reason && media.length > 0 && !submitting;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
-        <View style={styles.modalSheet}>
+        <View style={[styles.modalSheet, { maxHeight: "85%" }]}>
           <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>REQUEST REFUND</Text>
-          {order && (
-            <Text style={styles.modalSubtitle}>Order #{order.orderNumber}</Text>
-          )}
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={styles.modalTitle}>REQUEST REFUND</Text>
+            {order && (
+              <Text style={styles.modalSubtitle}>Order #{order.orderNumber}</Text>
+            )}
 
-          <Text style={styles.inputLabel}>REASON</Text>
-          <ScrollView style={styles.reasonList} nestedScrollEnabled>
-            {REFUND_REASONS.map((r) => (
-              <TouchableOpacity
-                key={r}
-                style={[styles.reasonOption, reason === r && styles.reasonOptionSelected]}
-                onPress={() => setReason(r)}
-              >
-                <View style={[styles.radioCircle, reason === r && styles.radioCircleFilled]} />
-                <Text style={[styles.reasonText, reason === r && styles.reasonTextSelected]}>{r}</Text>
-              </TouchableOpacity>
-            ))}
+            <Text style={styles.inputLabel}>REASON *</Text>
+            <View style={styles.reasonList}>
+              {REFUND_REASONS.map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  style={[styles.reasonOption, reason === r && styles.reasonOptionSelected]}
+                  onPress={() => setReason(r)}
+                >
+                  <View style={[styles.radioCircle, reason === r && styles.radioCircleFilled]} />
+                  <Text style={[styles.reasonText, reason === r && styles.reasonTextSelected]}>{r}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.inputLabel, { marginTop: 14 }]}>ADDITIONAL DETAILS (OPTIONAL)</Text>
+            <TextInput
+              style={styles.reviewInput}
+              placeholder="Anything else we should know…"
+              placeholderTextColor={colors.bgTertiary}
+              multiline
+              value={notes}
+              onChangeText={setNotes}
+            />
+
+            <Text style={[styles.inputLabel, { marginTop: 14 }]}>PHOTO EVIDENCE * ({media.length}/{MAX_REFUND_MEDIA})</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+              {media.map((m, i) => (
+                <View key={m.uri} style={styles.refundThumbWrap}>
+                  <Image source={{ uri: m.uri }} style={styles.refundThumb} />
+                  <TouchableOpacity style={styles.refundThumbRemove} onPress={() => removePhoto(i)}>
+                    <Text style={styles.refundThumbRemoveText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {media.length < MAX_REFUND_MEDIA && (
+                <TouchableOpacity style={styles.refundAddPhoto} onPress={addPhotos}>
+                  <Text style={styles.refundAddPhotoText}>+</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+            <Text style={styles.refundMediaHint}>At least one photo of the item is required.</Text>
           </ScrollView>
 
           <View style={styles.modalActions}>
@@ -247,12 +339,131 @@ function RefundModal({ visible, order, onClose, onSubmit, submitting }) {
               <Text style={styles.modalBtnSecondaryText}>CANCEL</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalBtnPrimary, (!reason || submitting) && styles.modalBtnDisabled]}
-              onPress={() => reason && onSubmit(reason, notes)}
-              disabled={!reason || submitting}
+              style={[styles.modalBtnPrimary, !canSubmit && styles.modalBtnDisabled]}
+              onPress={() => canSubmit && onSubmit(reason, notes, media)}
+              disabled={!canSubmit}
             >
               {submitting
-                ? <ActivityIndicator size="small" color="#0a0a0a" />
+                ? <ActivityIndicator size="small" color={colors.textInverse} />
+                : <Text style={styles.modalBtnPrimaryText}>SUBMIT</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Review Modal (per-item, matches web's ReviewModal.jsx fields) ────────────
+
+const REVIEW_FIT_OPTIONS = ["Runs Small", "True to Size", "Runs Big"];
+const REVIEW_COMFORT_OPTIONS = ["Uncomfortable", "Average", "Very Comfortable"];
+
+function RadioGroup({ options, value, onChange }) {
+  return (
+    <View style={styles.radioGroupRow}>
+      {options.map((opt) => (
+        <TouchableOpacity key={opt} style={styles.radioPill} onPress={() => onChange(opt)}>
+          <View style={[styles.radioCircle, value === opt && styles.radioCircleFilled]} />
+          <Text style={[styles.reasonText, value === opt && styles.reasonTextSelected]}>{opt}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+function ReviewModal({ visible, product, onClose, onSubmit, submitting }) {
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState("");
+  const [title, setTitle] = useState("");
+  const [fit, setFit] = useState("");
+  const [comfort, setComfort] = useState("");
+  const [recommend, setRecommend] = useState("");
+  const [agreed, setAgreed] = useState(false);
+
+  useEffect(() => {
+    if (visible) {
+      setRating(0); setReview(""); setTitle("");
+      setFit(""); setComfort(""); setRecommend(""); setAgreed(false);
+    }
+  }, [visible]);
+
+  const canSubmit = rating > 0 && review.trim().length >= 10 && agreed && !submitting;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalSheet, { maxHeight: "88%" }]}>
+          <View style={styles.modalHandle} />
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={styles.modalTitle}>WRITE A REVIEW</Text>
+            {product && (
+              <View style={styles.modalItem}>
+                <Image source={{ uri: product.image }} style={styles.modalItemImg} />
+                <Text style={styles.modalItemName} numberOfLines={2}>{product.name}</Text>
+              </View>
+            )}
+
+            <Text style={styles.inputLabel}>OVERALL RATING *</Text>
+            <View style={{ flexDirection: "row", gap: 6, marginBottom: 14 }}>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <TouchableOpacity key={i} onPress={() => setRating(i)}>
+                  <Text style={{ fontSize: 28, color: i <= rating ? colors.accentGold : colors.bgTertiary }}>★</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.inputLabel}>YOUR REVIEW * (min. 10 characters)</Text>
+            <TextInput
+              style={styles.reviewInput}
+              placeholder="Describe what you liked, what you didn't, and other key things shoppers should know."
+              placeholderTextColor={colors.bgTertiary}
+              multiline
+              maxLength={5000}
+              value={review}
+              onChangeText={setReview}
+            />
+            <Text style={styles.writeMuted}>{review.length}/5000</Text>
+
+            <Text style={[styles.inputLabel, { marginTop: 14 }]}>REVIEW TITLE</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Summarize your review in 150 characters or less"
+              placeholderTextColor={colors.bgTertiary}
+              maxLength={150}
+              value={title}
+              onChangeText={setTitle}
+            />
+
+            <Text style={[styles.inputLabel, { marginTop: 14 }]}>HOW DID THIS PRODUCT FIT?</Text>
+            <RadioGroup options={REVIEW_FIT_OPTIONS} value={fit} onChange={setFit} />
+
+            <Text style={[styles.inputLabel, { marginTop: 14 }]}>HOW COMFORTABLE WAS IT?</Text>
+            <RadioGroup options={REVIEW_COMFORT_OPTIONS} value={comfort} onChange={setComfort} />
+
+            <Text style={[styles.inputLabel, { marginTop: 14 }]}>WOULD YOU RECOMMEND IT?</Text>
+            <RadioGroup options={["Yes", "No"]} value={recommend} onChange={setRecommend} />
+
+            <TouchableOpacity style={styles.agreeRow} onPress={() => setAgreed(!agreed)}>
+              <View style={[styles.radioCircle, agreed && styles.radioCircleFilled, { borderRadius: 4 }]} />
+              <Text style={styles.writeMuted}>
+                I agree to the terms and understand my review may be used for marketing purposes.
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity style={styles.modalBtnSecondary} onPress={onClose} disabled={submitting}>
+              <Text style={styles.modalBtnSecondaryText}>CANCEL</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalBtnPrimary, !canSubmit && styles.modalBtnDisabled]}
+              onPress={() => canSubmit && onSubmit({ rating, review: review.trim(), title: title.trim(), fit, comfort, recommend })}
+              disabled={!canSubmit}
+            >
+              {submitting
+                ? <ActivityIndicator size="small" color={colors.textInverse} />
                 : <Text style={styles.modalBtnPrimaryText}>SUBMIT</Text>
               }
             </TouchableOpacity>
@@ -265,10 +476,15 @@ function RefundModal({ visible, order, onClose, onSubmit, submitting }) {
 
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
 
-function DetailModal({ order, visible, onClose, onPrintReceipt, onRefund, refundSubmitting, nowTick, onRetryPayment, retryingId }) {
+function DetailModal({
+  order, visible, onClose, onRefund, onReviewItem, onConfirmReceived,
+  confirmingReceived, nowTick, onRetryPayment, retryingId,
+}) {
   if (!order) return null;
-  const normalized = normalizeStatus(order.status);
-  const canRefund = normalized === "completed";
+  const rawIsDelivered = normalizeStatus(order.status) === "delivered";
+  const canReview = effectiveStatus(order) === "completed";
+  const canRefund = canRequestRefund(order);
+  const alreadyRefunded = !!(order.refundStatus || order.refundReason);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -291,6 +507,24 @@ function DetailModal({ order, visible, onClose, onPrintReceipt, onRefund, refund
               retrying={retryingId === order.orderNumber}
             />
 
+            {rawIsDelivered && (
+              <View style={styles.confirmReceivedBanner}>
+                <Text style={styles.confirmReceivedText}>
+                  Received your order? Confirming lets you write reviews and request a refund if needed.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.paymentRetryBtn, confirmingReceived && styles.btnDisabled]}
+                  onPress={() => onConfirmReceived(order)}
+                  disabled={confirmingReceived}
+                >
+                  {confirmingReceived
+                    ? <ActivityIndicator size="small" color={colors.textInverse} />
+                    : <Text style={styles.paymentRetryBtnText}>CONFIRM RECEIVED</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+            )}
+
             {order.items.map((item, i) => (
               <View key={i} style={styles.modalItem}>
                 <Image source={{ uri: item.image }} style={styles.modalItemImg} />
@@ -298,6 +532,11 @@ function DetailModal({ order, visible, onClose, onPrintReceipt, onRefund, refund
                   <Text style={styles.modalItemName} numberOfLines={2}>{item.name}</Text>
                   <Text style={styles.modalItemMeta}>Size: {item.size}  ×{item.quantity}</Text>
                   <Text style={styles.modalItemPrice}>₱{Number(item.price).toLocaleString()}</Text>
+                  {canReview && (
+                    <TouchableOpacity style={styles.btnReviewSmall} onPress={() => onReviewItem(item)}>
+                      <Text style={styles.btnReviewText}>WRITE REVIEW</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <Text style={styles.modalItemTotal}>
                   ₱{(item.price * item.quantity).toLocaleString()}
@@ -309,6 +548,12 @@ function DetailModal({ order, visible, onClose, onPrintReceipt, onRefund, refund
               <Text style={styles.modalTotalLabel}>TOTAL PAID</Text>
               <Text style={styles.modalTotalAmount}>₱{Number(order.total).toLocaleString()}</Text>
             </View>
+
+            {alreadyRefunded && (
+              <Text style={styles.refundAlreadyText}>
+                ↩ A refund has already been requested for this order.
+              </Text>
+            )}
 
             {canRefund && (
               <View style={styles.modalActions}>
@@ -335,10 +580,10 @@ export default function OrderHistoryScreen({ navigation }) {
   const { refreshCart } = useCart();
   const { refreshFavorites } = useFavorites();
 
-  const [reviewText,       setReviewText]       = useState("");
-const [rating,           setRating]           = useState(0);
-const [submitting,       setSubmitting]       = useState(false);
-const [reviewingOrderId, setReviewingOrderId] = useState(null);
+  const [reviewVisible, setReviewVisible]       = useState(false);
+  const [reviewProduct, setReviewProduct]       = useState(null);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [confirmingReceived, setConfirmingReceived] = useState(false);
 
   const [orders, setOrders]           = useState([]);
   const [loading, setLoading]         = useState(true);
@@ -512,15 +757,30 @@ const [reviewingOrderId, setReviewingOrderId] = useState(null);
 
   // ── Refund ──
 
-  const submitRefund = async (reason, notes) => {
+  // Matches backend orderController.requestRefund — multipart/form-data with
+  // reason, optional notes, and 1+ media files (photo evidence is required).
+  const submitRefund = async (reason, notes, media) => {
     if (!refundOrder) return;
     setRefundSubmitting(true);
     setLoadingIds((p) => [...p, refundOrder.orderNumber]);
     try {
+      const formData = new FormData();
+      formData.append("reason", reason);
+      if (notes) formData.append("notes", notes);
+      media.forEach((asset, i) => {
+        const filename = asset.uri.split("/").pop() || `refund-${i}.jpg`;
+        const ext = (filename.split(".").pop() || "jpg").toLowerCase();
+        formData.append("media", {
+          uri: asset.uri,
+          name: filename,
+          type: `image/${ext === "jpg" ? "jpeg" : ext}`,
+        });
+      });
+
       const res = await fetch(`${BASE_URL}/order/${refundOrder.orderNumber}/refund`, {
         method: "POST",
-        headers: { "auth-token": userToken, "Content-Type": "application/json" },
-        body: JSON.stringify({ reason, notes }),
+        headers: { "auth-token": userToken },
+        body: formData,
       });
       const data = await res.json();
       if (data.success) {
@@ -539,49 +799,67 @@ const [reviewingOrderId, setReviewingOrderId] = useState(null);
     }
   };
 
-  const submitReview = async (order) => {
-  if (!reviewText.trim() || rating === 0) {
-    addToast("error", "Add a rating and review first.");
-    return;
-  }
-  // submit a review for each item's productId in the order
-  try {
-    setSubmitting(true);
-    const results = await Promise.all(
-      order.items.map((item) =>
-        fetch(`${BASE_URL}/addreview`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "auth-token": userToken },
-          body: JSON.stringify({
-            productId: item.productId || item.id,
-            review: reviewText,
-            rating,
-          }),
-        }).then((r) => r.json())
-      )
-    );
-    const allOk = results.every((d) => d.success);
-    if (allOk) {
-      addToast("success", "Review submitted!");
-      setReviewText("");
-      setRating(0);
-      setReviewingOrderId(null);
-    } else {
-      addToast("error", "Some reviews failed to submit.");
+  const openReviewModal = (item) => {
+    setReviewProduct(item);
+    setReviewVisible(true);
+  };
+
+  // Reviews are per-product, not tied to the order — matches web's
+  // ReviewModal, which never sends an orderId to the backend either.
+  const submitReviewForm = async (payload) => {
+    if (!reviewProduct) return;
+    setReviewSubmitting(true);
+    try {
+      const res = await fetch(`${BASE_URL}/addreview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "auth-token": userToken },
+        body: JSON.stringify({
+          productId: reviewProduct.productId || reviewProduct.id,
+          ...payload,
+        }),
+      });
+      const data = await res.json();
+      if (data.success !== false) {
+        addToast("success", "Review submitted!");
+        setReviewVisible(false);
+        setReviewProduct(null);
+      } else {
+        addToast("error", data.error || data.message || "Failed to submit review.");
+      }
+    } catch {
+      addToast("error", "Failed to submit review.");
+    } finally {
+      setReviewSubmitting(false);
     }
-  } catch {
-    addToast("error", "Failed to submit review.");
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
+
+  const confirmOrderReceived = async (order) => {
+    setConfirmingReceived(true);
+    try {
+      const res = await fetch(`${BASE_URL}/order/${order.orderNumber}/confirm-received`, {
+        method: "POST",
+        headers: { "auth-token": userToken, "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (data.success) {
+        addToast("success", "Order marked as received. Thank you!");
+        fetchOrders(currentPage, statusFilter);
+      } else {
+        addToast("error", data.error || "Failed to confirm receipt.");
+      }
+    } catch {
+      addToast("error", "Failed to confirm receipt.");
+    } finally {
+      setConfirmingReceived(false);
+    }
+  };
 
   // ── Render order card ──
 
   const renderOrder = ({ item: order }) => {
     const normalized   = normalizeStatus(order.status);
     const isCancellable = normalized === "pending";
-    const isCompleted  = normalized === "completed";
+    const canRefund    = canRequestRefund(order);
     const isLoading    = loadingIds.includes(order.orderNumber);
 
     return (
@@ -635,10 +913,10 @@ const [reviewingOrderId, setReviewingOrderId] = useState(null);
 
         {/* Actions */}
         <View style={styles.cardActions}>
-          {isCompleted && (
+          {canRefund && (
             <TouchableOpacity
               style={styles.btnWarning}
-              onPress={(e) => { setRefundOrder(order); setRefundVisible(true); }}
+              onPress={() => { setRefundOrder(order); setRefundVisible(true); }}
               disabled={isLoading || refundSubmitting}
             >
               <Text style={styles.btnWarningText}>
@@ -647,60 +925,6 @@ const [reviewingOrderId, setReviewingOrderId] = useState(null);
             </TouchableOpacity>
           )}
 
-          {isCompleted && (
-  <View style={{ width: "100%", marginTop: 8 }}>
-    {reviewingOrderId === order.orderNumber ? (
-      <View style={styles.writeReview}>
-        <Text style={styles.writeTitle}>WRITE A REVIEW</Text>
-        <View style={styles.writeRatingRow}>
-          <Text style={styles.writeMuted}>Your rating</Text>
-          <View style={{ flexDirection: "row", gap: 4 }}>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <TouchableOpacity key={i} onPress={() => setRating(i)}>
-                <Text style={{ fontSize: 22, color: i <= rating ? "#E8C84A" : "#333" }}>★</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-        <TextInput
-          style={styles.reviewInput}
-          placeholder="Share your thoughts…"
-          placeholderTextColor="#383838"
-          multiline
-          value={reviewText}
-          onChangeText={setReviewText}
-        />
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <TouchableOpacity
-            style={[styles.modalBtnSecondary, { flex: 1 }]}
-            onPress={() => { setReviewingOrderId(null); setReviewText(""); setRating(0); }}
-          >
-            <Text style={styles.modalBtnSecondaryText}>CANCEL</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.submitBtn, { flex: 1 }, submitting && { opacity: 0.5 }]}
-            onPress={() => submitReview(order)}
-            disabled={submitting}
-          >
-            {submitting
-              ? <ActivityIndicator color="#000" size="small" />
-              : <Text style={styles.submitText}>SUBMIT</Text>
-            }
-          </TouchableOpacity>
-        </View>
-      </View>
-    ) : (
-      <TouchableOpacity
-        style={styles.btnReview}
-        onPress={() => { setReviewingOrderId(order.orderNumber); setReviewText(""); setRating(0); }}
-      >
-        <Text style={styles.btnReviewText}>WRITE A REVIEW</Text>
-      </TouchableOpacity>
-    )}
-  </View>
-)}
-          
-
           {isCancellable && (
             <TouchableOpacity
               style={[styles.btnDanger, isLoading && styles.btnDisabled]}
@@ -708,7 +932,7 @@ const [reviewingOrderId, setReviewingOrderId] = useState(null);
               disabled={isLoading}
             >
               {isLoading
-                ? <ActivityIndicator size="small" color="#ef5350" />
+                ? <ActivityIndicator size="small" color={colors.danger} />
                 : <Text style={styles.btnDangerText}>CANCEL ORDER</Text>
               }
             </TouchableOpacity>
@@ -793,7 +1017,7 @@ const [reviewingOrderId, setReviewingOrderId] = useState(null);
 
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#fff" />
+          <ActivityIndicator size="large" color={colors.accentGold} />
           <Text style={styles.loadingText}>Loading orders...</Text>
         </View>
       ) : orders.length === 0 ? (
@@ -816,10 +1040,10 @@ const [reviewingOrderId, setReviewingOrderId] = useState(null);
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
           }
           ListFooterComponent={totalPages > 1 ? <Pagination /> : null}
-          ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: "#1a1a1a" }} />}
+          ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.borderSubtle }} />}
         />
       )}
 
@@ -833,7 +1057,12 @@ const [reviewingOrderId, setReviewingOrderId] = useState(null);
           setRefundOrder(order);
           setRefundVisible(true);
         }}
-        refundSubmitting={refundSubmitting}
+        onReviewItem={(item) => {
+          setDetailVisible(false);
+          openReviewModal(item);
+        }}
+        onConfirmReceived={confirmOrderReceived}
+        confirmingReceived={confirmingReceived}
         nowTick={nowTick}
         onRetryPayment={retryPayment}
         retryingId={retryingId}
@@ -848,10 +1077,19 @@ const [reviewingOrderId, setReviewingOrderId] = useState(null);
         submitting={refundSubmitting}
       />
 
+      {/* Review Modal */}
+      <ReviewModal
+        visible={reviewVisible}
+        product={reviewProduct}
+        onClose={() => { setReviewVisible(false); setReviewProduct(null); }}
+        onSubmit={submitReviewForm}
+        submitting={reviewSubmitting}
+      />
+
       {/* Waiting on external browser payment */}
       <Modal visible={!!pendingOrderNumber && !verifying} transparent animationType="fade">
         <View style={styles.verifyOverlay}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
+          <ActivityIndicator size="large" color={colors.accentGold} />
           <Text style={styles.verifyText}>Complete your payment in the browser, then come back here.</Text>
         </View>
       </Modal>
@@ -859,7 +1097,7 @@ const [reviewingOrderId, setReviewingOrderId] = useState(null);
       {/* Verifying payment overlay */}
       <Modal visible={verifying} transparent animationType="fade">
         <View style={styles.verifyOverlay}>
-          <ActivityIndicator size="large" color="#FFFFFF" />
+          <ActivityIndicator size="large" color={colors.accentGold} />
           <Text style={styles.verifyText}>Confirming your payment…</Text>
         </View>
       </Modal>
@@ -870,7 +1108,7 @@ const [reviewingOrderId, setReviewingOrderId] = useState(null);
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#0a0a0a" },
+  root: { flex: 1, backgroundColor: colors.bgPrimary },
 
   // ── Toast ──
   toastStack: {
@@ -884,17 +1122,17 @@ const styles = StyleSheet.create({
   toast: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 4,
+    borderRadius: radius.sm,
     paddingVertical: 10,
     paddingHorizontal: 14,
     gap: 10,
     borderLeftWidth: 3,
   },
-  toastSuccess: { backgroundColor: "#0d1f0d", borderLeftColor: "#4caf50" },
+  toastSuccess: { backgroundColor: "#0d1f0d", borderLeftColor: colors.success },
   toastError:   { backgroundColor: "#1f0d0d", borderLeftColor: "#ef5350" },
-  toastIcon:    { fontSize: 14, fontWeight: "900", color: "#fff" },
-  toastMsg:     { flex: 1, fontSize: 13, color: "#ddd" },
-  toastClose:   { fontSize: 18, color: "#666", lineHeight: 20 },
+  toastIcon:    { fontSize: 14, fontWeight: "900", color: colors.textPrimary },
+  toastMsg:     { flex: 1, fontSize: 13, color: colors.textSecondary },
+  toastClose:   { fontSize: 18, color: colors.textMuted, lineHeight: 20 },
 
   // ── Header ──
   header: {
@@ -905,35 +1143,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     borderBottomWidth: 1,
-    borderBottomColor: "#1e1e1e",
+    borderBottomColor: colors.borderSubtle,
   },
   headerTitle: {
-    color: "#fff",
-    fontSize: isSmall ? 20 : 24,
-    fontWeight: "900",
-    letterSpacing: 3,
+    color: colors.textPrimary,
+    fontSize: isSmall ? 22 : 26,
+    fontFamily: fonts.display,
+    letterSpacing: 1.5,
   },
-  refreshBtn: { color: "#555", fontSize: 22 },
+  refreshBtn: { color: colors.textMuted, fontSize: 22 },
 
   // ── Loading / Empty ──
   centered: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 40 },
-  loadingText: { color: "#555", marginTop: 12, fontSize: 13, letterSpacing: 1 },
+  loadingText: { color: colors.textMuted, marginTop: 12, fontSize: 13, letterSpacing: 1 },
   emptyIcon:    { fontSize: 52, marginBottom: 20 },
-  emptyTitle:   { color: "#fff", fontSize: 18, fontWeight: "900", letterSpacing: 3, marginBottom: 8 },
-  emptySubtitle:{ color: "#555", fontSize: 13, textAlign: "center", lineHeight: 20, marginBottom: 32 },
+  emptyTitle:   { color: colors.textPrimary, fontSize: 20, fontFamily: fonts.display, letterSpacing: 2, marginBottom: 8 },
+  emptySubtitle:{ color: colors.textMuted, fontSize: 13, textAlign: "center", lineHeight: 20, marginBottom: 32 },
   shopBtn: {
-    borderWidth: 1, borderColor: "#fff",
-    paddingVertical: 14, paddingHorizontal: 32, borderRadius: 2,
+    borderWidth: 1, borderColor: colors.textPrimary,
+    paddingVertical: 14, paddingHorizontal: 32, borderRadius: radius.sm,
   },
-  shopBtnText: { color: "#fff", fontWeight: "800", fontSize: 13, letterSpacing: 2 },
+  shopBtnText: { ...typography.button, color: colors.textPrimary, fontSize: 13 },
 
   // ── List ──
   listContent: { padding: 16, paddingBottom: 40 },
 
   // ── Card ──
   card: {
-    backgroundColor: "#111",
-    borderRadius: 4,
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.md,
     padding: 16,
   },
   cardHeader: {
@@ -942,13 +1180,13 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 14,
   },
-  cardOrderNum: { color: "#fff", fontWeight: "900", fontSize: isSmall ? 14 : 16, letterSpacing: 0.5 },
-  cardDate:     { color: "#555", fontSize: 11, letterSpacing: 0.5, marginTop: 3 },
+  cardOrderNum: { color: colors.textPrimary, fontWeight: "900", fontSize: isSmall ? 14 : 16, letterSpacing: 0.5 },
+  cardDate:     { color: colors.textMuted, fontSize: 11, letterSpacing: 0.5, marginTop: 3 },
 
   // Status pill
   pill: {
     borderWidth: 1,
-    borderRadius: 2,
+    borderRadius: radius.sm,
     paddingHorizontal: 10,
     paddingVertical: 4,
     alignSelf: "flex-start",
@@ -958,23 +1196,23 @@ const styles = StyleSheet.create({
   // Items preview
   itemsPreview: { marginBottom: 12, gap: 10 },
   itemRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  itemThumb: { width: 48, height: 48, borderRadius: 3, backgroundColor: "#1a1a1a" },
-  itemName:  { color: "#ddd", fontSize: 13, fontWeight: "700", marginBottom: 2 },
-  itemMeta:  { color: "#555", fontSize: 11, letterSpacing: 0.5 },
-  itemPrice: { color: "#aaa", fontSize: 13, fontWeight: "700" },
-  moreItems: { color: "#444", fontSize: 11, letterSpacing: 1, marginTop: 4 },
+  itemThumb: { width: 48, height: 48, borderRadius: radius.sm, backgroundColor: colors.bgTertiary },
+  itemName:  { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.bodyBold, marginBottom: 2 },
+  itemMeta:  { color: colors.textMuted, fontSize: 11, letterSpacing: 0.5 },
+  itemPrice: { color: colors.textSecondary, fontSize: 13, fontFamily: fonts.bodyBold },
+  moreItems: { color: colors.textMuted, fontSize: 11, letterSpacing: 1, marginTop: 4 },
 
   // Total row
   cardTotalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: "#1e1e1e",
+    borderTopColor: colors.borderSubtle,
     paddingTop: 12,
     marginBottom: 12,
   },
-  cardTotalLabel:  { color: "#444", fontSize: 10, fontWeight: "800", letterSpacing: 2 },
-  cardTotalAmount: { color: "#fff", fontSize: 16, fontWeight: "900" },
+  cardTotalLabel:  { color: colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 2 },
+  cardTotalAmount: { color: colors.accentGold, fontSize: 16, fontWeight: "900" },
 
   // Timeline
   timelineScroll: { marginBottom: 12 },
@@ -986,34 +1224,34 @@ const styles = StyleSheet.create({
     right: "50%",
     width: 72,
     height: 1,
-    backgroundColor: "#2a2a2a",
+    backgroundColor: colors.borderLight,
   },
-  timelineLineActive: { backgroundColor: "#fff" },
+  timelineLineActive: { backgroundColor: colors.accentGold },
   timelineDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: "#333",
-    backgroundColor: "#0a0a0a",
+    borderColor: colors.borderLight,
+    backgroundColor: colors.bgPrimary,
     marginBottom: 6,
   },
-  timelineDotActive:  { borderColor: "#fff" },
-  timelineDotCurrent: { backgroundColor: "#fff" },
+  timelineDotActive:  { borderColor: colors.accentGold },
+  timelineDotCurrent: { backgroundColor: colors.accentGold },
   timelineLabel: {
-    color: "#333",
+    color: colors.bgTertiary,
     fontSize: 8,
     fontWeight: "700",
     letterSpacing: 0.8,
     textAlign: "center",
   },
-  timelineLabelActive: { color: "#888" },
+  timelineLabelActive: { color: colors.textSecondary },
 
   cancelledBanner: {
     backgroundColor: "#1a0000",
     borderWidth: 1,
     borderColor: "#ef5350",
-    borderRadius: 2,
+    borderRadius: radius.sm,
     paddingVertical: 8,
     alignItems: "center",
     marginBottom: 12,
@@ -1024,18 +1262,18 @@ const styles = StyleSheet.create({
   cardActions: { flexDirection: "row", gap: 10, flexWrap: "wrap", marginTop: 4 },
   btnWarning: {
     borderWidth: 1,
-    borderColor: "#ff9800",
+    borderColor: colors.warning,
     paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: 2,
+    borderRadius: radius.sm,
   },
-  btnWarningText: { color: "#ff9800", fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
+  btnWarningText: { color: colors.warning, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
   btnDanger: {
     borderWidth: 1,
     borderColor: "#ef5350",
     paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: 2,
+    borderRadius: radius.sm,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -1054,24 +1292,24 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: "#2a2a2a",
-    borderRadius: 2,
+    borderColor: colors.borderLight,
+    borderRadius: radius.sm,
   },
   pageBtnDisabled: { opacity: 0.3 },
-  pageBtnText: { color: "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  pageBtnText: { color: colors.textPrimary, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
   pageNumbers: { flexDirection: "row", gap: 6 },
   pageNum: {
     width: 32,
     height: 32,
-    borderRadius: 2,
+    borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: "#2a2a2a",
+    borderColor: colors.borderLight,
     alignItems: "center",
     justifyContent: "center",
   },
-  pageNumActive: { backgroundColor: "#fff", borderColor: "#fff" },
-  pageNumText:       { color: "#555", fontSize: 12, fontWeight: "700" },
-  pageNumTextActive: { color: "#0a0a0a" },
+  pageNumActive: { backgroundColor: colors.accentGold, borderColor: colors.accentGold },
+  pageNumText:       { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
+  pageNumTextActive: { color: colors.textInverse },
 
   // ── Modals ──
   modalOverlay: {
@@ -1080,30 +1318,30 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalSheet: {
-    backgroundColor: "#111",
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    backgroundColor: colors.bgCard,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
     padding: 20,
     paddingBottom: 36,
     borderTopWidth: 1,
-    borderTopColor: "#1e1e1e",
+    borderTopColor: colors.borderSubtle,
   },
   modalHandle: {
     width: 36,
     height: 3,
-    backgroundColor: "#333",
-    borderRadius: 2,
+    backgroundColor: colors.borderLight,
+    borderRadius: radius.sm,
     alignSelf: "center",
     marginBottom: 20,
   },
   modalTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "900",
-    letterSpacing: 3,
+    color: colors.textPrimary,
+    fontSize: 18,
+    fontFamily: fonts.display,
+    letterSpacing: 2,
     marginBottom: 4,
   },
-  modalSubtitle: { color: "#555", fontSize: 12, letterSpacing: 1, marginBottom: 16 },
+  modalSubtitle: { color: colors.textMuted, fontSize: 12, letterSpacing: 1, marginBottom: 16 },
 
   // Detail modal items
   modalItem: {
@@ -1111,37 +1349,37 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#1a1a1a",
+    borderBottomColor: colors.borderSubtle,
     alignItems: "flex-start",
   },
-  modalItemImg:   { width: 60, height: 60, borderRadius: 3, backgroundColor: "#1a1a1a" },
-  modalItemName:  { color: "#fff", fontSize: 13, fontWeight: "700", marginBottom: 4 },
-  modalItemMeta:  { color: "#555", fontSize: 11, marginBottom: 2 },
-  modalItemPrice: { color: "#888", fontSize: 12 },
-  modalItemTotal: { color: "#fff", fontSize: 14, fontWeight: "900", alignSelf: "center" },
+  modalItemImg:   { width: 60, height: 60, borderRadius: radius.sm, backgroundColor: colors.bgTertiary },
+  modalItemName:  { color: colors.textPrimary, fontSize: 13, fontFamily: fonts.bodyBold, marginBottom: 4 },
+  modalItemMeta:  { color: colors.textMuted, fontSize: 11, marginBottom: 2 },
+  modalItemPrice: { color: colors.textSecondary, fontSize: 12 },
+  modalItemTotal: { color: colors.textPrimary, fontSize: 14, fontWeight: "900", alignSelf: "center" },
   modalTotalRow:  {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 16,
     borderTopWidth: 2,
-    borderTopColor: "#fff",
+    borderTopColor: colors.accentGold,
     marginTop: 8,
   },
-  modalTotalLabel:  { color: "#444", fontSize: 11, fontWeight: "800", letterSpacing: 2 },
-  modalTotalAmount: { color: "#fff", fontSize: 18, fontWeight: "900" },
+  modalTotalLabel:  { color: colors.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 2 },
+  modalTotalAmount: { color: colors.accentGold, fontSize: 18, fontWeight: "900" },
   modalClose: {
     borderWidth: 1,
-    borderColor: "#2a2a2a",
+    borderColor: colors.borderLight,
     paddingVertical: 14,
     alignItems: "center",
-    borderRadius: 2,
+    borderRadius: radius.sm,
     marginTop: 16,
   },
-  modalCloseText: { color: "#555", fontSize: 12, fontWeight: "800", letterSpacing: 2 },
+  modalCloseText: { color: colors.textMuted, fontSize: 12, fontWeight: "800", letterSpacing: 2 },
 
   // Refund modal
   inputLabel: {
-    color: "#555",
+    color: colors.textMuted,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 2,
@@ -1153,54 +1391,54 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#1a1a1a",
+    borderBottomColor: colors.borderSubtle,
     gap: 12,
   },
-  reasonOptionSelected: { borderBottomColor: "#333" },
+  reasonOptionSelected: { borderBottomColor: colors.borderLight },
   radioCircle: {
     width: 16,
     height: 16,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: "#333",
+    borderColor: colors.borderLight,
   },
-  radioCircleFilled: { borderColor: "#fff", backgroundColor: "#fff" },
-  reasonText:         { color: "#555", fontSize: 13 },
-  reasonTextSelected: { color: "#fff", fontWeight: "700" },
+  radioCircleFilled: { borderColor: colors.accentGold, backgroundColor: colors.accentGold },
+  reasonText:         { color: colors.textMuted, fontSize: 13 },
+  reasonTextSelected: { color: colors.textPrimary, fontWeight: "700" },
 
   modalActions: { flexDirection: "row", gap: 10, marginTop: 8 },
   modalBtnSecondary: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#2a2a2a",
+    borderColor: colors.borderLight,
     paddingVertical: 14,
     alignItems: "center",
-    borderRadius: 2,
+    borderRadius: radius.sm,
   },
-  modalBtnSecondaryText: { color: "#555", fontSize: 12, fontWeight: "800", letterSpacing: 1.5 },
+  modalBtnSecondaryText: { color: colors.textMuted, fontSize: 12, fontWeight: "800", letterSpacing: 1.5 },
   modalBtnPrimary: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: colors.textPrimary,
     paddingVertical: 14,
     alignItems: "center",
-    borderRadius: 2,
+    borderRadius: radius.sm,
   },
-  modalBtnPrimaryText: { color: "#0a0a0a", fontSize: 12, fontWeight: "900", letterSpacing: 1.5 },
+  modalBtnPrimaryText: { color: colors.textInverse, fontSize: 12, fontWeight: "900", letterSpacing: 1.5 },
   modalBtnDisabled: { opacity: 0.35 },
 
 
   // ── Write review (order history) ──
 writeReview: {
-  backgroundColor: "#141414",
-  borderRadius: 4,
+  backgroundColor: colors.bgCard,
+  borderRadius: radius.sm,
   borderWidth: 1,
-  borderColor: "#1E1E1E",
+  borderColor: colors.borderSubtle,
   padding: 14,
   gap: 12,
   marginTop: 4,
 },
 writeTitle: {
-  color: "#444",
+  color: colors.textMuted,
   fontSize: 9,
   fontWeight: "700",
   letterSpacing: 2.5,
@@ -1210,86 +1448,86 @@ writeRatingRow: {
   justifyContent: "space-between",
   alignItems: "center",
 },
-writeMuted: { color: "#444", fontSize: 12 },
+writeMuted: { color: colors.textMuted, fontSize: 12 },
 reviewInput: {
-  backgroundColor: "#0a0a0a",
+  backgroundColor: colors.bgPrimary,
   borderWidth: 1,
-  borderColor: "#1E1E1E",
-  borderRadius: 4,
+  borderColor: colors.borderSubtle,
+  borderRadius: radius.sm,
   padding: 10,
   minHeight: 72,
-  color: "#FFF",
+  color: colors.textPrimary,
   fontSize: 13,
   textAlignVertical: "top",
 },
 submitBtn: {
-  backgroundColor: "#FFFFFF",
+  backgroundColor: colors.textPrimary,
   paddingVertical: 12,
-  borderRadius: 4,
+  borderRadius: radius.sm,
   alignItems: "center",
 },
 submitText: {
-  color: "#000",
+  color: colors.textInverse,
   fontWeight: "800",
   fontSize: 11,
   letterSpacing: 2,
 },
 btnReview: {
   borderWidth: 1,
-  borderColor: "#4caf50",
+  borderColor: colors.success,
   paddingVertical: 8,
   paddingHorizontal: 14,
-  borderRadius: 2,
+  borderRadius: radius.sm,
   alignSelf: "flex-start",
 },
-btnReviewText: { color: "#4caf50", fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
+btnReviewText: { color: colors.success, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
 
   // ── Status filter ──
-  filterScroll: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: "#1e1e1e" },
+  filterScroll: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle },
   filterRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
   filterBtn: {
     borderWidth: 1,
-    borderColor: "#2a2a2a",
-    borderRadius: 2,
+    borderColor: colors.borderLight,
+    borderRadius: radius.sm,
     paddingVertical: 8,
     paddingHorizontal: 14,
   },
-  filterBtnActive: { backgroundColor: "#fff", borderColor: "#fff" },
-  filterBtnText: { color: "#666", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
-  filterBtnTextActive: { color: "#0a0a0a" },
+  filterBtnActive: { backgroundColor: colors.accentGold, borderColor: colors.accentGold },
+  filterBtnText: { color: colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  filterBtnTextActive: { color: colors.textInverse },
 
   // ── Payment pending ──
   paymentPill: {
     alignSelf: "flex-start",
     backgroundColor: "#2a1a00",
     borderWidth: 1,
-    borderColor: "#ff9800",
-    borderRadius: 2,
+    borderColor: colors.warning,
+    borderRadius: radius.sm,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginBottom: 12,
   },
-  paymentPillText: { color: "#ff9800", fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
+  paymentPillText: { color: colors.warning, fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
 
   paymentBanner: {
     backgroundColor: "#1a1200",
     borderWidth: 1,
-    borderColor: "#ff9800",
-    borderRadius: 6,
+    borderColor: colors.warning,
+    borderRadius: radius.md,
     padding: 14,
     marginBottom: 16,
     gap: 10,
   },
   paymentBannerText: { color: "#e8a852", fontSize: 12, lineHeight: 18 },
-  paymentCountdown: { color: "#ff9800", fontSize: 12, fontWeight: "800" },
+  paymentCountdown: { color: colors.warning, fontSize: 12, fontWeight: "800" },
   paymentCountdownExpired: { color: "#ef5350" },
   paymentRetryBtn: {
-    backgroundColor: "#fff",
-    borderRadius: 2,
+    backgroundColor: colors.textPrimary,
+    borderRadius: radius.sm,
     paddingVertical: 12,
     alignItems: "center",
   },
-  paymentRetryBtnText: { color: "#0a0a0a", fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
+  paymentRetryBtnText: { color: colors.textInverse, fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
 
   verifyOverlay: {
     flex: 1,
@@ -1299,5 +1537,61 @@ btnReviewText: { color: "#4caf50", fontSize: 10, fontWeight: "800", letterSpacin
     gap: 14,
     paddingHorizontal: 40,
   },
-  verifyText: { color: "#ccc", fontSize: 13, letterSpacing: 0.5, textAlign: "center" },
+  verifyText: { color: colors.textSecondary, fontSize: 13, letterSpacing: 0.5, textAlign: "center" },
+
+  // ── Refund photo evidence ──
+  refundThumbWrap: { position: "relative", marginRight: 10 },
+  refundThumb: { width: 64, height: 64, borderRadius: radius.sm, backgroundColor: colors.bgTertiary },
+  refundThumbRemove: {
+    position: "absolute", top: -6, right: -6,
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: "#ef5350", alignItems: "center", justifyContent: "center",
+  },
+  refundThumbRemoveText: { color: colors.textPrimary, fontSize: 10, fontWeight: "800" },
+  refundAddPhoto: {
+    width: 64, height: 64, borderRadius: radius.sm,
+    borderWidth: 1, borderColor: colors.borderLight, borderStyle: "dashed",
+    alignItems: "center", justifyContent: "center",
+  },
+  refundAddPhotoText: { color: colors.textMuted, fontSize: 24, fontWeight: "300" },
+  refundMediaHint: { color: colors.textMuted, fontSize: 11, marginBottom: 10 },
+  refundAlreadyText: { color: "#ce93d8", fontSize: 12, marginBottom: 10, textAlign: "center" },
+
+  // ── Review form (per-item) ──
+  radioGroupRow: { gap: 8, marginBottom: 4 },
+  radioPill: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingVertical: 8,
+  },
+  input: {
+    backgroundColor: colors.bgPrimary,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: radius.sm,
+    padding: 10,
+    color: colors.textPrimary,
+    fontSize: 13,
+  },
+  agreeRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginTop: 16, marginBottom: 8 },
+  btnReviewSmall: {
+    borderWidth: 1,
+    borderColor: colors.success,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: radius.sm,
+    alignSelf: "flex-start",
+    marginTop: 6,
+  },
+
+  // ── Confirm received ──
+  confirmReceivedBanner: {
+    backgroundColor: "#0d1f0d",
+    borderWidth: 1,
+    borderColor: colors.success,
+    borderRadius: radius.md,
+    padding: 14,
+    marginBottom: 16,
+    gap: 10,
+  },
+  confirmReceivedText: { color: "#8fd08f", fontSize: 12, lineHeight: 18 },
 });
