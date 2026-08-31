@@ -58,23 +58,24 @@ const getNextSkuNumber = async () => {
 /**
  * Formats a raw product document with calculated flags (isNew, priceRange, etc.)
  */
-const formatProduct = (product, topSellerIds = new Set()) => {
+const formatProduct = (product, topSellerIds = new Set(), reservedMap = {}) => {
   const fallbackPrice = product.price !== undefined && product.price !== null ? Number(product.price) : 0;
-  
+  const reservedFor = (size) => Number(reservedMap[`${product.id}_${size || ""}`] || 0);
+
   // Normalize sizes to object mapping if not already
   const sizes = {};
   if (Array.isArray(product.sizes)) {
     product.sizes.forEach((entry) => {
       if (!entry || !entry.size) return;
       sizes[String(entry.size)] = {
-        quantity: Number(entry.quantity || 0),
+        quantity: Math.max(0, Number(entry.quantity || 0) - reservedFor(entry.size)),
         price: Number(entry.price !== undefined ? entry.price : fallbackPrice),
       };
     });
   } else {
     Object.entries(product.sizes || {}).forEach(([k, v]) => {
       sizes[k] = {
-        quantity: Number(v.quantity || 0),
+        quantity: Math.max(0, Number(v.quantity || 0) - reservedFor(k)),
         price: Number(v.price !== undefined ? v.price : fallbackPrice),
       };
     });
@@ -91,14 +92,16 @@ const formatProduct = (product, topSellerIds = new Set()) => {
     maxPrice = Math.max(...priceValues);
   }
 
-  const totalStock = Object.values(sizes).reduce((sum, s) => sum + Number(s.quantity || 0), 0) || Number(product.stock || 0);
+  const adjustedSimpleStock = Math.max(0, Number(product.stock || 0) - reservedFor(""));
+  const totalStock = Object.values(sizes).reduce((sum, s) => sum + Number(s.quantity || 0), 0) || adjustedSimpleStock;
 
   const now = Date.now();
   const productDate = product.date ? new Date(product.date).getTime() : now;
   const daysOld = (now - productDate) / (1000 * 60 * 60 * 24);
-  
+
   return {
     ...product,
+    stock: Object.keys(sizes).length > 0 ? product.stock : adjustedSimpleStock,
     sizes,
     priceRange: { min: minPrice, max: maxPrice },
     totalStock,

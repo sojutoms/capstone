@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 import {
   loginUser,
   signupUser,
@@ -7,6 +8,11 @@ import {
   forgotPassword,
   resetPassword,
 } from "../api/authApi";
+
+const BASE_URL =
+  Platform.OS === "web"
+    ? "http://localhost:4000"
+    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 const AuthContext = createContext();
 
@@ -16,6 +22,28 @@ export const AuthProvider = ({ children }) => {
   const [userToken, setUserToken]               = useState(null);
   const [loading, setLoading]                   = useState(true);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+  const emptyProfile = { name: "", email: "", photoURL: null, place: "", bio: "" };
+  const [userProfile, setUserProfile] = useState(emptyProfile);
+
+  // The JWT only carries the user's id ({ user: { id } }) — name/email/etc.
+  // live in the database, so any screen wanting the real account info
+  // needs this instead of trying to decode it out of the token.
+  const fetchUserProfile = async (token) => {
+    if (!token) { setUserProfile(emptyProfile); return; }
+    try {
+      const res  = await fetch(`${BASE_URL}/user/profile`, { headers: { "auth-token": token } });
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUserProfile({
+          name: data.user.name || "",
+          email: data.user.email || "",
+          photoURL: data.user.photo || data.user.avatar || null,
+          place: data.user.place || "",
+          bio: data.user.bio || "",
+        });
+      }
+    } catch {}
+  };
 
   // ─── Load stored data on app start ──────────────────────────────────────────
   useEffect(() => {
@@ -33,6 +61,8 @@ export const AuthProvider = ({ children }) => {
     };
     loadData();
   }, []);
+
+  useEffect(() => { fetchUserProfile(userToken); }, [userToken]);
 
   // ─── Login ───────────────────────────────────────────────────────────────────
   const login = async (email, password) => {
@@ -87,6 +117,8 @@ export const AuthProvider = ({ children }) => {
         userToken,
         loading,
         hasSeenOnboarding,
+        userProfile,
+        refreshUserProfile: () => fetchUserProfile(userToken),
         login,
         signup,
         confirmOtp,

@@ -9,8 +9,20 @@ import {
   Alert,
   StatusBar,
   Image,
+  RefreshControl,
+  Platform,
+  ActivityIndicator,
+  Modal,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
+import { useFavorites } from "../context/FavoritesContext";
+
+const BASE_URL =
+  Platform.OS === "web"
+    ? "http://localhost:4000"
+    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 function MenuItem({ icon, label, sublabel, onPress, rightElement, danger }) {
   return (
@@ -45,24 +57,99 @@ function Section({ title, children }) {
 }
 
 export default function ProfileScreen({ navigation }) {
-  const { logout, userToken } = useAuth();
+  const { logout, userToken, userProfile: user, refreshUserProfile } = useAuth();
+  const { refreshCart } = useCart();
+  const { refreshFavorites } = useFavorites();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState(false);
 
-  const getUserInfo = () => {
+  const handleAvatarLongPress = () => {
+    if (user?.photoURL) setViewingPhoto(true);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([refreshUserProfile(), refreshCart(), refreshFavorites()]);
+    setRefreshing(false);
+  };
+
+  const uploadAvatar = async (uri) => {
+    setUploadingPhoto(true);
     try {
-      if (!userToken) return { name: "Guest", email: "" };
-      const payload = JSON.parse(atob(userToken.split(".")[1]));
-      return {
-        name: payload.name || payload.username || "Sneaker Head",
-        email: payload.email || "",
-        photoURL: payload.photo || payload.avatar || null,
-      };
+      const filename = uri.split("/").pop() || "avatar.jpg";
+      const ext = (filename.split(".").pop() || "jpg").toLowerCase();
+      const formData = new FormData();
+      formData.append("product", {
+        uri,
+        name: filename,
+        type: `image/${ext === "jpg" ? "jpeg" : ext}`,
+      });
+
+      const uploadRes  = await fetch(`${BASE_URL}/upload`, { method: "POST", body: formData });
+      const uploadData = await uploadRes.json();
+      if (!uploadData.success || !uploadData.image_url) {
+        Alert.alert("Upload Failed", uploadData.error || "Could not upload photo.");
+        return;
+      }
+
+      const saveRes  = await fetch(`${BASE_URL}/user/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "auth-token": userToken || "" },
+        body: JSON.stringify({ photo: uploadData.image_url }),
+      });
+      const saveData = await saveRes.json();
+      if (saveData.success) {
+        await refreshUserProfile();
+      } else {
+        Alert.alert("Save Failed", saveData.error || "Could not save your new photo.");
+      }
     } catch {
-      return { name: "Sneaker Head", email: "" };
+      Alert.alert("Network Error", "Could not upload your photo.");
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
-  const user = getUserInfo();
+  const pickFromCamera = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Permission Needed", "Camera access is required to take a photo.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) uploadAvatar(result.assets[0].uri);
+  };
+
+  const pickFromLibrary = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert("Permission Needed", "Photo library access is required to choose a photo.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets?.[0]?.uri) uploadAvatar(result.assets[0].uri);
+  };
+
+  const handleAvatarPress = () => {
+    if (uploadingPhoto) return;
+    Alert.alert("Profile Photo", "Choose a source", [
+      { text: "Take Photo", onPress: pickFromCamera },
+      { text: "Choose from Library", onPress: pickFromLibrary },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
 
   const handleLogout = () => {
     if (typeof window !== "undefined" && window.confirm) {
@@ -93,13 +180,24 @@ export default function ProfileScreen({ navigation }) {
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+        }
       >
         <View style={styles.heroSection}>
           <Text style={styles.heroEyebrow}>MY PROFILE</Text>
 
-          <View style={styles.avatarRing}>
+          <TouchableOpacity
+            style={styles.avatarRing}
+            onPress={handleAvatarPress}
+            onLongPress={handleAvatarLongPress}
+            delayLongPress={350}
+            activeOpacity={0.8}
+          >
             <View style={styles.avatarInner}>
-              {user?.photoURL ? (
+              {uploadingPhoto ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : user?.photoURL ? (
                 <Image source={{ uri: user.photoURL }} style={styles.avatarImage} />
               ) : (
                 <Text style={styles.avatarInitial}>
@@ -111,10 +209,17 @@ export default function ProfileScreen({ navigation }) {
                 </Text>
               )}
             </View>
-          </View>
+            <View style={styles.avatarEditBadge}>
+              <Text style={styles.avatarEditBadgeText}>✎</Text>
+            </View>
+          </TouchableOpacity>
 
-          <Text style={styles.heroName}>{user?.name || "Sneaker Head"}</Text>
-          <Text style={styles.heroEmail}>{user?.email || ""}</Text>
+          <Text style={styles.heroName}>{user?.name || user?.email || "Account"}</Text>
+          <View style={styles.heroInfoBlock}>
+            {!!user?.name && <Text style={styles.heroEmail}>{user?.email || ""}</Text>}
+            {!!user?.place && <Text style={styles.heroPlace}>📍 {user.place}</Text>}
+            {!!user?.bio && <Text style={styles.heroBio}>{user.bio}</Text>}
+          </View>
 
           <TouchableOpacity
             style={styles.editBtn}
@@ -138,6 +243,7 @@ export default function ProfileScreen({ navigation }) {
         </View>
 
         <Section title="ACCOUNT">
+          
           <MenuItem icon="📦" label="My Orders" sublabel="Track, return or buy again" onPress={() => navigation.navigate("OrderHistory")} />
           <View style={styles.itemDivider} />
           <MenuItem icon="🏠" label="Delivery Addresses" sublabel="Manage saved addresses" onPress={() => navigation.navigate("Addresses")} />
@@ -185,6 +291,25 @@ export default function ProfileScreen({ navigation }) {
 
         <Text style={styles.version}>Version 1.0.0 · Built for Sneakerheads</Text>
       </ScrollView>
+
+      <Modal visible={viewingPhoto} transparent animationType="fade" onRequestClose={() => setViewingPhoto(false)}>
+        <TouchableOpacity
+          style={styles.photoViewerOverlay}
+          activeOpacity={1}
+          onPress={() => setViewingPhoto(false)}
+        >
+          {user?.photoURL && (
+            <Image source={{ uri: user.photoURL }} style={styles.photoViewerImage} resizeMode="contain" />
+          )}
+          <TouchableOpacity
+            style={styles.photoViewerClose}
+            onPress={() => setViewingPhoto(false)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={styles.photoViewerCloseText}>✕</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -202,12 +327,29 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   heroEyebrow: { color: "#444", fontSize: 10, fontWeight: "900", letterSpacing: 3, marginBottom: 20 },
-  avatarRing: { width: 90, height: 90, borderRadius: 45, borderWidth: 1, borderColor: "#333", justifyContent: "center", alignItems: "center", marginBottom: 14 },
+  avatarRing: { width: 90, height: 90, borderRadius: 45, borderWidth: 1, borderColor: "#333", justifyContent: "center", alignItems: "center", marginBottom: 14, position: "relative" },
   avatarInner: { width: 78, height: 78, borderRadius: 39, backgroundColor: "#1a1a1a", justifyContent: "center", alignItems: "center", overflow: "hidden" },
   avatarImage: { width: "100%", height: "100%" },
   avatarInitial: { color: "#fff", fontSize: 30, fontWeight: "900" },
+  avatarEditBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#fff",
+    borderWidth: 2,
+    borderColor: "#0a0a0a",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarEditBadgeText: { color: "#0a0a0a", fontSize: 12 },
   heroName: { color: "#fff", fontSize: 22, fontWeight: "900", letterSpacing: 1, marginBottom: 4 },
-  heroEmail: { color: "#555", fontSize: 13, letterSpacing: 0.3, marginBottom: 18 },
+  heroInfoBlock: { alignItems: "center", marginBottom: 18 },
+  heroEmail: { color: "#555", fontSize: 13, letterSpacing: 0.3, marginBottom: 4 },
+  heroPlace: { color: "#777", fontSize: 12, marginBottom: 8 },
+  heroBio: { color: "#999", fontSize: 13, lineHeight: 19, textAlign: "center", paddingHorizontal: 24 },
   editBtn: { borderWidth: 1, borderColor: "#333", paddingVertical: 8, paddingHorizontal: 24, borderRadius: 2, marginBottom: 28 },
   editBtnText: { color: "#aaa", fontSize: 10, fontWeight: "900", letterSpacing: 2.5 },
   statsRow: { flexDirection: "row", width: "100%", backgroundColor: "#111", borderRadius: 4, paddingVertical: 18, paddingHorizontal: 10 },
@@ -228,4 +370,24 @@ const styles = StyleSheet.create({
   menuArrow: { color: "#444", fontSize: 22, fontWeight: "300" },
   itemDivider: { height: 1, backgroundColor: "#1a1a1a", marginLeft: 66 },
   version: { color: "#2a2a2a", fontSize: 10, letterSpacing: 1, textAlign: "center", marginTop: 30 },
+
+  photoViewerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoViewerImage: { width: "100%", height: "70%" },
+  photoViewerClose: {
+    position: "absolute",
+    top: 56,
+    right: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoViewerCloseText: { color: "#fff", fontSize: 18 },
 });

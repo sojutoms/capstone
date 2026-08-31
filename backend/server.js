@@ -18,6 +18,7 @@ const skuRoutes     = require("./routes/skuRoutes");
 const reviewRoutes  = require("./routes/reviewRoutes");
 const categoryBrandRoutes = require("./routes/categoryBrandRoutes")
 const paymentRoutes = require("./routes/paymentRoutes");
+const chatbotRoutes = require("./routes/chatbotRoutes");
 const { handlePaymongoWebhook } = require("./controllers/paymentController");
 const { seedCategoryBrand } = require("./utils/seedCategoryBrand");
 const seedSizesSubcategories = require("./utils/seedSizesSubcategories");
@@ -58,6 +59,11 @@ app.post("/webhooks/paymongo", express.raw({ type: "application/json" }), handle
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
+app.use((req, res, next) => {
+  console.log(`>>> ${new Date().toISOString()} ${req.method} ${req.originalUrl} from ${req.ip}`);
+  next();
+});
+
 // ─── Connect DB ───────────────────────────────────────────────────────────────
 connectDB();
 
@@ -74,6 +80,7 @@ app.use("/", skuRoutes);
 app.use("/", reviewRoutes);
 app.use("/", categoryBrandRoutes);
 app.use("/", paymentRoutes);
+app.use("/", chatbotRoutes);
 // ─── Init & background jobs ───────────────────────────────────────────────────
 initializeSequenceCounter();
 seedCategoryBrand();

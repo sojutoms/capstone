@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./OrderHistory.css";
 import ReviewModal from "../ProductDisplay/ReviewModal";
 import RefundModal from "../ProductDisplay/RefundModal";
@@ -128,6 +129,17 @@ const DigitalCertificate = ({ order, onClose }) => {
 };
 
 const OrderHistory = () => {
+  const navigate = useNavigate();
+
+  // Reached from the "Track Order" footer link (or any other entry point)
+  // while logged out — send straight to login instead of showing a broken,
+  // permanently-empty order list.
+  useEffect(() => {
+    if (!localStorage.getItem("auth-token")) {
+      navigate("/login", { replace: true });
+    }
+  }, [navigate]);
+
   const [orders, setOrders] = useState([]);
   const [selected, setSelected] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -142,6 +154,15 @@ const OrderHistory = () => {
   const [certOrder, setCertOrder] = useState(null); 
   const [confirmModal, setConfirmModal] = useState({ open: false, order: null });
   const [receivedModal, setReceivedModal] = useState({ open: false, order: null });
+  const [retryingPaymentFor, setRetryingPaymentFor] = useState(null);
+
+  // Ticks once a second so the "time left to pay" countdown on awaiting-payment
+  // orders stays live without needing a refetch.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const [toasts, setToasts] = useState([]);
   const toastIdRef = useRef(0);
@@ -175,13 +196,17 @@ const OrderHistory = () => {
         setOrders(data.orders || []);
         setCurrentPage(data.page || page);
         setTotalPages(data.totalPages || 1);
+      } else if (res.status === 401) {
+        // Token present but expired/invalid — same dead-end as being logged
+        // out, so send to login instead of leaving an empty list on screen.
+        navigate("/login", { replace: true });
       } else {
         addToast("error", data.error || "Failed to load orders.");
       }
     } catch (err) {
       addToast("error", "Failed to load orders.");
     }
-  }, [addToast]);
+  }, [addToast, navigate]);
 
   useEffect(() => {
     fetchOrders(currentPage, statusFilter);
@@ -374,10 +399,80 @@ const OrderHistory = () => {
     );
   };
 
+  const retryPayment = async (order) => {
+    setRetryingPaymentFor(order.orderNumber);
+    try {
+      const res = await fetch(`${API_BASE_URL}/create-checkout-session`, {
+        method: "POST",
+        headers: { "auth-token": localStorage.getItem("auth-token"), "Content-Type": "application/json" },
+        body: JSON.stringify({ orderNumber: order.orderNumber }),
+      });
+      const data = await res.json();
+      if (data.success && data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        addToast("error", data.error || "Could not start payment.");
+        setRetryingPaymentFor(null);
+
+        // A sold-out item or an expired 15-minute payment window both mean
+        // the server auto-cancelled this order (it can never be paid now) —
+        // patch it locally so the "payment pending" banner/pill disappears
+        // immediately instead of still showing it as an active order until
+        // the next full refetch.
+        if (data.soldOut || data.expired) {
+          const patch = (o) => (o.orderNumber === order.orderNumber ? { ...o, status: "cancelled", displayStatus: "cancelled" } : o);
+          setOrders((prev) => prev.map(patch));
+          setSelected((prev) => (prev && prev.orderNumber === order.orderNumber ? patch(prev) : prev));
+        }
+      }
+    } catch (err) {
+      addToast("error", "Could not start payment.");
+      setRetryingPaymentFor(null);
+    }
+  };
+
+  // Formats milliseconds remaining as "M:SS". Returns null once the checkout
+  // reservation hasn't started yet (order placed but "Complete Payment" never
+  // clicked) — there's no deadline to count down to until then.
+  const getPaymentCountdown = (order) => {
+    if (!order.checkoutReservedUntil) return null;
+    const remainingMs = new Date(order.checkoutReservedUntil).getTime() - nowTick;
+    if (remainingMs <= 0) return "0:00";
+    const totalSeconds = Math.floor(remainingMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  };
+
+  const renderPaymentStatusBanner = (order) => {
+    if (order.paymentMethod !== "online" || !order.paymentStatus || order.paymentStatus === "paid") return null;
+    if (["cancelled", "refunded"].includes(rawStatus(order))) return null;
+    const countdown = getPaymentCountdown(order);
+    return (
+      <div className="payment-pending-banner">
+        <span>
+          ⚠ Payment not completed for this order — it won't be processed until payment goes through, and the item(s) may sell out to someone else in the meantime.
+          {countdown && (
+            <span className={`payment-countdown ${countdown === "0:00" ? "payment-countdown--expired" : ""}`}>
+              {countdown === "0:00" ? "Cancelling — payment window expired" : `Time left to pay: ${countdown}`}
+            </span>
+          )}
+        </span>
+        <button
+          className="btn-confirm-received"
+          onClick={() => retryPayment(order)}
+          disabled={retryingPaymentFor === order.orderNumber}
+        >
+          {retryingPaymentFor === order.orderNumber ? "STARTING..." : "COMPLETE PAYMENT"}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="order-history-container">
       <div className="order-history-filters">
-        {["all", "pending", "confirmed", "shipping", "delivered"].map(f => (
+        {["all", "pending", "confirmed", "shipping", "delivered", "cancelled"].map(f => (
           <button key={f} className={`order-filter-btn ${statusFilter === f ? "active" : ""}`} onClick={() => { setStatusFilter(f); setCurrentPage(1); setSelected(null); }}>
             {f.toUpperCase()}
           </button>
@@ -393,6 +488,11 @@ const OrderHistory = () => {
                   <span className="compact-id">#{o.orderNumber.slice(-8)}</span>
                   {renderStatusPill(o)}
                 </div>
+                {o.paymentMethod === "online" && o.paymentStatus && o.paymentStatus !== "paid" && !["cancelled", "refunded"].includes(rawStatus(o)) && (
+                  <span className="status-pill status-pill--payment-pending">
+                    ⚠ AWAITING PAYMENT{getPaymentCountdown(o) ? ` · ${getPaymentCountdown(o)}` : ""}
+                  </span>
+                )}
                 <div className="compact-meta">
                   <span>{new Date(o.timestamp).toLocaleDateString()}</span>
                   <span>₱{formatPrice(o.total)}</span>
@@ -427,6 +527,7 @@ const OrderHistory = () => {
                 {renderTimeline(selected)}
               </div>
 
+              {renderPaymentStatusBanner(selected)}
               {renderConfirmReceivedBanner(selected)}
 
               <div className="details-section">

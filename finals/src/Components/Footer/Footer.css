@@ -42,7 +42,7 @@
 /* ─── Main Grid ──────────────────────────────────────────────────── */
 .footer-master-grid {
   display: grid;
-  grid-template-columns: 1.5fr 1.8fr 1fr 1fr 1fr 1.2fr;
+  grid-template-columns: 1.5fr 1.8fr 1fr 1fr 1.2fr;
   max-width: 1400px;
   width: 92%;
   margin: 0 auto;
@@ -52,10 +52,10 @@
 
 /* ─── Cells ───────────────────────────────────────────────────────── */
 .footer-cell {
-  padding: 48px 24px;
+  padding: 30px 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   border-right: 1px solid var(--glass-border);
   transition: background 0.3s ease;
 }
@@ -173,10 +173,10 @@
 
 /* ─── Complimentary Services ─────────────────────────────────────── */
 .footer-complimentary-services {
-  margin-top: 24px;
+  margin-top: 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .service-item {
@@ -213,8 +213,8 @@
   color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 0.22em;
-  margin-bottom: 8px;
-  padding-bottom: 12px;
+  margin-bottom: 6px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--glass-border);
   opacity: 0.6;
 }
@@ -223,7 +223,7 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding: 0;
   margin: 0;
 }
@@ -266,8 +266,8 @@
   color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 0.22em;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
+  margin-bottom: 6px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--glass-border);
   opacity: 0.6;
 }
@@ -275,8 +275,8 @@
 .footer-contact-info {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 .footer-contact-info p {
@@ -315,7 +315,7 @@
 
 .footer-social-icon img {
   width: 14px;
-  filter: var(--logo-filter);
+  filter: var(--dark-icon-filter);
   opacity: 0.7;
   transition: opacity 0.2s ease;
 }
@@ -330,7 +330,7 @@
   width: 92%;
   margin: 0 auto;
   border-top: 1px solid var(--glass-border);
-  padding: 24px 0;
+  padding: 14px 0;
   position: relative;
   z-index: 1;
 }
@@ -415,7 +415,7 @@
   }
 
   .footer-cell {
-    padding: 32px 20px;
+    padding: 22px 20px;
   }
 
   .footer-bottom {
@@ -444,7 +444,7 @@
   }
 
   .footer-cell {
-    padding: 24px 20px;
+    padding: 18px 20px;
     border-right: none;
     border-bottom: 1px solid var(--glass-border);
   }

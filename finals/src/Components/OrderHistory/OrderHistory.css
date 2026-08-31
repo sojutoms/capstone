@@ -40,8 +40,8 @@
 }
 
 .order-filter-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
 }
 
 .order-filter-btn.active {
@@ -72,12 +72,19 @@
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border-subtle);
+  /* Grid items default to min-height: auto, which lets them grow past their
+     track to fit content instead of respecting it — breaking the internal
+     overflow-y: auto below and any scroll on longer order lists. */
+  min-height: 0;
 }
 
 .orders-list-compact {
   flex: 1;
   overflow-y: auto;
   padding: 10px;
+  /* Same min-height: auto quirk, but for a flex item this time — without it,
+     a long order list refuses to scroll and just pushes the pane taller. */
+  min-height: 0;
 }
 
 .order-item-compact {
@@ -131,7 +138,7 @@
 .compact-pagination button {
   background: none;
   border: none;
-  color: #fff;
+  color: var(--text-primary);
   cursor: pointer;
   opacity: 0.5;
 }
@@ -145,6 +152,12 @@
   background: var(--bg-primary);
   position: relative;
   overflow-y: auto;
+  /* Same grid min-height: auto quirk as the sidebar — without this, long
+     order details (many items, full address, cancel button) grow the pane
+     past its track instead of scrolling, and the overflow gets silently
+     clipped by .order-history-split-layout's overflow: hidden with no way
+     to reach it. */
+  min-height: 0;
 }
 
 .details-scroll-content {
@@ -197,9 +210,9 @@
 }
 
 .details-util-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: var(--glass-bg-hover);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
   padding: 8px 16px;
   font-family: 'Bebas Neue', sans-serif;
   font-size: 12px;
@@ -231,7 +244,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--border-subtle);
   z-index: 0;
 }
 
@@ -254,9 +267,9 @@
 }
 
 .timeline-step.active .timeline-dot {
-  background: #fff;
-  border-color: #fff;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  box-shadow: 0 0 20px rgba(var(--text-primary-rgb), 0.4);
 }
 
 .timeline-label {
@@ -267,7 +280,7 @@
 }
 
 .timeline-step.active .timeline-label {
-  color: #fff;
+  color: var(--text-primary);
 }
 
 /* ── Sections ── */
@@ -349,8 +362,8 @@
 .manifest-review-btn {
   margin-top: 12px;
   background: none;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #fff;
+  border: 1px solid var(--border-light);
+  color: var(--text-primary);
   padding: 6px 12px;
   font-size: 10px;
   border-radius: 4px;
@@ -449,15 +462,17 @@
   text-transform: uppercase;
 }
 
-.status-pill--pending { background: rgba(255, 255, 255, 0.1); color: #fff; }
+.status-pill--pending { background: var(--glass-bg-hover); color: var(--text-primary); }
 .status-pill--confirmed { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
 .status-pill--shipping { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 .status-pill--delivered { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 .status-pill--completed { background: #fff; color: #000; }
+.status-pill--payment-pending { background: #f59e0b; color: #1a1200; margin-top: 6px; display: inline-block; }
 
 /* ── Empty State ── */
 .details-empty-state {
-  height: 100%;
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -500,7 +515,7 @@
 }
 
 .rider-card__label { color: var(--text-secondary); }
-.rider-card__phone { color: #fff; text-decoration: underline; }
+.rider-card__phone { color: var(--text-primary); text-decoration: underline; }
 
 /* ── Banner ── */
 .confirm-received-banner {
@@ -513,6 +528,48 @@
   align-items: center;
   margin-bottom: 40px;
   animation: bannerPulse 2s infinite;
+}
+
+.payment-pending-banner {
+  background: #f59e0b;
+  color: #1a1200;
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.payment-pending-banner span {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.payment-pending-banner .btn-confirm-received {
+  background: #1a1200;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.payment-countdown {
+  display: block;
+  margin-top: 6px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  font-weight: 400;
+}
+
+.payment-countdown--expired {
+  animation: countdownPulse 1s infinite;
+}
+
+@keyframes countdownPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 @keyframes bannerPulse {
@@ -576,7 +633,7 @@
   cursor: pointer;
 }
 
-.btn-secondary { background: rgba(255, 255, 255, 0.05); color: #fff; border: 1px solid rgba(255, 255, 255, 0.1); }
+.btn-secondary { background: var(--glass-bg-hover); color: var(--text-primary); border: 1px solid var(--glass-border); }
 
 /* ── Digital Certificate ── */
 .certificate-modal {
@@ -710,7 +767,7 @@
   justify-content: center;
   font-family: 'Bebas Neue', sans-serif;
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.2);
+  color: var(--text-muted);
   background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.02));
 }
 
@@ -728,8 +785,8 @@
   border-radius: 4px;
   cursor: pointer;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
 }
 
 .cert-btn--primary {

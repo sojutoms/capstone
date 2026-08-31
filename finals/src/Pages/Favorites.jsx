@@ -1,8 +1,10 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { FavoritesContext } from "../Context/FavoritesContext";
 import { ShopContext } from "../Context/ShopContext";
 import Item from "../Components/Item/Item";
 import "./CSS/Favorites.css";
+
+const ITEMS_PER_PAGE = 12;
 
 const toNumber = (v) => {
   if (v === null || v === undefined || v === "") return NaN;
@@ -73,6 +75,20 @@ const resolveBestPrice = (item) => {
 const Favorites = () => {
   const { favorites, clearFavorites } = useContext(FavoritesContext);
   const { all_product } = useContext(ShopContext);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const favSet = new Set(favorites.map((f) => String(f)));
+  const favoriteProducts = Array.isArray(all_product)
+    ? all_product.filter((product) => favSet.has(String(product.id)))
+    : [];
+
+  const totalPages = Math.max(1, Math.ceil(favoriteProducts.length / ITEMS_PER_PAGE));
+
+  // Clamp back to a valid page if items were removed (e.g. unfavorited)
+  // while on a later page that no longer exists.
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   if (!Array.isArray(all_product) || all_product.length === 0) {
     return (
@@ -92,8 +108,7 @@ const Favorites = () => {
     );
   }
 
-  const favSet = new Set(favorites.map((f) => String(f)));
-  const favoriteProducts = all_product.filter((product) => favSet.has(String(product.id)));
+  const pageProducts = favoriteProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
     <div className="favorites-page">
@@ -125,33 +140,43 @@ const Favorites = () => {
             <p className="empty-description">
               Start adding items to your favorites by clicking the heart icon on products you love!
             </p>
-            <a href="/shop" className="shop-now-btn">
+            <a href="/shoes" className="shop-now-btn">
               Continue Shopping
             </a>
           </div>
         ) : (
-          /* Products Grid */
-          <div className="favorites-grid">
-            {favoriteProducts.map((item) => {
-              const numericPrice = resolveBestPrice(item);
-              return (
-                <Item
-                  key={item.id}
-                  id={item.id}
-                  name={item.name}
-                  image={item.image}
-                  sizes={item.sizes || item.variants || item.price_map}
-                  price={Number.isFinite(numericPrice) ? numericPrice : undefined}
-                  new_price={item.new_price}
-                  old_price={item.old_price}
-                  isNew={item.isNew}
-                  salesCount={item.salesCount || 0}
-                  // Optionally pass formatted price if Item expects a string:
-                  // formattedPrice={Number.isFinite(numericPrice) ? `₱${formatPrice(numericPrice)}` : null}
-                />
-              );
-            })}
-          </div>
+          <>
+            {/* Products Grid */}
+            <div className="favorites-grid">
+              {pageProducts.map((item) => {
+                const numericPrice = resolveBestPrice(item);
+                return (
+                  <Item
+                    key={item.id}
+                    id={item.id}
+                    name={item.name}
+                    image={item.image}
+                    sizes={item.sizes || item.variants || item.price_map}
+                    price={Number.isFinite(numericPrice) ? numericPrice : undefined}
+                    new_price={item.new_price}
+                    old_price={item.old_price}
+                    isNew={item.isNew}
+                    salesCount={item.salesCount || 0}
+                    // Optionally pass formatted price if Item expects a string:
+                    // formattedPrice={Number.isFinite(numericPrice) ? `₱${formatPrice(numericPrice)}` : null}
+                  />
+                );
+              })}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="favorites-pagination">
+                <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>PREV</button>
+                <span>{currentPage} / {totalPages}</span>
+                <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>NEXT</button>
+              </div>
+            )}
+          </>
         )}
 
         {/* Info Section */}

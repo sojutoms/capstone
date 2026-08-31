@@ -18,7 +18,7 @@ const Terms = () => {
                     <p style={{ ...s.legalText, fontStyle: 'italic' }}>Last updated: October 2025</p>
                     <h2 style={s.legalHeading}>Acceptance of Terms</h2>
                     <p style={s.legalText}>
-                        By accessing and using Sneaky Concepts website, you accept and agree to be bound by
+                        By accessing and using Good Soles PH website, you accept and agree to be bound by
                         these Terms of Service. If you do not agree, please do not use our services.
                     </p>
                 </section>
@@ -45,7 +45,7 @@ const Terms = () => {
                 <section style={s.contentSection}>
                     <h2 style={s.legalHeading}>Pricing and Payment</h2>
                     <p style={s.legalText}>
-                        All prices are in USD and subject to change. We reserve the right to refuse or
+                        All prices are in PHP and subject to change. We reserve the right to refuse or
                         cancel orders for any reason, including errors in pricing or product information.
                     </p>
                 </section>
@@ -54,14 +54,14 @@ const Terms = () => {
                     <h2 style={s.legalHeading}>Intellectual Property</h2>
                     <p style={s.legalText}>
                         All content on this website, including text, graphics, logos, and images, is
-                        the property of Sneaky Concepts and protected by copyright laws.
+                        the property of Good Soles PH and protected by copyright laws.
                     </p>
                 </section>
 
                 <section style={s.contentSection}>
                     <h2 style={s.legalHeading}>Limitation of Liability</h2>
                     <p style={s.legalText}>
-                        Sneaky Concepts shall not be liable for any indirect, incidental, special, or
+                        Good Soles PH shall not be liable for any indirect, incidental, special, or
                         consequential damages resulting from the use or inability to use our service.
                     </p>
                 </section>
@@ -70,7 +70,7 @@ const Terms = () => {
                     <h2 style={s.legalHeading}>Contact</h2>
                     <p style={s.legalText}>
                         Questions about these Terms? Contact us at{' '}
-                        <span style={{ color: '#ffffff' }}>sneaky-concepts@legal.com</span>
+                        <span style={{ color: 'var(--text-primary)' }}>good-soles-ph@gmail.com</span>
                     </p>
                 </section>
             </div>

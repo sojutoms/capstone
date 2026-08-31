@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import "./CSS/Shop.css";
 import Hero from "../Components/Hero/Hero";
 import Banner from "../Components/Banner/Banner";
@@ -9,6 +10,19 @@ import SocialFeed from "../Components/SocialFeed/SocialFeed";
 import StoreMap from "../Components/Storemap/StoreMap";
 
 const Shop = () => {
+    const location = useLocation();
+
+    // Lets other pages (e.g. Contact Us's "Find Store" button) land here and
+    // land the user straight on the store map instead of the top of the page.
+    useEffect(() => {
+        if (location.state?.scrollTo === "store-map") {
+            const timer = setTimeout(() => {
+                document.getElementById("store-map")?.scrollIntoView({ behavior: "instant", block: "start" });
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [location.state]);
+
     return (
         <div className="shop-page">
             <Hero />

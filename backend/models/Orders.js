@@ -95,6 +95,19 @@ const orderSchema = new mongoose.Schema(
     paymentIntentId:   { type: String, default: null },
     paidAt:             { type: Date, default: null },
 
+    // Set when a PayMongo checkout session is created for an "online" order
+    // whose inventory isn't committed yet. Holds the item(s) for a short
+    // window so a second buyer can't also check out the last unit — see
+    // createCheckoutSession in paymentController.js.
+    checkoutReservedUntil: { type: Date, default: null },
+
+    // For "online" (PayMongo) orders, stock/points/voucher aren't committed at
+    // placeOrder time — only once payment is confirmed. COD orders commit
+    // immediately, so this stays true for them from creation.
+    inventoryCommitted: { type: Boolean, default: true },
+    oversold:           { type: Boolean, default: false },
+    oversoldItems:       { type: Array,   default: [] },
+
     status: {
       type: String,
       default: "pending",

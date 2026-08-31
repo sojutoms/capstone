@@ -669,7 +669,7 @@ header.navbar.search-active .nav-right {
   gap: 8px;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted);
   font-family: var(--nav-display);
   font-size: 11px;
   font-weight: 400;
@@ -763,7 +763,7 @@ header.navbar.search-active .nav-right {
   padding: 14px 24px;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
   font-family: var(--nav-font);
   font-size: 13px;
   font-weight: 500;
@@ -914,7 +914,7 @@ header.navbar.search-active .nav-right {
 
 .nav-search-no-results {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted);
   padding: 20px 0;
 }
 
@@ -1046,17 +1046,17 @@ header.navbar.search-active .nav-right {
 }
 
 .nav-cart-wrapper:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg);
 }
 
 .nav-cart-wrapper:hover .nav-cart-icon {
   opacity: 1;
-  filter: invert(0) sepia(1) saturate(5) hue-rotate(5deg);
+  color: var(--gold);
 }
 
 .nav-cart-icon {
-  width: 24px;
-  filter: var(--logo-filter);
+  display: flex;
+  color: var(--text-primary);
   opacity: 0.6;
   transition: all 0.2s ease;
 }
@@ -1260,7 +1260,7 @@ header.navbar.search-active .nav-right {
     justify-content: center;
     width: 64px;
     height: 60px;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--text-secondary);
     font-size: 10px;
     border: none !important;
     outline: none !important;
@@ -1326,7 +1326,7 @@ header.navbar.search-active .nav-right {
   .mega-col ul li a {
     padding: 12px 0;
     font-size: 14px;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-muted);
     border: none !important;
     background: transparent !important;
     display: block;
@@ -1552,6 +1552,35 @@ header.navbar.search-active .nav-right {
   margin-top: 0.5rem;
 }
 
+.drawer-item-controls button {
+  background: var(--bg-elevated);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.drawer-item-controls button:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.drawer-item-controls span:not(.price) {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 800;
+  min-width: 20px;
+  text-align: center;
+  color: var(--text-primary);
+}
+
 .drawer-qty {
   display: flex;
   align-items: center;
@@ -1645,9 +1674,9 @@ header.navbar.search-active .nav-right {
 }
 
 .drawer-checkout-btn {
-  background: #ffffff;
-  color: #000000;
-  border: 1px solid #000000;
+  background: var(--white);
+  color: var(--black);
+  border: 1px solid var(--white);
   padding: 1.1rem;
   font-family: var(--font-display);
   font-size: 1rem;
@@ -1826,7 +1855,7 @@ header.navbar.search-active .nav-right {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(5, 5, 5, 0.98);
+  background: rgba(var(--bg-primary-rgb), 0.98);
   backdrop-filter: blur(25px);
   z-index: 100000;
   opacity: 0;
@@ -1967,7 +1996,7 @@ header.navbar.search-active .nav-right .nav-auth-cart {
   height: 80px;
   border-radius: 8px;
   overflow: hidden;
-  background: #111;
+  background: var(--bg-elevated);
 }
 
 .vault-item-img img {
@@ -2100,8 +2129,8 @@ header.navbar.search-active .nav-right .nav-auth-cart {
 .drawer-checkout-btn {
   width: 100%;
   margin-top: 15px;
-  background: var(--text-primary);
-  color: #000;
+  background: var(--white);
+  color: var(--black);
   border: none;
   padding: 18px;
   border-radius: 12px;

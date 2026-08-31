@@ -7,14 +7,34 @@ import PlaceOrderScreen from "../screens/PlaceOrderScreen";
 import OrdersScreen from "../screens/OrdersScreen";
 import FavoritesScreen from "../screens/FavoritesScreen";
 import ARTryOnScreen from "../screens/ARTryOnScreen";
+import { useCart } from "../context/CartContext";
+import { useFavorites } from "../context/FavoritesContext";
+import { useAuth } from "../context/AuthContext";
 
 
 const Stack = createNativeStackNavigator();
 
 export default function HomeStack() {
+  const { refreshCart } = useCart();
+  const { refreshFavorites } = useFavorites();
+  const { refreshUserProfile } = useAuth();
+
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      
+    <Stack.Navigator
+      screenOptions={{ headerShown: false }}
+      screenListeners={{
+        // Fires whenever any screen in this stack comes into focus (e.g.
+        // navigating back from ProductDetail to Home, or into Favorites) —
+        // keeps cart/favorites-derived badges (and the Home greeting name)
+        // current without needing a manual pull-to-refresh every time.
+        focus: () => {
+          refreshCart();
+          refreshFavorites();
+          refreshUserProfile();
+        },
+      }}
+    >
+
       <Stack.Screen 
         name="HomeScreen" 
         component={HomeScreen} 

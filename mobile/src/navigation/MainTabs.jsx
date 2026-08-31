@@ -16,6 +16,8 @@ import CameraScreen from "../screens/CameraScreen";
 import ProfileStack from "./ProfileStack";
 
 import { useCart } from "../context/CartContext";
+import { useFavorites } from "../context/FavoritesContext";
+import { useAuth } from "../context/AuthContext";
 import ShopStack from "./ShopStack";
 
 const Tab = createBottomTabNavigator();
@@ -109,7 +111,9 @@ const Badge = ({ count }) =>
 function ElegantTabBar({ state, navigation }) {
   if (state.index === 2) return null;
 
-  const { cart } = useCart();
+  const { cart, refreshCart } = useCart();
+  const { refreshFavorites } = useFavorites();
+  const { refreshUserProfile } = useAuth();
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
   const counts = { Cart: cartCount };
@@ -150,6 +154,13 @@ function ElegantTabBar({ state, navigation }) {
 
     const ev = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
     if (!focused && !ev.defaultPrevented) navigation.navigate(route.name);
+
+    // Keep the Cart badge (and anything reading favorites elsewhere, like
+    // the Home heart icon) live as the user moves between tabs, not just
+    // when they land on Cart/Favorites and pull to refresh directly.
+    refreshCart();
+    refreshFavorites();
+    refreshUserProfile();
   };
 
   return (

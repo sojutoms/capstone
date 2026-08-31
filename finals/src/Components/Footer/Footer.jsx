@@ -54,8 +54,7 @@ const Footer = () => {
                     <h3>Quick Links</h3>
                     <ul className="footer-links-grid">
                         <li><Link to="/AboutUs">About Us</Link></li>
-                        <li><Link to="/shop">Shop</Link></li>
-                        <li><Link to="/gift-cards">Gift Cards</Link></li>
+                        <li><Link to="/shoes">Shop</Link></li>
                     </ul>
                 </div>
 
@@ -68,18 +67,6 @@ const Footer = () => {
                         <li><Link to="/returns">Returns</Link></li>
                         <li><Link to="/size-guide">Size Guide</Link></li>
                         <li><Link to="/track-order">Track Order</Link></li>
-                    </ul>
-                </div>
-
-                {/* ── Company ── */}
-                <div className="footer-cell">
-                    <h3>Company</h3>
-                    <ul className="footer-links-grid">
-                        <li><Link to="/our-story">Our Story</Link></li>
-                        <li><Link to="/careers">Careers</Link></li>
-                        <li><Link to="/sustainability">Sustainability</Link></li>
-                        <li><Link to="/press">Press</Link></li>
-                        <li><Link to="/affiliates">Affiliates</Link></li>
                     </ul>
                 </div>
 

@@ -69,6 +69,46 @@
   gap: 30px;
 }
 
+/* ── Pagination ── */
+.favorites-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-top: 40px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+}
+
+.favorites-pagination span {
+  color: var(--text-secondary);
+}
+
+.favorites-pagination button {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.favorites-pagination button:hover:not(:disabled) {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
+}
+
+.favorites-pagination button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 /* ── Empty State ── */
 .favorites-empty {
   text-align: center;
@@ -143,7 +183,7 @@
 
 .info-card p {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   margin: 0;
 }
 

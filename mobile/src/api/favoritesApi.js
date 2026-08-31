@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 const BASE_URL =
   Platform.OS === "web"
     ? "http://localhost:4000"
-    : "https://unlaboured-charise-unmachined.ngrok-free.dev";
+    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 // 🔥 GET FAVORITES
 export const getFavoritesAPI = async (token) => {

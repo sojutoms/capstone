@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 const BASE_URL =
   Platform.OS === "web"
     ? "http://localhost:4000"
-    : "https://unlaboured-charise-unmachined.ngrok-free.dev"; // 🔥 change to your IP
+    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 // 🔹 GET ADDRESSES
 export const getSavedAddresses = async (token) => {

@@ -4,16 +4,16 @@ import { ShopContext } from "../../Context/ShopContext";
 const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 
 const CartTotal = ({
-  paymentMethod,
   discountAmount = 0,
   discountPercent = 0,
   voucherCode = null,
   shippingFee = 0,
   shippingTierLabel = "",
   shippingEta = "",
-  codFee = 0,
+  items = null, // optional override of the real cart — e.g. a Buy Now single-item checkout
 }) => {
-  const { all_product, cartItems } = useContext(ShopContext);
+  const { all_product, cartItems: contextCartItems } = useContext(ShopContext);
+  const cartItems = items || contextCartItems;
 
   const formatPrice = (price) => {
     const num = Number(price);
@@ -105,9 +105,8 @@ const CartTotal = ({
 
   const subtotal = calculateCartTotal();
   const shipping = Number(shippingFee) || 0;
-  const cod = Number(codFee) || 0;
   const discount = Number(discountAmount) || 0;
-  const total = subtotal + shipping + cod - discount;
+  const total = subtotal + shipping - discount;
 
   const isFreeShipping = shipping === 0;
   const hasRegion = shippingTierLabel !== "";
@@ -116,20 +115,20 @@ const CartTotal = ({
     <div style={{
       position: "sticky",
       top: "20px",
-      background: "linear-gradient(180deg, #151515 0%, #0a0a0a 100%)",
+      background: "var(--bg-card)",
       padding: "30px",
       borderRadius: "16px",
-      border: "1px solid rgba(255,255,255,0.08)",
+      border: "1px solid var(--glass-border)",
       maxHeight: "calc(100vh - 40px)",
       overflowY: "auto",
-      color: "#ffffff",
-      boxShadow: "0 20px 40px rgba(0,0,0,0.4)"
+      color: "var(--text-primary)",
+      boxShadow: "var(--shadow-lg)"
     }}>
       <h2 style={{
         fontSize: "22px",
         fontWeight: "800",
         marginBottom: "24px",
-        color: "#ffffff",
+        color: "var(--text-primary)",
         textTransform: "uppercase",
         letterSpacing: "-0.5px",
         fontFamily: "'Bebas Neue', sans-serif"
@@ -138,19 +137,19 @@ const CartTotal = ({
       </h2>
 
       {/* Subtotal */}
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", fontSize: "16px", color: "#ffffff", fontWeight: "700" }}>
-        <span style={{ color: "#777777", fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase" }}>Subtotal</span>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", fontSize: "16px", color: "var(--text-primary)", fontWeight: "700" }}>
+        <span style={{ color: "var(--text-muted)", fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase" }}>Subtotal</span>
         <span>₱{formatPrice(subtotal)}</span>
       </div>
 
       {/* Shipping fee row */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", fontSize: "16px", color: "#ffffff", fontWeight: "700" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", fontSize: "16px", color: "var(--text-primary)", fontWeight: "700" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-          <span style={{ color: "#777777", fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase" }}>
+          <span style={{ color: "var(--text-muted)", fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase" }}>
             Delivery / Shipping
           </span>
           {hasRegion && (
-            <span style={{ fontSize: "11px", color: "#666", fontWeight: "500", textTransform: "none", letterSpacing: "0" }}>
+            <span style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: "500", textTransform: "none", letterSpacing: "0" }}>
               {shippingTierLabel}
               {shippingEta ? ` · ${shippingEta}` : ""}
             </span>
@@ -158,11 +157,11 @@ const CartTotal = ({
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px" }}>
           {!hasRegion ? (
-            <span style={{ color: "#666", fontSize: "12px", fontWeight: "600" }}>Select region</span>
+            <span style={{ color: "var(--text-muted)", fontSize: "12px", fontWeight: "600" }}>Select region</span>
           ) : isFreeShipping ? (
             <span style={{
-              background: "linear-gradient(135deg, #ffffff, #f0f0f0)",
-              color: "#050505",
+              background: "linear-gradient(135deg, var(--white), #f0f0f0)",
+              color: "var(--black)",
               fontSize: "11px",
               fontWeight: "800",
               padding: "2px 8px",
@@ -178,28 +177,11 @@ const CartTotal = ({
         </div>
       </div>
 
-      {/* COD fee row */}
-      {paymentMethod === "cash on delivery" && (
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", fontSize: "16px", color: "#ffffff", fontWeight: "700" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-            <span style={{ color: "#777777", fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase" }}>
-              COD Handling Fee
-            </span>
-            {hasRegion && (
-              <span style={{ fontSize: "11px", color: "#666", fontWeight: "500" }}>
-                {shippingTierLabel}
-              </span>
-            )}
-          </div>
-          <span>₱{formatPrice(cod)}</span>
-        </div>
-      )}
-
       {/* Voucher discount row */}
       {voucherCode && discount > 0 && (
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", fontSize: "16px", color: "#ffffff", fontWeight: "700" }}>
-          <span style={{ color: "#777777", fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase" }}>
-            Voucher ({discountPercent}% off)
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", fontSize: "16px", color: "var(--text-primary)", fontWeight: "700" }}>
+          <span style={{ color: "var(--text-muted)", fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase" }}>
+            Voucher{discountPercent > 0 ? ` (${discountPercent}% off)` : ''}
           </span>
           <span style={{ color: "#4ade80" }}>−₱{formatPrice(discount)}</span>
         </div>
@@ -208,7 +190,7 @@ const CartTotal = ({
       {/* Free shipping progress bar — only show if NOT already free */}
       {!isFreeShipping && hasRegion && (
         <div style={{ margin: "16px 0" }}>
-          <p style={{ fontSize: "12px", color: "#ffffff", marginBottom: "8px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px" }}>
+          <p style={{ fontSize: "12px", color: "var(--text-primary)", marginBottom: "8px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px" }}>
             Shipping: ₱{formatPrice(shipping)} for {shippingTierLabel}
           </p>
         </div>
@@ -216,19 +198,19 @@ const CartTotal = ({
 
       {isFreeShipping && hasRegion && (
         <div style={{ margin: "16px 0" }}>
-          <p style={{ fontSize: "12px", color: "#ffffff", marginBottom: "8px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px" }}>
+          <p style={{ fontSize: "12px", color: "var(--text-primary)", marginBottom: "8px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px" }}>
             {subtotal >= 5000 ? "Complimentary shipping unlocked." : `Complimentary shipping to ${shippingTierLabel}`}
           </p>
-          <div style={{ width: "100%", height: "12px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", overflow: "hidden" }}>
-            <div style={{ width: "100%", height: "100%", background: "linear-gradient(90deg, #ffffff, #f0f0f0)", borderRadius: "6px" }}></div>
+          <div style={{ width: "100%", height: "12px", background: "var(--glass-bg)", border: "1px solid var(--glass-border)", borderRadius: "6px", overflow: "hidden" }}>
+            <div style={{ width: "100%", height: "100%", background: "var(--text-primary)", borderRadius: "6px" }}></div>
           </div>
         </div>
       )}
 
       {/* No region selected placeholder */}
       {!hasRegion && (
-        <div style={{ margin: "16px 0", padding: "12px", border: "1px dashed rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.03)", borderRadius: "8px" }}>
-          <p style={{ fontSize: "12px", color: "#ffffff", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", margin: 0, textAlign: "center" }}>
+        <div style={{ margin: "16px 0", padding: "12px", border: "1px dashed var(--border-light)", background: "var(--glass-bg)", borderRadius: "8px" }}>
+          <p style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", margin: 0, textAlign: "center" }}>
             📍 Select a region to see shipping cost
           </p>
         </div>
@@ -242,23 +224,23 @@ const CartTotal = ({
         fontSize: "20px",
         marginTop: "20px",
         paddingTop: "20px",
-        borderTop: "1px solid rgba(255,255,255,0.1)",
-        color: "#ffffff",
+        borderTop: "1px solid var(--glass-border)",
+        color: "var(--text-primary)",
         textTransform: "uppercase"
       }}>
         <span>Total</span>
         <span>₱{formatPrice(total)}</span>
       </div>
 
-      <hr style={{ border: "none", borderTop: "1px solid rgba(255,255,255,0.08)", margin: "20px 0" }} />
+      <hr style={{ border: "none", borderTop: "1px solid var(--glass-border)", margin: "20px 0" }} />
 
       {/* Estimated delivery */}
       <div style={{ marginBottom: "20px" }}>
-        <p style={{ fontSize: "14px", color: "#ffffff", fontWeight: "800", textTransform: "uppercase" }}>
+        <p style={{ fontSize: "14px", color: "var(--text-primary)", fontWeight: "800", textTransform: "uppercase" }}>
           Arrives {getDeliveryDateRange()}
         </p>
         {hasRegion && (
-          <p style={{ fontSize: "11px", color: "#777", fontWeight: "600", marginTop: "4px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          <p style={{ fontSize: "11px", color: "var(--text-muted)", fontWeight: "600", marginTop: "4px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
             {shippingTierLabel} · {shippingEta}
           </p>
         )}
@@ -281,7 +263,7 @@ const CartTotal = ({
               gap: "15px",
               marginBottom: "20px",
               paddingBottom: "20px",
-              borderBottom: "1px solid rgba(255,255,255,0.08)"
+              borderBottom: "1px solid var(--glass-border)"
             }}>
               <img
                 src={product.image}
@@ -290,26 +272,26 @@ const CartTotal = ({
                   width: "80px",
                   height: "80px",
                   objectFit: "contain",
-                  background: "rgba(255,255,255,0.04)",
+                  background: "var(--glass-bg)",
                   padding: "5px",
                   borderRadius: "8px",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  border: "1px solid var(--glass-border)",
                   flexShrink: 0
                 }}
               />
               <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                <p style={{ fontSize: "14px", fontWeight: "800", color: "#ffffff", marginBottom: "4px", textTransform: "uppercase" }}>
+                <p style={{ fontSize: "14px", fontWeight: "800", color: "var(--text-primary)", marginBottom: "4px", textTransform: "uppercase" }}>
                   {product.name}
                 </p>
-                <p style={{ fontSize: "11px", color: "#777777", marginBottom: "2px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "700" }}>
+                <p style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "2px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "700" }}>
                   Qty {quantity}
                 </p>
                 {showSize && (
-                  <p style={{ fontSize: "11px", color: "#777777", marginBottom: "2px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "700" }}>
+                  <p style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "2px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: "700" }}>
                     Size {normalizedSize || "—"}
                   </p>
                 )}
-                <p style={{ fontSize: "14px", fontWeight: "800", color: "#ffffff", marginTop: "6px" }}>
+                <p style={{ fontSize: "14px", fontWeight: "800", color: "var(--text-primary)", marginTop: "6px" }}>
                   ₱{formatPrice(sizePrice)}
                 </p>
               </div>

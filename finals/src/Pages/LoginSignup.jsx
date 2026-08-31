@@ -293,7 +293,7 @@ const BrandPanel = () => (
       <div className="ls-brand-logo-wrap">
         <div className="ls-brand-logo-box">
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <text x="14" y="22" textAnchor="middle" fontFamily="'Barlow Condensed', sans-serif" fontWeight="900" fontSize="24" fill="#0a0a0a" letterSpacing="-1">GS</text>
+            <text x="14" y="22" textAnchor="middle" fontFamily="'Barlow Condensed', sans-serif" fontWeight="900" fontSize="24" fill="var(--bg-primary)" letterSpacing="-1">GS</text>
           </svg>
         </div>
         <div className="ls-brand-logo-name">
@@ -412,8 +412,9 @@ const LoginSignup = () => {
       setAnimating(true);
       setTimeout(() => { setBrandLeft(toSignup); setMode(next); setAnimating(false); }, 500);
     } else { setMode(next); }
+    setFormData({ firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "", newPassword: "" });
     setOtpSent(false); setOtp(""); clearErrors();
-    if (next !== "signup") setPwStrength("");
+    setPwStrength("");
     setResendKey((k) => k + 1); // reset resend button
   };
 

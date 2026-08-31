@@ -7,7 +7,7 @@ const IS_WEB = Platform.OS === "web";
 
 const BASE_URL = IS_WEB
   ? "http://localhost:4000"
-  : "https://unlaboured-charise-unmachined.ngrok-free.dev";
+  : "https://lifting-manpower-corral.ngrok-free.dev";
 
 // NOTE: The "ngrok-skip-browser-warning" header causes CORS preflight to fail
 // when running on web (localhost:8081) because the backend doesn't whitelist it.

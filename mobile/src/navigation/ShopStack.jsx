@@ -9,20 +9,24 @@ import PlaceOrderScreen from "../screens/PlaceOrderScreen";
 import OrdersScreen   from "../screens/OrdersScreen";
 import FavoritesScreen from "../screens/FavoritesScreen";
 import ARTryOnScreen from "../screens/ARTryOnScreen";
+import BagsScreen from "../screens/BagsScreen";
+import CollectiblesScreen from "../screens/CollectiblesScreen";
 
 const Stack = createNativeStackNavigator();
 
 export default function ShopStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ShopScreen"    component={ShopScreen} />
-      <Stack.Screen name="ShoesScreen"   component={ShoesScreen} />
-      <Stack.Screen name="WatchesScreen" component={WatchesScreen} />
-      <Stack.Screen name="ProductDetail" component={ProductDetail} />
-      <Stack.Screen name="PlaceOrder"    component={PlaceOrderScreen} />
-      <Stack.Screen name="Orders"        component={OrdersScreen} />
-      <Stack.Screen name="Favorites"     component={FavoritesScreen} />
-      <Stack.Screen name="ARTryOn" component={ARTryOnScreen} />
+      <Stack.Screen name="ShopScreen"         component={ShopScreen} />
+      <Stack.Screen name="ShoesScreen"        component={ShoesScreen} />
+      <Stack.Screen name="WatchesScreen"      component={WatchesScreen} />
+      <Stack.Screen name="BagsScreen"         component={BagsScreen}/>
+      <Stack.Screen name="CollectiblesScreen" component={CollectiblesScreen}/>
+      <Stack.Screen name="ProductDetail"      component={ProductDetail} />
+      <Stack.Screen name="PlaceOrder"         component={PlaceOrderScreen} />
+      <Stack.Screen name="Orders"             component={OrdersScreen} />
+      <Stack.Screen name="Favorites"          component={FavoritesScreen} />
+      <Stack.Screen name="ARTryOn"            component={ARTryOnScreen} />
     </Stack.Navigator>
   );
 }

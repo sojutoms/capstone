@@ -61,32 +61,13 @@ export const getShippingTier = (regionCode) => {
 
 /**
  * Returns just the shipping fee (number) for a region code.
- * Returns 0 if no region selected yet.
+ * Returns 0 if no region selected yet. Purely region-tier based (NCR is
+ * "free" because its own tier fee is 0, not because of order size).
  */
-export const getShippingFee = (regionCode, subtotal = 0) => {
+export const getShippingFee = (regionCode) => {
   if (!regionCode) return 0;
-  if (subtotal >= 5000) return 0; // Free Shipping Threshold
   const tierObj = getShippingTier(regionCode);
   return tierObj ? tierObj.fee : 0;
 };
 
-/**
- * Returns the COD fee for a given region.
- * Base ₱80 + ₱0.5% of order subtotal, capped per tier.
- * Tiers with higher shipping also have higher COD handling.
- */
-const COD_BASE = {
-  0: 80,
-  1: 100,
-  2: 130,
-  3: 160,
-  4: 200,
-};
-
-export const getCodFee = (regionCode) => {
-  if (!regionCode) return 80;
-  const tierIndex = REGION_TIER_MAP[String(regionCode)] ?? 2;
-  return COD_BASE[tierIndex];
-};
-
-export default { SHIPPING_TIERS, getShippingTier, getShippingFee, getCodFee };
+export default { SHIPPING_TIERS, getShippingTier, getShippingFee };

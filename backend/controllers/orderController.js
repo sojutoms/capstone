@@ -5,6 +5,8 @@ const Users = require("../models/Users");
 const Product = require("../models/Product");
 const { ShoeSequence } = require("../models/index");
 const { normalizeProductSizes, convertMapToDbShape, getSizePriceFromMap } = require("../utils/sizes");
+const { getReservedQtyForItem } = require("../utils/reservations");
+const { computeVoucherDiscount } = require("../utils/vouchers");
 
 const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 const NCR_PSGC_CODE = "1300000000";
@@ -286,7 +288,7 @@ const adminUpdateOrderStatus = async (req, res) => {
     if (status === "delivered") order.deliveredAt = now;
     if (status === "completed") order.completedAt = now;
 
-    if (status === "cancelled") {
+    if (status === "cancelled" && order.inventoryCommitted) {
       await restoreStockForOrder(order.toObject());
       try {
         await ShoeSequence.updateMany(
@@ -366,24 +368,29 @@ const cancelOrder = async (req, res) => {
 
     const updated = updatedDoc.toObject();
 
-    if (updated.voucherCode && userId) {
+    // Online orders whose payment never went through never had stock/points/
+    // voucher committed in the first place (see deferCommit in placeOrder) —
+    // restoring them here would incorrectly add stock that was never taken.
+    if (updated.inventoryCommitted) {
+      if (updated.voucherCode && userId) {
+        try {
+          await Users.findOneAndUpdate(
+            { _id: userId, "vouchers.code": updated.voucherCode },
+            { $set: { "vouchers.$.used": false, "vouchers.$.usedAt": null, "vouchers.$.usedOnOrder": null } }
+          );
+        } catch (err) { console.error("Voucher restore on cancel error:", err); }
+      }
+
+      try { await restoreStockForOrder(updated); } catch (err) { console.error("restoreStockForOrder failed:", err); }
+
       try {
-        await Users.findOneAndUpdate(
-          { _id: userId, "vouchers.code": updated.voucherCode },
-          { $set: { "vouchers.$.used": false, "vouchers.$.usedAt": null, "vouchers.$.usedOnOrder": null } }
+        const skuResult = await ShoeSequence.updateMany(
+          { orderNumber: updated.orderNumber, status: "sold" },
+          { $set: { status: "available", soldDate: null, soldToUserId: null, orderNumber: null } }
         );
-      } catch (err) { console.error("Voucher restore on cancel error:", err); }
+        console.log(`SKUs restored: ${skuResult.modifiedCount}`);
+      } catch (err) { console.error("SKU restore failed:", err); }
     }
-
-    try { await restoreStockForOrder(updated); } catch (err) { console.error("restoreStockForOrder failed:", err); }
-
-    try {
-      const skuResult = await ShoeSequence.updateMany(
-        { orderNumber: updated.orderNumber, status: "sold" },
-        { $set: { status: "available", soldDate: null, soldToUserId: null, orderNumber: null } }
-      );
-      console.log(`SKUs restored: ${skuResult.modifiedCount}`);
-    } catch (err) { console.error("SKU restore failed:", err); }
 
     return res.json({ success: true, order: { ...updated, displayStatus: deriveDisplayStatus(updated) } });
   } catch (err) {
@@ -754,7 +761,7 @@ const adminUpdateRefundStatus = async (req, res) => {
 const placeOrder = async (req, res) => {
   const session = await mongoose.startSession();
   try {
-    const { items, total: clientTotal, deliveryInfo, paymentMethod, voucherCode, pointsUsed } = req.body;
+    const { items, total: clientTotal, deliveryInfo, paymentMethod, voucherCode, pointsUsed, isBuyNow } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0)
       return res.status(400).json({ success: false, error: "Invalid items" });
@@ -927,6 +934,11 @@ const placeOrder = async (req, res) => {
     let finalOrderNumber = null;
     let assignedSkus     = [];
 
+    // Online (PayMongo) orders don't commit stock/points/voucher until payment
+    // is confirmed — see finalizeOnlineOrderPayment. COD commits immediately,
+    // same as before.
+    const deferCommit = String(paymentMethod).toLowerCase() === "online";
+
     await session.withTransaction(async () => {
       let computedSubtotal = 0;
       const orderItems     = [];
@@ -947,7 +959,7 @@ const placeOrder = async (req, res) => {
           if (available < qtyReq) throw new Error(`Insufficient stock for ${product.name}. Available: ${available}, Requested: ${qtyReq}`);
           const price = Number(product.new_price ?? product.price ?? 0);
           computedSubtotal += price * qtyReq;
-          productUpdates.push({ productId: product._id, id: product.id, simple: true, qty: qtyReq });
+          if (!deferCommit) productUpdates.push({ productId: product._id, id: product.id, simple: true, qty: qtyReq });
           orderItems.push({ id: product.id, name: product.name, image: product.image, price, quantity: qtyReq, size: "" });
           continue;
         }
@@ -962,17 +974,15 @@ const placeOrder = async (req, res) => {
 
         const price = getSizePriceFromMap(sizesMap, product, sizeKey);
         computedSubtotal += price * qtyReq;
-        sizesMap[sizeKey].quantity = Math.max(0, available - qtyReq);
-        productUpdates.push({ productId: product._id, id: product.id, updatedSizesMap: sizesMap, qty: qtyReq });
+        if (!deferCommit) {
+          sizesMap[sizeKey].quantity = Math.max(0, available - qtyReq);
+          productUpdates.push({ productId: product._id, id: product.id, updatedSizesMap: sizesMap, qty: qtyReq });
+        }
         orderItems.push({ id: product.id, name: product.name, image: product.image, price, quantity: qtyReq, size: sizeKey });
       }
 
       if (appliedVoucher) {
-        const rawDiscount = (computedSubtotal * appliedVoucher.discountPercent) / 100;
-        discountAmount = appliedVoucher.maxDiscount > 0
-          ? Math.min(rawDiscount, appliedVoucher.maxDiscount)
-          : rawDiscount;
-        discountAmount = Math.round(discountAmount * 100) / 100;
+        discountAmount = computeVoucherDiscount(appliedVoucher, computedSubtotal);
       }
 
       const maxAllowedPointsDiscount = computedSubtotal * 0.7;
@@ -988,12 +998,12 @@ const placeOrder = async (req, res) => {
       const orderNumber = "ORD-" + Date.now();
       finalOrderNumber  = orderNumber;
 
-      // Enforce Free Shipping threshold on server
-      let finalShippingFee = Number(req.body.shippingFee || 0);
-      if (computedSubtotal >= 5000) {
-        finalShippingFee = 0;
-      }
-      const finalCodFee = Number(req.body.codFee || 0);
+      // Shipping fee is purely region-tier based now (no ₱5000 free-shipping
+      // override) — trusted directly from the client.
+      const finalShippingFee = Number(req.body.shippingFee || 0);
+      // COD handling fee was removed — kept as a schema field (0 going
+      // forward) so past orders that were charged one still display it.
+      const finalCodFee = 0;
 
       const orderDoc = new Orders({
         userId: String(req.user.id || ""),
@@ -1022,74 +1032,77 @@ const placeOrder = async (req, res) => {
         status:      "pending",
         deliveredAt: null,
         completedAt: null,
+        inventoryCommitted: !deferCommit,
       });
 
       assignedSkus = [];
 
-      for (const it of orderItems) {
-        const qty      = Number(it.quantity || 0);
-        const sizeKey  = String(it.size || "");
-        const skuQuery = { productId: it.id, status: "available" };
-        if (sizeKey) skuQuery.size = sizeKey;
+      if (!deferCommit) {
+        for (const it of orderItems) {
+          const qty      = Number(it.quantity || 0);
+          const sizeKey  = String(it.size || "");
+          const skuQuery = { productId: it.id, status: "available" };
+          if (sizeKey) skuQuery.size = sizeKey;
 
-        const availableSkus = await ShoeSequence.find(skuQuery)
-          .sort({ sequenceNumber: 1 }).limit(qty).session(session).lean();
+          const availableSkus = await ShoeSequence.find(skuQuery)
+            .sort({ sequenceNumber: 1 }).limit(qty).session(session).lean();
 
-        const skuIds = availableSkus.map((s) => s._id);
-        if (skuIds.length > 0) {
-          await ShoeSequence.updateMany(
-            { _id: { $in: skuIds }, status: "available" },
-            { $set: { status: "sold", soldDate: new Date(), soldToUserId: String(req.user.id || ""), orderNumber } },
-            { session }
-          );
-          for (const sku of availableSkus)
-            assignedSkus.push({ sequenceNumber: sku.sequenceNumber, productName: sku.productName, size: sizeKey || "" });
+          const skuIds = availableSkus.map((s) => s._id);
+          if (skuIds.length > 0) {
+            await ShoeSequence.updateMany(
+              { _id: { $in: skuIds }, status: "available" },
+              { $set: { status: "sold", soldDate: new Date(), soldToUserId: String(req.user.id || ""), orderNumber } },
+              { session }
+            );
+            for (const sku of availableSkus)
+              assignedSkus.push({ sequenceNumber: sku.sequenceNumber, productName: sku.productName, size: sizeKey || "" });
+          }
+
+          if (availableSkus.length < qty)
+            console.warn(`Not enough SKUs for product ${it.name}${sizeKey ? ` size ${sizeKey}` : ""}. Needed ${qty}, found ${availableSkus.length}`);
         }
 
-        if (availableSkus.length < qty)
-          console.warn(`Not enough SKUs for product ${it.name}${sizeKey ? ` size ${sizeKey}` : ""}. Needed ${qty}, found ${availableSkus.length}`);
-      }
+        for (const pu of productUpdates) {
+          const product = await Product.findOne({ _id: pu.productId }).session(session);
+          if (!product) throw new Error(`Product not found during update: ${pu.id}`);
 
-      for (const pu of productUpdates) {
-        const product = await Product.findOne({ _id: pu.productId }).session(session);
-        if (!product) throw new Error(`Product not found during update: ${pu.id}`);
+          if (pu.simple) {
+            product.stock      = Math.max(0, (product.stock || 0) - Number(pu.qty || 0));
+            product.salesCount = (product.salesCount || 0) + Number(pu.qty || 0);
+            product.available  = product.stock > 0;
+            await product.save({ session });
+            continue;
+          }
 
-        if (pu.simple) {
-          product.stock      = Math.max(0, (product.stock || 0) - Number(pu.qty || 0));
-          product.salesCount = (product.salesCount || 0) + Number(pu.qty || 0);
-          product.available  = product.stock > 0;
+          const originalWasArray = Array.isArray(product.sizes);
+          product.sizes = convertMapToDbShape(pu.updatedSizesMap, originalWasArray);
+          if (typeof product.markModified === "function") product.markModified("sizes");
           await product.save({ session });
-          continue;
+
+          product.salesCount = (product.salesCount || 0) + Number(pu.qty || 0);
+
+          if (product.sizes && Object.keys(product.sizes).length > 0) {
+            const anyAvailable = Object.values(product.sizes).some((v) =>
+              typeof v === "object" && v.quantity !== undefined ? Number(v.quantity) > 0 : Number(v) > 0
+            );
+            product.available = anyAvailable;
+          } else if (typeof product.stock === "number") {
+            product.stock     = Math.max(0, (product.stock || 0) - Number(pu.qty || 0));
+            product.available = product.stock > 0;
+          }
+
+          if (typeof product.markModified === "function") product.markModified("sizes");
+          await product.save({ session });
         }
 
-        const originalWasArray = Array.isArray(product.sizes);
-        product.sizes = convertMapToDbShape(pu.updatedSizesMap, originalWasArray);
-        if (typeof product.markModified === "function") product.markModified("sizes");
-        await product.save({ session });
-
-        product.salesCount = (product.salesCount || 0) + Number(pu.qty || 0);
-
-        if (product.sizes && Object.keys(product.sizes).length > 0) {
-          const anyAvailable = Object.values(product.sizes).some((v) =>
-            typeof v === "object" && v.quantity !== undefined ? Number(v.quantity) > 0 : Number(v) > 0
-          );
-          product.available = anyAvailable;
-        } else if (typeof product.stock === "number") {
-          product.stock     = Math.max(0, (product.stock || 0) - Number(pu.qty || 0));
-          product.available = product.stock > 0;
+        if (requestedPoints > 0) {
+          await Users.findByIdAndUpdate(req.user.id, { $inc: { points: -requestedPoints } }).session(session);
         }
-
-        if (typeof product.markModified === "function") product.markModified("sizes");
-        await product.save({ session });
       }
 
-      if (requestedPoints > 0) {
-        await Users.findByIdAndUpdate(req.user.id, { $inc: { points: -requestedPoints } }).session(session);
-      }
-      
       await orderDoc.save({ session });
 
-      if (appliedVoucher) {
+      if (!deferCommit && appliedVoucher) {
         await Users.findOneAndUpdate(
           { _id: req.user.id, "vouchers.code": appliedVoucher.code },
           { $set: { "vouchers.$.used": true, "vouchers.$.usedAt": new Date(), "vouchers.$.usedOnOrder": orderNumber } },
@@ -1099,16 +1112,23 @@ const placeOrder = async (req, res) => {
 
       const user = await Users.findById(req.user.id).session(session);
       if (user) {
-        user.cartData = {};
-        if (typeof user.markModified === "function") user.markModified("cartData");
+        // Buy Now checks out a single item straight from the product page
+        // without ever touching the bag — clearing cartData here would wipe
+        // out whatever the user already had bagged for an unrelated purchase.
+        if (!isBuyNow) {
+          user.cartData = {};
+          if (typeof user.markModified === "function") user.markModified("cartData");
+        }
 
-        // Award points at a rate of 1 point per 100 Pesos spent (0.5% - 1% effective cashback)
-        // This prevents the "high points" exploit reported by the user.
-        const pointsEarned = Math.floor((orderDoc.total || 0) / 100);
-        user.points = (user.points || 0) + pointsEarned;
-        
+        if (!deferCommit) {
+          // Award points at a rate of 1 point per 100 Pesos spent (0.5% - 1% effective cashback)
+          // This prevents the "high points" exploit reported by the user.
+          const pointsEarned = Math.floor((orderDoc.total || 0) / 100);
+          user.points = (user.points || 0) + pointsEarned;
+          console.log(`✅ Awarded ${pointsEarned} points to user ${user.email} for order ${finalOrderNumber}`);
+        }
+
         await user.save({ session });
-        console.log(`✅ Awarded ${pointsEarned} points to user ${user.email} for order ${finalOrderNumber}`);
       }
     });
 
@@ -1124,6 +1144,202 @@ const placeOrder = async (req, res) => {
     return res.status(400).json({ success: false, error: err?.message || "Server error" });
   } finally {
     try { await session.endSession(); } catch (e) { console.warn("Failed to end session:", e); }
+  }
+};
+
+// ─── finalizeOnlineOrderPayment ────────────────────────────────────────────────
+// Called once PayMongo confirms a payment (webhook or the redirect-back verify
+// endpoint) for an "online" order whose stock/points/voucher were deferred at
+// placeOrder time. Re-validates availability against *current* stock (time has
+// passed since the order was created) and commits it now that money is in.
+//
+// If stock ran out in the meantime (rare race — someone else bought the last
+// unit before this order got paid), the order is still marked paid — the
+// customer did pay — but flagged `oversold` for manual follow-up rather than
+// silently overselling or losing the payment record.
+const finalizeOnlineOrderPayment = async (orderNumber) => {
+  const session = await mongoose.startSession();
+  try {
+    let result = { success: true, oversold: false };
+
+    await session.withTransaction(async () => {
+      const order = await Orders.findOne({ orderNumber }).session(session);
+      if (!order) { result = { success: false, error: "Order not found" }; return; }
+
+      // Idempotent: webhook + verify can both race to finalize the same order.
+      if (order.inventoryCommitted) { result = { success: true, oversold: order.oversold }; return; }
+
+      const productUpdates = [];
+      const oversoldItems  = [];
+
+      for (const it of order.items) {
+        const product = await Product.findOne({ id: it.id, isDeleted: { $ne: true } }).session(session);
+        if (!product) { oversoldItems.push({ id: it.id, name: it.name, size: it.size, reason: "Product no longer exists" }); continue; }
+
+        const category = String(product.category || "").toLowerCase();
+        const isSimple = SIMPLE_CATEGORIES.includes(category);
+        const qty      = Number(it.quantity || 0);
+
+        if (isSimple) {
+          const available = Number(product.stock || 0);
+          if (available < qty) { oversoldItems.push({ id: it.id, name: it.name, size: it.size, reason: `Only ${available} left, needed ${qty}` }); continue; }
+          productUpdates.push({ productId: product._id, id: product.id, simple: true, qty });
+          continue;
+        }
+
+        const sizesMap = normalizeProductSizes(product.sizes || {}, Number(product.new_price || 0));
+        const sizeKey  = String(it.size || "");
+        const available = Number(sizesMap[sizeKey]?.quantity || 0);
+        if (available < qty) { oversoldItems.push({ id: it.id, name: it.name, size: it.size, reason: `Only ${available} left, needed ${qty}` }); continue; }
+        sizesMap[sizeKey].quantity = Math.max(0, available - qty);
+        productUpdates.push({ productId: product._id, id: product.id, updatedSizesMap: sizesMap, qty });
+      }
+
+      if (oversoldItems.length > 0) {
+        order.paymentStatus = "paid";
+        order.paidAt = new Date();
+        order.oversold = true;
+        order.oversoldItems = oversoldItems;
+        await order.save({ session });
+        console.error(`⚠️  OVERSOLD after payment for order ${orderNumber} — needs manual review:`, oversoldItems);
+        result = { success: true, oversold: true };
+        return;
+      }
+
+      const assignedSkus = [];
+      for (const it of order.items) {
+        const qty      = Number(it.quantity || 0);
+        const sizeKey  = String(it.size || "");
+        const skuQuery = { productId: it.id, status: "available" };
+        if (sizeKey) skuQuery.size = sizeKey;
+
+        const availableSkus = await ShoeSequence.find(skuQuery)
+          .sort({ sequenceNumber: 1 }).limit(qty).session(session).lean();
+
+        const skuIds = availableSkus.map((s) => s._id);
+        if (skuIds.length > 0) {
+          await ShoeSequence.updateMany(
+            { _id: { $in: skuIds }, status: "available" },
+            { $set: { status: "sold", soldDate: new Date(), soldToUserId: String(order.userId || ""), orderNumber } },
+            { session }
+          );
+          for (const sku of availableSkus)
+            assignedSkus.push({ sequenceNumber: sku.sequenceNumber, productName: sku.productName, size: sizeKey || "" });
+        }
+      }
+
+      for (const pu of productUpdates) {
+        const product = await Product.findOne({ _id: pu.productId }).session(session);
+        if (!product) continue;
+
+        if (pu.simple) {
+          product.stock      = Math.max(0, (product.stock || 0) - Number(pu.qty || 0));
+          product.salesCount = (product.salesCount || 0) + Number(pu.qty || 0);
+          product.available  = product.stock > 0;
+          await product.save({ session });
+          continue;
+        }
+
+        const originalWasArray = Array.isArray(product.sizes);
+        product.sizes = convertMapToDbShape(pu.updatedSizesMap, originalWasArray);
+        product.salesCount = (product.salesCount || 0) + Number(pu.qty || 0);
+        if (product.sizes && Object.keys(product.sizes).length > 0) {
+          const anyAvailable = Object.values(product.sizes).some((v) =>
+            typeof v === "object" && v.quantity !== undefined ? Number(v.quantity) > 0 : Number(v) > 0
+          );
+          product.available = anyAvailable;
+        }
+        if (typeof product.markModified === "function") product.markModified("sizes");
+        await product.save({ session });
+      }
+
+      if (order.pointsUsed > 0) {
+        await Users.findByIdAndUpdate(order.userId, { $inc: { points: -order.pointsUsed } }).session(session);
+      }
+
+      if (order.voucherCode) {
+        await Users.findOneAndUpdate(
+          { _id: order.userId, "vouchers.code": order.voucherCode },
+          { $set: { "vouchers.$.used": true, "vouchers.$.usedAt": new Date(), "vouchers.$.usedOnOrder": orderNumber } },
+          { session }
+        );
+      }
+
+      const user = await Users.findById(order.userId).session(session);
+      if (user) {
+        const pointsEarned = Math.floor((order.total || 0) / 100);
+        user.points = (user.points || 0) + pointsEarned;
+        await user.save({ session });
+      }
+
+      order.paymentStatus = "paid";
+      order.paidAt = new Date();
+      order.inventoryCommitted = true;
+      await order.save({ session });
+
+      result = { success: true, oversold: false, assignedSkus };
+    });
+
+    return result;
+  } catch (err) {
+    console.error("finalizeOnlineOrderPayment error:", err);
+    return { success: false, error: err?.message || "Server error" };
+  } finally {
+    try { await session.endSession(); } catch (e) { console.warn("Failed to end session:", e); }
+  }
+};
+
+// ─── autoCancelUnpaidOnlineOrders cron ─────────────────────────────────────────
+// Online orders whose payment never completed hold nothing (stock/points/
+// voucher were never committed — see deferCommit above), so cancelling them
+// is just a status flip, no restoration needed.
+const AUTO_CANCEL_UNPAID_ONLINE_MINUTES = 45;
+const autoCancelUnpaidOnlineOrders = async () => {
+  try {
+    const cutoff = new Date(Date.now() - AUTO_CANCEL_UNPAID_ONLINE_MINUTES * 60 * 1000);
+    const result = await Orders.updateMany(
+      {
+        paymentMethod: "online",
+        paymentStatus: { $ne: "paid" },
+        status: "pending",
+        inventoryCommitted: false,
+        timestamp: { $lte: cutoff },
+      },
+      { $set: { status: "cancelled", updatedAt: new Date() } }
+    );
+    if (result.modifiedCount > 0)
+      console.log(`[autoCancelUnpaid] ${result.modifiedCount} unpaid online order(s) auto-cancelled after ${AUTO_CANCEL_UNPAID_ONLINE_MINUTES} min.`);
+  } catch (err) {
+    console.error("[autoCancelUnpaid] Error running auto-cancel cron:", err);
+  }
+};
+
+// ─── autoCancelExpiredReservedOrders cron ──────────────────────────────────────
+// Once a buyer clicks Pay Now, createCheckoutSession gives them a 15-minute
+// hold (checkoutReservedUntil) on the item — during that window the stock
+// shown to other shoppers is reduced to reflect it (see getActiveReservationsMap).
+// If they never finish paying, that window expiring should both free the item
+// back up for others *and* flip this order to "cancelled" so it stops showing
+// as "awaiting payment" in the buyer's order history. Nothing was ever
+// deducted for it, so — same as the 45-min fallback above — this is just a
+// status flip, no stock/points/voucher restoration needed.
+const autoCancelExpiredReservedOrders = async () => {
+  try {
+    const now = new Date();
+    const result = await Orders.updateMany(
+      {
+        paymentMethod: "online",
+        paymentStatus: { $ne: "paid" },
+        status: "pending",
+        inventoryCommitted: false,
+        checkoutReservedUntil: { $ne: null, $lte: now },
+      },
+      { $set: { status: "cancelled", updatedAt: now } }
+    );
+    if (result.modifiedCount > 0)
+      console.log(`[autoCancelExpiredReserved] ${result.modifiedCount} order(s) auto-cancelled — 15-min payment window expired.`);
+  } catch (err) {
+    console.error("[autoCancelExpiredReserved] Error running auto-cancel cron:", err);
   }
 };
 
@@ -1143,12 +1359,14 @@ const validateCart = async (req, res) => {
       }
       const isSimple = SIMPLE_CATEGORIES.includes(String(product.category || "").toLowerCase());
       if (isSimple) {
-        const stock = Number(product.stock || 0);
+        const reserved = await getReservedQtyForItem(product.id, "");
+        const stock = Math.max(0, Number(product.stock || 0) - reserved);
         results.push({ id: it.id, size: it.size, available: stock >= Number(it.quantity || 1), stock, reason: stock < Number(it.quantity || 1) ? "Out of stock" : null });
       } else {
         const sizesArray = Array.isArray(product.sizes) ? product.sizes : [];
         const sizeEntry  = sizesArray.find((s) => String(s.size).trim() === String(it.size || "").trim());
-        const stock      = sizeEntry ? Number(sizeEntry.quantity || 0) : 0;
+        const reserved   = await getReservedQtyForItem(product.id, it.size);
+        const stock      = Math.max(0, (sizeEntry ? Number(sizeEntry.quantity || 0) : 0) - reserved);
         results.push({ id: it.id, size: it.size, available: stock >= Number(it.quantity || 1), stock, reason: stock < Number(it.quantity || 1) ? "Out of stock" : null });
       }
     }
@@ -1194,4 +1412,8 @@ module.exports = {
   validateCart,
   enqueueRefundIfNeeded,
   autoCompleteDeliveredOrders,
+  finalizeOnlineOrderPayment,
+  autoCancelUnpaidOnlineOrders,
+  autoCancelExpiredReservedOrders,
+  SIMPLE_CATEGORIES,
 };

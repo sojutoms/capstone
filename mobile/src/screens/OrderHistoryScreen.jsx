@@ -13,8 +13,14 @@ import {
   Platform,
   Dimensions,
   Animated,
+  TextInput,
+  Linking,
+  AppState,
+  RefreshControl,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
+import { useFavorites } from "../context/FavoritesContext";
 
 const { width } = Dimensions.get("window");
 const isSmall = width < 380;
@@ -22,7 +28,7 @@ const isSmall = width < 380;
 const BASE_URL =
   Platform.OS === "web"
     ? "http://localhost:4000"
-    : "https://unlaboured-charise-unmachined.ngrok-free.dev";
+    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 const ORDERS_PER_PAGE = 5;
 
@@ -89,6 +95,66 @@ function StatusPill({ status }) {
   return (
     <View style={[styles.pill, { backgroundColor: colors.bg, borderColor: colors.border }]}>
       <Text style={[styles.pillText, { color: colors.text }]}>{prettyStatus(normalized)}</Text>
+    </View>
+  );
+}
+
+// ─── Payment pending helpers ────────────────────────────────────────────────
+
+const isAwaitingPayment = (order) =>
+  order.paymentMethod === "online" &&
+  order.paymentStatus &&
+  order.paymentStatus !== "paid" &&
+  !["cancelled", "refunded"].includes(normalizeStatus(order.status));
+
+// Formats ms remaining as "M:SS". Returns null until a checkout attempt has
+// actually started a reservation window.
+const formatCountdown = (order, nowTick) => {
+  if (!order.checkoutReservedUntil) return null;
+  const remainingMs = new Date(order.checkoutReservedUntil).getTime() - nowTick;
+  if (remainingMs <= 0) return "0:00";
+  const totalSeconds = Math.floor(remainingMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+};
+
+function PaymentPendingPill({ order, nowTick }) {
+  if (!isAwaitingPayment(order)) return null;
+  const countdown = formatCountdown(order, nowTick);
+  return (
+    <View style={styles.paymentPill}>
+      <Text style={styles.paymentPillText}>
+        ⚠ AWAITING PAYMENT{countdown ? ` · ${countdown}` : ""}
+      </Text>
+    </View>
+  );
+}
+
+function PaymentPendingBanner({ order, nowTick, onRetry, retrying }) {
+  if (!isAwaitingPayment(order)) return null;
+  const countdown = formatCountdown(order, nowTick);
+  const expired = countdown === "0:00";
+  return (
+    <View style={styles.paymentBanner}>
+      <Text style={styles.paymentBannerText}>
+        ⚠ Payment not completed for this order — it won't be processed until payment goes through, and the item(s) may sell out to someone else in the meantime.
+      </Text>
+      {countdown && (
+        <Text style={[styles.paymentCountdown, expired && styles.paymentCountdownExpired]}>
+          {expired ? "Cancelling — payment window expired" : `Time left to pay: ${countdown}`}
+        </Text>
+      )}
+      <TouchableOpacity
+        style={[styles.paymentRetryBtn, retrying && styles.btnDisabled]}
+        onPress={() => onRetry(order)}
+        disabled={retrying}
+      >
+        {retrying
+          ? <ActivityIndicator size="small" color="#0a0a0a" />
+          : <Text style={styles.paymentRetryBtnText}>COMPLETE PAYMENT</Text>
+        }
+      </TouchableOpacity>
     </View>
   );
 }
@@ -199,7 +265,7 @@ function RefundModal({ visible, order, onClose, onSubmit, submitting }) {
 
 // ─── Detail Modal ─────────────────────────────────────────────────────────────
 
-function DetailModal({ order, visible, onClose, onPrintReceipt, onRefund, refundSubmitting }) {
+function DetailModal({ order, visible, onClose, onPrintReceipt, onRefund, refundSubmitting, nowTick, onRetryPayment, retryingId }) {
   if (!order) return null;
   const normalized = normalizeStatus(order.status);
   const canRefund = normalized === "completed";
@@ -217,6 +283,13 @@ function DetailModal({ order, visible, onClose, onPrintReceipt, onRefund, refund
             <View style={{ marginBottom: 12 }}>
               <StatusPill status={order.status} />
             </View>
+
+            <PaymentPendingBanner
+              order={order}
+              nowTick={nowTick}
+              onRetry={onRetryPayment}
+              retrying={retryingId === order.orderNumber}
+            />
 
             {order.items.map((item, i) => (
               <View key={i} style={styles.modalItem}>
@@ -259,18 +332,53 @@ function DetailModal({ order, visible, onClose, onPrintReceipt, onRefund, refund
 
 export default function OrderHistoryScreen({ navigation }) {
   const { userToken } = useAuth();
+  const { refreshCart } = useCart();
+  const { refreshFavorites } = useFavorites();
+
+  const [reviewText,       setReviewText]       = useState("");
+const [rating,           setRating]           = useState(0);
+const [submitting,       setSubmitting]       = useState(false);
+const [reviewingOrderId, setReviewingOrderId] = useState(null);
 
   const [orders, setOrders]           = useState([]);
   const [loading, setLoading]         = useState(true);
+  const [refreshing, setRefreshing]   = useState(false);
   const [loadingIds, setLoadingIds]   = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages]   = useState(1);
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const [selected, setSelected]               = useState(null);
   const [detailVisible, setDetailVisible]     = useState(false);
   const [refundVisible, setRefundVisible]     = useState(false);
   const [refundOrder, setRefundOrder]         = useState(null);
   const [refundSubmitting, setRefundSubmitting] = useState(false);
+
+  // Payment retry (PayMongo hosted checkout) — opened in the external
+  // browser rather than an in-app WebView (that native module isn't linked
+  // in this dev build); auto-verifies once the user comes back to the app.
+  const [verifying, setVerifying]             = useState(false);
+  const [pendingOrderNumber, setPendingOrderNumber] = useState(null);
+  const [retryingId, setRetryingId]           = useState(null);
+  const pendingOrderRef = useRef(null);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active" && pendingOrderRef.current) {
+        const orderNumber = pendingOrderRef.current;
+        pendingOrderRef.current = null;
+        finalizePayment(orderNumber);
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
+  // Ticks once a second so "time left to pay" countdowns stay live without refetching.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const [toasts, setToasts]   = useState([]);
   const toastIdRef            = useRef(0);
@@ -286,12 +394,14 @@ export default function OrderHistoryScreen({ navigation }) {
 
   // ── Fetch ──
 
-  const fetchOrders = useCallback(async (page = 1) => {
+  // `silent` skips the full-screen loading state — used by pull-to-refresh,
+  // which shows its own small spinner and shouldn't swap the whole list out.
+  const fetchOrders = useCallback(async (page = 1, status = "all", silent = false) => {
     if (!userToken) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const res = await fetch(
-        `${BASE_URL}/orderhistory?page=${page}&limit=${ORDERS_PER_PAGE}`,
+        `${BASE_URL}/orderhistory?page=${page}&limit=${ORDERS_PER_PAGE}&status=${status}`,
         { headers: { "auth-token": userToken } }
       );
       const data = await res.json();
@@ -307,11 +417,62 @@ export default function OrderHistoryScreen({ navigation }) {
     } catch {
       addToast("error", "Failed to load orders.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [userToken, addToast]);
 
-  useEffect(() => { fetchOrders(currentPage); }, [currentPage]);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchOrders(currentPage, statusFilter, true), refreshCart(), refreshFavorites()]);
+    setRefreshing(false);
+  };
+
+  useEffect(() => { fetchOrders(currentPage, statusFilter); }, [currentPage, statusFilter]);
+
+  // ── Retry payment (PayMongo hosted checkout) ──
+
+  const retryPayment = async (order) => {
+    setRetryingId(order.orderNumber);
+    try {
+      const res = await fetch(`${BASE_URL}/create-checkout-session`, {
+        method: "POST",
+        headers: { "auth-token": userToken, "Content-Type": "application/json" },
+        body: JSON.stringify({ orderNumber: order.orderNumber }),
+      });
+      const data = await res.json();
+      if (data.success && data.checkoutUrl) {
+        pendingOrderRef.current = order.orderNumber;
+        setPendingOrderNumber(order.orderNumber);
+        setRetryingId(null);
+        await Linking.openURL(data.checkoutUrl);
+      } else {
+        addToast("error", data.error || "Could not start payment.");
+        setRetryingId(null);
+        // A sold-out item or an expired payment window means the server
+        // already auto-cancelled this order — reflect that immediately.
+        if (data.soldOut || data.expired) {
+          const patch = (o) => (o.orderNumber === order.orderNumber ? { ...o, status: "cancelled" } : o);
+          setOrders((prev) => prev.map(patch));
+          setSelected((prev) => (prev && prev.orderNumber === order.orderNumber ? patch(prev) : prev));
+        }
+      }
+    } catch {
+      addToast("error", "Could not start payment.");
+      setRetryingId(null);
+    }
+  };
+
+  const finalizePayment = async (orderNumber) => {
+    setPendingOrderNumber(null);
+    setVerifying(true);
+    try {
+      await fetch(`${BASE_URL}/payment/verify/${orderNumber}`, {
+        headers: { "auth-token": userToken },
+      });
+    } catch {}
+    setVerifying(false);
+    fetchOrders(currentPage, statusFilter);
+  };
 
   // ── Cancel ──
 
@@ -334,7 +495,7 @@ export default function OrderHistoryScreen({ navigation }) {
               const data = await res.json();
               if (data.success) {
                 addToast("success", "Order cancelled successfully.");
-                fetchOrders(currentPage);
+                fetchOrders(currentPage, statusFilter);
               } else {
                 addToast("error", data.error || "Failed to cancel.");
               }
@@ -366,7 +527,7 @@ export default function OrderHistoryScreen({ navigation }) {
         addToast("success", "Refund request submitted.");
         setRefundVisible(false);
         setRefundOrder(null);
-        fetchOrders(currentPage);
+        fetchOrders(currentPage, statusFilter);
       } else {
         addToast("error", data.error || "Refund request failed.");
       }
@@ -377,6 +538,43 @@ export default function OrderHistoryScreen({ navigation }) {
       setLoadingIds((p) => p.filter((id) => id !== refundOrder?.orderNumber));
     }
   };
+
+  const submitReview = async (order) => {
+  if (!reviewText.trim() || rating === 0) {
+    addToast("error", "Add a rating and review first.");
+    return;
+  }
+  // submit a review for each item's productId in the order
+  try {
+    setSubmitting(true);
+    const results = await Promise.all(
+      order.items.map((item) =>
+        fetch(`${BASE_URL}/addreview`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "auth-token": userToken },
+          body: JSON.stringify({
+            productId: item.productId || item.id,
+            review: reviewText,
+            rating,
+          }),
+        }).then((r) => r.json())
+      )
+    );
+    const allOk = results.every((d) => d.success);
+    if (allOk) {
+      addToast("success", "Review submitted!");
+      setReviewText("");
+      setRating(0);
+      setReviewingOrderId(null);
+    } else {
+      addToast("error", "Some reviews failed to submit.");
+    }
+  } catch {
+    addToast("error", "Failed to submit review.");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   // ── Render order card ──
 
@@ -404,6 +602,8 @@ export default function OrderHistoryScreen({ navigation }) {
           </View>
           <StatusPill status={order.status} />
         </View>
+
+        <PaymentPendingPill order={order} nowTick={nowTick} />
 
         {/* Items preview */}
         <View style={styles.itemsPreview}>
@@ -446,6 +646,60 @@ export default function OrderHistoryScreen({ navigation }) {
               </Text>
             </TouchableOpacity>
           )}
+
+          {isCompleted && (
+  <View style={{ width: "100%", marginTop: 8 }}>
+    {reviewingOrderId === order.orderNumber ? (
+      <View style={styles.writeReview}>
+        <Text style={styles.writeTitle}>WRITE A REVIEW</Text>
+        <View style={styles.writeRatingRow}>
+          <Text style={styles.writeMuted}>Your rating</Text>
+          <View style={{ flexDirection: "row", gap: 4 }}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <TouchableOpacity key={i} onPress={() => setRating(i)}>
+                <Text style={{ fontSize: 22, color: i <= rating ? "#E8C84A" : "#333" }}>★</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        <TextInput
+          style={styles.reviewInput}
+          placeholder="Share your thoughts…"
+          placeholderTextColor="#383838"
+          multiline
+          value={reviewText}
+          onChangeText={setReviewText}
+        />
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <TouchableOpacity
+            style={[styles.modalBtnSecondary, { flex: 1 }]}
+            onPress={() => { setReviewingOrderId(null); setReviewText(""); setRating(0); }}
+          >
+            <Text style={styles.modalBtnSecondaryText}>CANCEL</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.submitBtn, { flex: 1 }, submitting && { opacity: 0.5 }]}
+            onPress={() => submitReview(order)}
+            disabled={submitting}
+          >
+            {submitting
+              ? <ActivityIndicator color="#000" size="small" />
+              : <Text style={styles.submitText}>SUBMIT</Text>
+            }
+          </TouchableOpacity>
+        </View>
+      </View>
+    ) : (
+      <TouchableOpacity
+        style={styles.btnReview}
+        onPress={() => { setReviewingOrderId(order.orderNumber); setReviewText(""); setRating(0); }}
+      >
+        <Text style={styles.btnReviewText}>WRITE A REVIEW</Text>
+      </TouchableOpacity>
+    )}
+  </View>
+)}
+          
 
           {isCancellable && (
             <TouchableOpacity
@@ -516,11 +770,26 @@ export default function OrderHistoryScreen({ navigation }) {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>YOUR ORDERS</Text>
         {!loading && (
-          <TouchableOpacity onPress={() => fetchOrders(currentPage)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity onPress={() => fetchOrders(currentPage, statusFilter)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Text style={styles.refreshBtn}>↻</Text>
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Status filter */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
+        {["all", "pending", "confirmed", "shipping", "delivered", "cancelled"].map((f) => (
+          <TouchableOpacity
+            key={f}
+            style={[styles.filterBtn, statusFilter === f && styles.filterBtnActive]}
+            onPress={() => { setStatusFilter(f); setCurrentPage(1); setSelected(null); }}
+          >
+            <Text style={[styles.filterBtnText, statusFilter === f && styles.filterBtnTextActive]}>
+              {f.toUpperCase()}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       {loading ? (
         <View style={styles.centered}>
@@ -546,6 +815,9 @@ export default function OrderHistoryScreen({ navigation }) {
           renderItem={renderOrder}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+          }
           ListFooterComponent={totalPages > 1 ? <Pagination /> : null}
           ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: "#1a1a1a" }} />}
         />
@@ -562,6 +834,9 @@ export default function OrderHistoryScreen({ navigation }) {
           setRefundVisible(true);
         }}
         refundSubmitting={refundSubmitting}
+        nowTick={nowTick}
+        onRetryPayment={retryPayment}
+        retryingId={retryingId}
       />
 
       {/* Refund Modal */}
@@ -572,6 +847,22 @@ export default function OrderHistoryScreen({ navigation }) {
         onSubmit={submitRefund}
         submitting={refundSubmitting}
       />
+
+      {/* Waiting on external browser payment */}
+      <Modal visible={!!pendingOrderNumber && !verifying} transparent animationType="fade">
+        <View style={styles.verifyOverlay}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={styles.verifyText}>Complete your payment in the browser, then come back here.</Text>
+        </View>
+      </Modal>
+
+      {/* Verifying payment overlay */}
+      <Modal visible={verifying} transparent animationType="fade">
+        <View style={styles.verifyOverlay}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={styles.verifyText}>Confirming your payment…</Text>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -896,4 +1187,117 @@ const styles = StyleSheet.create({
   },
   modalBtnPrimaryText: { color: "#0a0a0a", fontSize: 12, fontWeight: "900", letterSpacing: 1.5 },
   modalBtnDisabled: { opacity: 0.35 },
+
+
+  // ── Write review (order history) ──
+writeReview: {
+  backgroundColor: "#141414",
+  borderRadius: 4,
+  borderWidth: 1,
+  borderColor: "#1E1E1E",
+  padding: 14,
+  gap: 12,
+  marginTop: 4,
+},
+writeTitle: {
+  color: "#444",
+  fontSize: 9,
+  fontWeight: "700",
+  letterSpacing: 2.5,
+},
+writeRatingRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+},
+writeMuted: { color: "#444", fontSize: 12 },
+reviewInput: {
+  backgroundColor: "#0a0a0a",
+  borderWidth: 1,
+  borderColor: "#1E1E1E",
+  borderRadius: 4,
+  padding: 10,
+  minHeight: 72,
+  color: "#FFF",
+  fontSize: 13,
+  textAlignVertical: "top",
+},
+submitBtn: {
+  backgroundColor: "#FFFFFF",
+  paddingVertical: 12,
+  borderRadius: 4,
+  alignItems: "center",
+},
+submitText: {
+  color: "#000",
+  fontWeight: "800",
+  fontSize: 11,
+  letterSpacing: 2,
+},
+btnReview: {
+  borderWidth: 1,
+  borderColor: "#4caf50",
+  paddingVertical: 8,
+  paddingHorizontal: 14,
+  borderRadius: 2,
+  alignSelf: "flex-start",
+},
+btnReviewText: { color: "#4caf50", fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
+
+  // ── Status filter ──
+  filterScroll: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: "#1e1e1e" },
+  filterRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  filterBtn: {
+    borderWidth: 1,
+    borderColor: "#2a2a2a",
+    borderRadius: 2,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  filterBtnActive: { backgroundColor: "#fff", borderColor: "#fff" },
+  filterBtnText: { color: "#666", fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  filterBtnTextActive: { color: "#0a0a0a" },
+
+  // ── Payment pending ──
+  paymentPill: {
+    alignSelf: "flex-start",
+    backgroundColor: "#2a1a00",
+    borderWidth: 1,
+    borderColor: "#ff9800",
+    borderRadius: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 12,
+  },
+  paymentPillText: { color: "#ff9800", fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
+
+  paymentBanner: {
+    backgroundColor: "#1a1200",
+    borderWidth: 1,
+    borderColor: "#ff9800",
+    borderRadius: 6,
+    padding: 14,
+    marginBottom: 16,
+    gap: 10,
+  },
+  paymentBannerText: { color: "#e8a852", fontSize: 12, lineHeight: 18 },
+  paymentCountdown: { color: "#ff9800", fontSize: 12, fontWeight: "800" },
+  paymentCountdownExpired: { color: "#ef5350" },
+  paymentRetryBtn: {
+    backgroundColor: "#fff",
+    borderRadius: 2,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  paymentRetryBtnText: { color: "#0a0a0a", fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
+
+  verifyOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.85)",
+    gap: 14,
+    paddingHorizontal: 40,
+  },
+  verifyText: { color: "#ccc", fontSize: 13, letterSpacing: 0.5, textAlign: "center" },
 });

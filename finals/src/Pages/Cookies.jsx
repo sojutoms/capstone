@@ -36,7 +36,7 @@ const Cookies = () => {
                         <div key={i} style={{ ...s.featureItem, marginBottom: '12px' }}>
                             <span style={s.featureCheck}>✓</span>
                             <div>
-                                <strong style={{ color: '#ffffff', display: 'block', marginBottom: '4px' }}>{item.title}</strong>
+                                <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>{item.title}</strong>
                                 <span>{item.desc}</span>
                             </div>
                         </div>
@@ -55,7 +55,7 @@ const Cookies = () => {
                     <h2 style={s.legalHeading}>Questions?</h2>
                     <p style={s.legalText}>
                         If you have questions about our use of cookies, please contact{' '}
-                        <span style={{ color: '#ffffff' }}>sneaky-concepts-privacy@gmail.com</span>
+                        <span style={{ color: 'var(--text-primary)' }}>good-soles-ph@gmail.com</span>
                     </p>
                 </section>
             </div>

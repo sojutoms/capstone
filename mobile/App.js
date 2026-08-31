@@ -5,6 +5,7 @@ import { AuthProvider } from "./src/context/AuthContext";
 import { CartProvider } from "./src/context/CartContext";
 import { FavoritesProvider } from "./src/context/FavoritesContext";
 import Toast from "react-native-toast-message";
+import ChatWidget from "./src/components/ChatWidget";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
             <NavigationContainer>
               <AppNavigator />
             </NavigationContainer>
+            <ChatWidget />
           </CartProvider>
         </FavoritesProvider>
       </AuthProvider>

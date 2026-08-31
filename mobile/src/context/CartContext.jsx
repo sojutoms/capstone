@@ -10,7 +10,7 @@ import { Platform, Alert } from "react-native";
 const BASE_URL =
   Platform.OS === "web"
     ? "http://localhost:4000"
-    : "https://unlaboured-charise-unmachined.ngrok-free.dev";
+    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 const CartContext = createContext();
 
@@ -20,45 +20,44 @@ export const CartProvider = ({ children }) => {
   const { userToken } = useAuth();
   const [cart, setCart] = useState([]);
 
-  // 🔁 LOAD CART + PRODUCTS
-  useEffect(() => {
-    const loadCart = async () => {
-      if (!userToken) {
-        setCart([]);
-        return;
-      }
+  // 🔁 LOAD CART + PRODUCTS — also exposed as refreshCart so screens can
+  // re-pull this on focus (e.g. after adding to cart from the web app).
+  const loadCart = async () => {
+    if (!userToken) {
+      setCart([]);
+      return;
+    }
 
-      try {
-        const cartData = await getCart(userToken);
+    try {
+      const cartData = await getCart(userToken);
 
-        const res = await fetch(`${BASE_URL}/allproducts`);
-        const products = await res.json();
+      const res = await fetch(`${BASE_URL}/allproducts`);
+      const products = await res.json();
 
-        const merged = cartData
-          .map((c) => {
-            const product = products.find(
-              (p) => p.id === Number(c.itemId)
-            );
+      const merged = cartData
+        .map((c) => {
+          const product = products.find(
+            (p) => p.id === Number(c.itemId)
+          );
 
-            if (!product) return null;
+          if (!product) return null;
 
-            return {
-              ...product,
-              selectedSize: c.size,
-              quantity: c.quantity,
-            };
-          })
-          .filter(Boolean);
+          return {
+            ...product,
+            selectedSize: c.size,
+            quantity: c.quantity,
+          };
+        })
+        .filter(Boolean);
 
-        setCart(merged);
-      } catch (err) {
-        console.log("Cart load error:", err);
-        setCart([]);
-      }
-    };
+      setCart(merged);
+    } catch (err) {
+      console.log("Cart load error:", err);
+      setCart([]);
+    }
+  };
 
-    loadCart();
-  }, [userToken]);
+  useEffect(() => { loadCart(); }, [userToken]);
 
   // ➕ ADD WITH STOCK CHECK
   const addToCart = async (product, size) => {
@@ -201,6 +200,7 @@ export const CartProvider = ({ children }) => {
         decreaseQuantity,
         removeFromCart,
         clearCart,        // ✅ now exported
+        refreshCart: loadCart,
       }}
     >
       {children}

@@ -98,8 +98,9 @@ Respond with plain text only.`;
         "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        max_tokens: 200,
+        model: "openai/gpt-oss-120b",
+        max_tokens: 300,
+        reasoning_effort: "low",
         messages: [{ role: "user", content: prompt }],
       }),
     });

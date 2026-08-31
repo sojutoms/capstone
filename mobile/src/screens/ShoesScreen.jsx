@@ -13,7 +13,11 @@ import {
   Dimensions,
   TextInput,
   Animated,
+  Modal,
+  RefreshControl,
 } from "react-native";
+import { useCart } from "../context/CartContext";
+import { useFavorites } from "../context/FavoritesContext";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 48) / 2;
@@ -21,7 +25,7 @@ const CARD_WIDTH = (width - 48) / 2;
 const BASE_URL =
   Platform.OS === "web"
     ? "http://localhost:4000"
-    : "https://unlaboured-charise-unmachined.ngrok-free.dev";
+    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 /* ─────────────────── PRICE HELPERS ─────────────────── */
 
@@ -103,24 +107,15 @@ const getBadge = (product, index) => {
 
 /* ─────────────────── CONFIG ─────────────────── */
 
-// The exact brand values that count as "shoes" — used to scope the All filter
 const SHOE_BRAND_VALUES = ["nike", "adidas", "puma", "nb"];
 
-const BRANDS = [
-  { label: "All",         value: "all" },
-  { label: "Nike",        value: "nike" },
-  { label: "Adidas",      value: "adidas" },
-  { label: "Puma",        value: "puma" },
-  { label: "New Balance", value: "nb" },
-];
-
-const CATEGORIES = ["All", "Running", "Lifestyle", "Training", "Outdoor", "Collab"];
+const SUBCATEGORIES = ["All", "Lifestyle", "Basketball", "Running"];
 
 const SORT_OPTIONS = [
-  { label: "Newest",    value: "newest" },
-  { label: "Price ↑",  value: "price_asc" },
-  { label: "Price ↓",  value: "price_desc" },
-  { label: "Name A–Z", value: "name_asc" },
+  { label: "Newest",          value: "newest" },
+  { label: "Price: Low to High", value: "price_asc" },
+  { label: "Price: High to Low", value: "price_desc" },
+  { label: "Name A–Z",        value: "name_asc" },
 ];
 
 /* ─────────────────── PRODUCT CARD ─────────────────── */
@@ -174,6 +169,8 @@ const ProductCard = ({ item, index, onPress }) => {
 
 export default function ShoesScreen({ navigation, route }) {
   const initialBrand = route?.params?.selectedBrand || "all";
+  const { refreshCart } = useCart();
+  const { refreshFavorites } = useFavorites();
 
   const [products,       setProducts]       = useState([]);
   const [loading,        setLoading]        = useState(true);
@@ -182,8 +179,11 @@ export default function ShoesScreen({ navigation, route }) {
   const [activeCategory, setActiveCategory] = useState("All");
   const [sortBy,         setSortBy]         = useState("newest");
   const [showSearch,     setShowSearch]     = useState(false);
+  const [showSortModal,  setShowSortModal]  = useState(false);
 
   const searchAnim = useRef(new Animated.Value(0)).current;
+
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { fetchProducts(); }, []);
 
@@ -200,6 +200,12 @@ export default function ShoesScreen({ navigation, route }) {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchProducts(), refreshCart(), refreshFavorites()]);
+    setRefreshing(false);
+  };
+
   const toggleSearch = () => {
     const toValue = showSearch ? 0 : 1;
     setShowSearch(!showSearch);
@@ -212,12 +218,9 @@ export default function ShoesScreen({ navigation, route }) {
     let result = [...products];
 
     // ── BRAND FILTER ──────────────────────────────────────────────────────
-    // "All" → only show products whose brand is one of the 4 shoe brands
-    // Specific brand → show only that exact brand
     if (selectedBrand === "all") {
       result = result.filter((p) => {
         const brand = (p.brand || p.category || "").toLowerCase().trim();
-        // "nb" stored as "new balance" in some DBs — handle both
         return (
           SHOE_BRAND_VALUES.includes(brand) ||
           brand === "new balance"
@@ -233,12 +236,13 @@ export default function ShoesScreen({ navigation, route }) {
       });
     }
 
-    // ── CATEGORY FILTER ───────────────────────────────────────────────────
+    // ── SUBCATEGORY FILTER ────────────────────────────────────────────────
     if (activeCategory !== "All") {
+      const activeLower = activeCategory.toLowerCase();
       result = result.filter(
         (p) =>
-          (p.type && p.type.toLowerCase() === activeCategory.toLowerCase()) ||
-          (p.tags && p.tags.includes(activeCategory.toLowerCase()))
+          Array.isArray(p.subCategories) &&
+          p.subCategories.some((sc) => sc.toLowerCase() === activeLower)
       );
     }
 
@@ -265,6 +269,8 @@ export default function ShoesScreen({ navigation, route }) {
   }, [products, selectedBrand, activeCategory, searchQuery, sortBy]);
 
   const displayed = filteredProducts();
+
+  const activeSortLabel = SORT_OPTIONS.find((s) => s.value === sortBy)?.label || "Sort";
 
   if (loading) {
     return (
@@ -335,73 +341,48 @@ export default function ShoesScreen({ navigation, route }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
         stickyHeaderIndices={[0]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+        }
       >
         {/* ── STICKY FILTERS ── */}
         <View style={styles.stickyFilters}>
 
-          {/* Category tabs */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.tabsRow}
-            contentContainerStyle={{ paddingHorizontal: 16 }}
-          >
-            {CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                onPress={() => setActiveCategory(cat)}
-                style={[styles.tab, activeCategory === cat && styles.tabActive]}
-              >
-                {activeCategory === cat && <View style={styles.tabDot} />}
-                <Text style={[styles.tabText, activeCategory === cat && styles.tabTextActive]}>
-                  {cat}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Brand chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.brandsRow}
-            contentContainerStyle={{ paddingHorizontal: 16 }}
-          >
-            {BRANDS.map((b) => (
-              <TouchableOpacity
-                key={b.value}
-                onPress={() => setSelectedBrand(b.value)}
-                style={[styles.brandChip, selectedBrand === b.value && styles.brandChipActive]}
-              >
-                <Text style={[styles.brandChipText, selectedBrand === b.value && styles.brandChipTextActive]}>
-                  {b.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {/* Sort + result count row */}
-          <View style={styles.sortRow}>
-            <Text style={styles.resultCount}>
-              {displayed.length} {displayed.length === 1 ? "RESULT" : "RESULTS"}
-            </Text>
+          {/* Subcategory underline tabs */}
+          <View style={styles.tabsRow}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 6 }}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
             >
-              {SORT_OPTIONS.map((s) => (
+              {SUBCATEGORIES.map((cat) => (
                 <TouchableOpacity
-                  key={s.value}
-                  onPress={() => setSortBy(s.value)}
-                  style={[styles.sortChip, sortBy === s.value && styles.sortChipActive]}
+                  key={cat}
+                  onPress={() => setActiveCategory(cat)}
+                  style={styles.tab}
                 >
-                  <Text style={[styles.sortChipText, sortBy === s.value && styles.sortChipTextActive]}>
-                    {s.label}
+                  <Text style={[styles.tabText, activeCategory === cat && styles.tabTextActive]}>
+                    {cat}
                   </Text>
+                  {activeCategory === cat && <View style={styles.tabUnderline} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
+            <View style={styles.tabDivider} />
+          </View>
+
+          {/* Sort button + result count row */}
+          <View style={styles.sortRow}>
+            <Text style={styles.resultCount}>
+              {displayed.length} {displayed.length === 1 ? "result" : "results"}
+            </Text>
+            <TouchableOpacity
+              style={styles.sortBtn}
+              onPress={() => setShowSortModal(true)}
+            >
+              <Text style={styles.sortBtnText}>{activeSortLabel}</Text>
+              <Text style={styles.sortBtnIcon}>▾</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -438,6 +419,39 @@ export default function ShoesScreen({ navigation, route }) {
           </View>
         )}
       </ScrollView>
+
+      {/* ── SORT DROPDOWN MODAL ── */}
+      <Modal
+        visible={showSortModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSortModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowSortModal(false)}
+        >
+          <View style={styles.dropdownMenu}>
+            <Text style={styles.dropdownTitle}>SORT BY</Text>
+            {SORT_OPTIONS.map((s) => (
+              <TouchableOpacity
+                key={s.value}
+                style={[styles.dropdownItem, sortBy === s.value && styles.dropdownItemActive]}
+                onPress={() => {
+                  setSortBy(s.value);
+                  setShowSortModal(false);
+                }}
+              >
+                <Text style={[styles.dropdownItemText, sortBy === s.value && styles.dropdownItemTextActive]}>
+                  {s.label}
+                </Text>
+                {sortBy === s.value && <Text style={styles.dropdownCheck}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -485,42 +499,64 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, color: "#fff", fontSize: 14 },
   searchClear: { color: "#444", fontSize: 14, paddingLeft: 4 },
 
-  stickyFilters: { backgroundColor: "#0A0A0A", paddingTop: 8, paddingBottom: 4 },
+  stickyFilters: { backgroundColor: "#0A0A0A", paddingTop: 4, paddingBottom: 0 },
 
-  tabsRow: { marginBottom: 8 },
+  /* ── Underline tabs (Nike-style) ── */
+  tabsRow: { backgroundColor: "#0A0A0A" },
   tab: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    paddingVertical: 7, paddingHorizontal: 16,
-    borderRadius: 8, backgroundColor: "#141414",
-    borderWidth: 1, borderColor: "#2A2A2A", marginRight: 8,
+    marginRight: 24,
+    paddingVertical: 12,
+    alignItems: "center",
+    position: "relative",
   },
-  tabActive:     { backgroundColor: "#FFFFFF", borderColor: "#FFFFFF" },
-  tabDot:        { width: 5, height: 5, borderRadius: 3, backgroundColor: "#000" },
-  tabText:       { fontSize: 12, fontWeight: "500", color: "#555" },
-  tabTextActive: { color: "#000", fontWeight: "700" },
-
-  brandsRow: { marginBottom: 8 },
-  brandChip: {
-    paddingVertical: 6, paddingHorizontal: 14,
-    borderRadius: 6, borderWidth: 1, borderColor: "#2A2A2A",
-    marginRight: 6, backgroundColor: "transparent",
+  tabText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#666",
   },
-  brandChipActive:     { backgroundColor: "#FFFFFF", borderColor: "#FFFFFF" },
-  brandChipText:       { fontSize: 11, fontWeight: "500", color: "#555" },
-  brandChipTextActive: { color: "#000", fontWeight: "700" },
+  tabTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  tabUnderline: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 1,
+  },
+  tabDivider: {
+    height: 1,
+    backgroundColor: "#1E1E1E",
+    marginTop: 0,
+  },
 
+  /* ── Sort row ── */
   sortRow: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 16, paddingBottom: 8,
-    borderBottomWidth: 1, borderBottomColor: "#1a1a1a",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
-  resultCount:        { color: "#444", fontSize: 9, fontWeight: "800", letterSpacing: 2, marginRight: 10 },
-  sortChip:           { paddingVertical: 5, paddingHorizontal: 12, borderRadius: 6, borderWidth: 1, borderColor: "#2A2A2A", backgroundColor: "transparent" },
-  sortChipActive:     { backgroundColor: "#1e1e1e", borderColor: "#444" },
-  sortChipText:       { fontSize: 10, color: "#444", fontWeight: "600" },
-  sortChipTextActive: { color: "#fff" },
+  resultCount: { color: "#555", fontSize: 12, fontWeight: "500" },
+  sortBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    backgroundColor: "#141414",
+  },
+  sortBtnText: { color: "#fff", fontSize: 12, fontWeight: "600" },
+  sortBtnIcon: { color: "#fff", fontSize: 10 },
 
-  grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 12, gap: 10, paddingTop: 14 },
+  grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 12, gap: 10, paddingTop: 4 },
 
   card:          { width: CARD_WIDTH, backgroundColor: "#141414", borderRadius: 16, borderWidth: 1, borderColor: "#2A2A2A", overflow: "hidden" },
   cardImageWrap: { width: "100%", aspectRatio: 1, backgroundColor: "#1A1A1A", justifyContent: "center", alignItems: "center", position: "relative" },
@@ -552,4 +588,40 @@ const styles = StyleSheet.create({
   emptySubtitle: { color: "#444", fontSize: 12, textAlign: "center", lineHeight: 18, marginBottom: 28 },
   resetBtn:      { borderWidth: 1, borderColor: "#2a2a2a", paddingVertical: 12, paddingHorizontal: 28, borderRadius: 6 },
   resetBtnText:  { color: "#fff", fontSize: 11, fontWeight: "800", letterSpacing: 2 },
+
+  /* ── Sort modal ── */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  dropdownMenu: {
+    backgroundColor: "#1A1A1A",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 20,
+    paddingBottom: 36,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  dropdownTitle: {
+    color: "#555",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#2A2A2A",
+  },
+  dropdownItemActive: {},
+  dropdownItemText: { fontSize: 15, color: "#888", fontWeight: "500" },
+  dropdownItemTextActive: { color: "#FFFFFF", fontWeight: "700" },
+  dropdownCheck: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
 });

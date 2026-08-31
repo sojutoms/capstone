@@ -1,5 +1,6 @@
 const Users = require("../models/Users");
 const Product = require("../models/Product");
+const { getReservedQtyForItem } = require("../utils/reservations");
 
 // ─── POST /getcart ────────────────────────────────────────────────────────────
 const getCart = async (req, res) => {
@@ -32,17 +33,23 @@ const addToCart = async (req, res) => {
     if (!product) return res.status(404).json({ success: false, error: "Product not found" });
 
     const currentQtyInCart = (user.cartData && user.cartData[key]) || 0;
-    
-    // Check stock based on category
+
+    // Check stock based on category — minus whatever's currently held by an
+    // active checkout reservation, so the cart can never accept more than
+    // what's actually shown as available on the product page.
     const isSimple = ["bags", "collectibles"].includes((product.category || "").toLowerCase());
-    
+
     if (isSimple) {
-      if (currentQtyInCart + 1 > (product.stock || 0)) {
+      const reserved = await getReservedQtyForItem(product.id, "");
+      const trulyAvailable = Math.max(0, (product.stock || 0) - reserved);
+      if (currentQtyInCart + 1 > trulyAvailable) {
         return res.status(400).json({ success: false, error: "Not enough stock available" });
       }
     } else {
       const sizeEntry = (product.sizes || []).find(s => String(s.size) === String(size));
-      if (!sizeEntry || currentQtyInCart + 1 > (sizeEntry.quantity || 0)) {
+      const reserved = await getReservedQtyForItem(product.id, size);
+      const trulyAvailable = Math.max(0, (sizeEntry?.quantity || 0) - reserved);
+      if (!sizeEntry || currentQtyInCart + 1 > trulyAvailable) {
         return res.status(400).json({ success: false, error: "Not enough stock available for this size" });
       }
     }

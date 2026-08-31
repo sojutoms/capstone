@@ -114,7 +114,7 @@
   font-family: 'Bebas Neue', sans-serif;
   font-size: 11px;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted);
   background: transparent;
   border: none;
   border-radius: 100px;
@@ -129,7 +129,7 @@
 }
 
 .lifestyle-btn:hover:not(.active) {
-  color: #fff;
+  color: var(--text-primary);
 }
 
 /* ── Right Column: Sticky Info ─────────────────────────────────────── */
@@ -651,26 +651,39 @@
 ═══════════════════════════════════════════════════════════════ */
 .product-actions {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 32px;
 }
 
-.add-to-cart-btn {
+.product-actions-primary {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.add-to-cart-btn,
+.buy-now-btn {
   position: relative;
-  padding: 20px 40px;
-  width: 100%;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 19px 20px;
   font-weight: 800;
-  font-size: 0.9rem;
-  letter-spacing: 0.05em;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  border-radius: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.add-to-cart-btn {
   color: var(--bg-primary);
   background: var(--text-primary);
-  border: none;
-  border-radius: 100px;
-  cursor: pointer;
-  overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 2px solid var(--text-primary);
 }
 
 .add-to-cart-btn::before {
@@ -688,8 +701,8 @@
 }
 
 .add-to-cart-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 40px rgba(255, 255, 255, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 32px rgba(255, 255, 255, 0.18);
 }
 
 .add-to-cart-btn:hover::before {
@@ -698,6 +711,28 @@
 
 .add-to-cart-btn:disabled {
   background: var(--border-subtle);
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.buy-now-btn {
+  color: var(--text-primary);
+  background: transparent;
+  border: 2px solid var(--text-primary);
+}
+
+.buy-now-btn:hover {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 32px rgba(255, 255, 255, 0.18);
+}
+
+.buy-now-btn:disabled {
+  border-color: var(--border-subtle);
   color: var(--text-secondary);
   cursor: not-allowed;
   transform: none;
@@ -709,15 +744,16 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 16px 20px;
+  width: 100%;
+  padding: 13px 20px;
   font-family: var(--font-display, 'Bebas Neue', sans-serif);
   font-size: 12px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--text-primary);
+  color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--border-subtle);
-  border-radius: 50%;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -725,11 +761,10 @@
 .favorite-btn:hover {
   border-color: var(--accent-gold, #ffffff);
   color: var(--accent-gold, #ffffff);
-  transform: translateY(-2px);
 }
 
 .favorite-btn.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
   border-color: var(--accent-gold, #ffffff);
   color: var(--accent-gold, #ffffff);
 }
@@ -1107,9 +1142,8 @@
     font-size: 1.75rem;
   }
 
-  .product-actions {
+  .product-actions-primary {
     flex-direction: column;
-    gap: 12px;
   }
 
   .sz-tabs {
@@ -1119,17 +1153,6 @@
   .sz-tab {
     flex: none;
     width: calc(50% - 2px);
-  }
-
-  .favorite-btn {
-    width: 100%;
-    padding: 14px;
-    border-radius: 12px;
-    justify-content: center;
-  }
-
-  .favorite-btn span {
-    display: inline;
   }
 
   .zoom-indicator {

@@ -1,19 +1,19 @@
 /* ============================================
-   SHARED DARK-THEME PAGE STYLES
-   Hypebeast-Luxe Design System
+   SHARED PAGE STYLES
+   Hypebeast-Luxe Design System (theme-aware)
    ============================================ */
 
 const darkPageStyles = {
   /* ── Page Container ── */
   pageContainer: {
-    background: '#0a0a0a',
+    background: 'var(--bg-primary)',
     minHeight: '100vh',
-    color: '#ffffff',
+    color: 'var(--text-primary)',
   },
 
   /* ── Hero Section ── */
   hero: {
-    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(10, 10, 10, 0.95) 100%)',
+    background: 'linear-gradient(135deg, var(--glass-bg-hover) 0%, var(--bg-primary) 100%)',
     position: 'relative',
     overflow: 'hidden',
     padding: '80px 20px',
@@ -25,7 +25,7 @@ const darkPageStyles = {
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'radial-gradient(ellipse at center, rgba(255, 255, 255, 0.06) 0%, transparent 70%)',
+    background: 'var(--gradient-glow)',
     pointerEvents: 'none',
   },
   heroContent: {
@@ -40,13 +40,13 @@ const darkPageStyles = {
     fontWeight: 400,
     letterSpacing: '0.08em',
     textTransform: 'uppercase',
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     marginBottom: '16px',
   },
   heroSubtitle: {
     fontFamily: "'Outfit', sans-serif",
     fontSize: 'clamp(0.95rem, 2vw, 1.15rem)',
-    color: 'rgba(255,255,255,0.6)',
+    color: 'var(--text-secondary)',
     lineHeight: 1.7,
   },
   heroDecoration: {
@@ -55,7 +55,7 @@ const darkPageStyles = {
     left: 0,
     right: 0,
     height: '40px',
-    background: '#0a0a0a',
+    background: 'var(--bg-primary)',
     clipPath: 'polygon(0 50%, 100% 0, 100% 100%, 0 100%)',
   },
 
@@ -68,8 +68,8 @@ const darkPageStyles = {
 
   /* ── Content Section Card ── */
   contentSection: {
-    background: '#111111',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--glass-border)',
     borderRadius: '16px',
     padding: '40px',
     marginBottom: '28px',
@@ -79,8 +79,8 @@ const darkPageStyles = {
   /* ── Section Badge ── */
   sectionBadge: {
     display: 'inline-block',
-    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
-    color: '#050505',
+    background: 'linear-gradient(135deg, var(--white), #f0f0f0)',
+    color: 'var(--black)',
     padding: '6px 16px',
     borderRadius: '9999px',
     fontFamily: "'Bebas Neue', sans-serif",
@@ -91,15 +91,15 @@ const darkPageStyles = {
     marginBottom: '18px',
   },
   valueBadge: {
-    background: 'rgba(255, 255, 255, 0.2)',
-    color: '#ffffff',
+    background: 'var(--glass-border-hover)',
+    color: 'var(--text-primary)',
   },
 
   /* ── Section Title ── */
   sectionTitle: {
     fontFamily: "'Playfair Display', serif",
     fontSize: 'clamp(1.5rem, 3vw, 2rem)',
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     marginBottom: '24px',
     fontWeight: 700,
     fontStyle: 'italic',
@@ -113,7 +113,7 @@ const darkPageStyles = {
     fontFamily: "'Outfit', sans-serif",
     fontSize: '14px',
     lineHeight: 1.8,
-    color: 'rgba(255,255,255,0.6)',
+    color: 'var(--text-secondary)',
     marginBottom: '16px',
   },
   dropCap: {
@@ -122,7 +122,7 @@ const darkPageStyles = {
     float: 'left',
     lineHeight: 1,
     marginRight: '10px',
-    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+    background: 'linear-gradient(135deg, var(--text-primary), var(--text-secondary))',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
@@ -130,8 +130,8 @@ const darkPageStyles = {
 
   /* ── Values Section (accent bg) ── */
   valuesSection: {
-    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, #111111 100%)',
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    background: 'linear-gradient(135deg, var(--glass-bg-hover) 0%, var(--bg-card) 100%)',
+    borderColor: 'var(--border-light)',
   },
   valuesGrid: {
     display: 'grid',
@@ -140,9 +140,9 @@ const darkPageStyles = {
     marginTop: '32px',
   },
   valueCard: {
-    background: 'rgba(255,255,255,0.03)',
+    background: 'var(--glass-bg)',
     backdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    border: '1px solid var(--glass-border)',
     borderRadius: '12px',
     padding: '28px',
     textAlign: 'center',
@@ -157,11 +157,11 @@ const darkPageStyles = {
     fontFamily: "'Outfit', sans-serif",
     fontSize: '1.1rem',
     marginBottom: '12px',
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     fontWeight: 600,
   },
   valueDesc: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'var(--text-muted)',
     lineHeight: 1.6,
     fontSize: '0.85rem',
     margin: 0,
@@ -177,13 +177,13 @@ const darkPageStyles = {
     marginTop: '24px',
   },
   featureItem: {
-    background: '#0a0a0a',
+    background: 'var(--bg-primary)',
     padding: '18px 22px',
     borderRadius: '10px',
-    border: '1px solid rgba(255,255,255,0.08)',
-    borderLeft: '3px solid #ffffff',
+    border: '1px solid var(--glass-border)',
+    borderLeft: '3px solid var(--text-primary)',
     fontSize: '14px',
-    color: 'rgba(255,255,255,0.6)',
+    color: 'var(--text-secondary)',
     display: 'flex',
     alignItems: 'center',
     gap: '14px',
@@ -195,8 +195,8 @@ const darkPageStyles = {
     justifyContent: 'center',
     width: '26px',
     height: '26px',
-    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
-    color: '#050505',
+    background: 'linear-gradient(135deg, var(--white), #f0f0f0)',
+    color: 'var(--black)',
     borderRadius: '50%',
     fontWeight: 'bold',
     flexShrink: 0,
@@ -211,8 +211,8 @@ const darkPageStyles = {
     marginTop: '28px',
   },
   statCard: {
-    background: 'rgba(255,255,255,0.03)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'var(--glass-bg)',
+    border: '1px solid var(--glass-border)',
     borderRadius: '12px',
     padding: '24px',
     textAlign: 'center',
@@ -221,7 +221,7 @@ const darkPageStyles = {
   statNumber: {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: '2rem',
-    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+    background: 'linear-gradient(135deg, var(--text-primary), var(--text-secondary))',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
@@ -230,7 +230,7 @@ const darkPageStyles = {
   statLabel: {
     fontFamily: "'Outfit', sans-serif",
     fontSize: '11px',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'var(--text-muted)',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     marginTop: '6px',
@@ -244,8 +244,8 @@ const darkPageStyles = {
     marginTop: '28px',
   },
   stepCard: {
-    background: 'rgba(255,255,255,0.03)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'var(--glass-bg)',
+    border: '1px solid var(--glass-border)',
     borderRadius: '12px',
     padding: '28px 24px',
     textAlign: 'center',
@@ -255,7 +255,7 @@ const darkPageStyles = {
   stepNumber: {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: '2rem',
-    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+    background: 'linear-gradient(135deg, var(--text-primary), var(--text-secondary))',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
@@ -266,12 +266,12 @@ const darkPageStyles = {
     fontFamily: "'Outfit', sans-serif",
     fontSize: '1rem',
     fontWeight: 600,
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     marginBottom: '10px',
   },
   stepDesc: {
     fontSize: '0.85rem',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'var(--text-muted)',
     lineHeight: 1.6,
     margin: 0,
   },
@@ -285,7 +285,7 @@ const darkPageStyles = {
     fontFamily: "'Outfit', sans-serif",
     fontSize: '11px',
     fontWeight: 600,
-    color: 'rgba(255,255,255,0.5)',
+    color: 'var(--text-muted)',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     marginBottom: '8px',
@@ -293,10 +293,10 @@ const darkPageStyles = {
   input: {
     width: '100%',
     padding: '14px 16px',
-    background: '#0a0a0a',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border-light)',
     borderRadius: '10px',
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     fontFamily: "'Outfit', sans-serif",
     fontSize: '14px',
     outline: 'none',
@@ -306,10 +306,10 @@ const darkPageStyles = {
   textarea: {
     width: '100%',
     padding: '14px 16px',
-    background: '#0a0a0a',
-    border: '1px solid rgba(255,255,255,0.1)',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--border-light)',
     borderRadius: '10px',
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     fontFamily: "'Outfit', sans-serif",
     fontSize: '14px',
     outline: 'none',
@@ -319,8 +319,8 @@ const darkPageStyles = {
     boxSizing: 'border-box',
   },
   submitButton: {
-    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
-    color: '#050505',
+    background: 'linear-gradient(135deg, var(--white), #f0f0f0)',
+    color: 'var(--black)',
     border: 'none',
     padding: '16px 40px',
     borderRadius: '10px',
@@ -336,8 +336,8 @@ const darkPageStyles = {
 
   /* ── CTA / Banner ── */
   ctaSection: {
-    background: 'linear-gradient(135deg, rgba(201,162,39,0.12) 0%, #111111 100%)',
-    border: '1px solid rgba(201,162,39,0.2)',
+    background: 'linear-gradient(135deg, rgba(var(--accent-gold-rgb),0.12) 0%, var(--bg-card) 100%)',
+    border: '1px solid rgba(var(--accent-gold-rgb),0.2)',
     borderRadius: '16px',
     padding: '48px 40px',
     textAlign: 'center',
@@ -346,13 +346,13 @@ const darkPageStyles = {
   ctaTitle: {
     fontFamily: "'Playfair Display', serif",
     fontSize: 'clamp(1.4rem, 3vw, 1.8rem)',
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     marginBottom: '14px',
     fontWeight: 700,
     fontStyle: 'italic',
   },
   ctaDesc: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'var(--text-muted)',
     fontSize: '14px',
     lineHeight: 1.7,
     marginBottom: '24px',
@@ -361,8 +361,8 @@ const darkPageStyles = {
   },
   ctaButton: {
     display: 'inline-block',
-    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
-    color: '#050505',
+    background: 'linear-gradient(135deg, var(--white), #f0f0f0)',
+    color: 'var(--black)',
     padding: '14px 36px',
     borderRadius: '9999px',
     fontFamily: "'Bebas Neue', sans-serif",
@@ -383,8 +383,8 @@ const darkPageStyles = {
     marginTop: '24px',
   },
   infoCard: {
-    background: 'rgba(255,255,255,0.03)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'var(--glass-bg)',
+    border: '1px solid var(--glass-border)',
     borderRadius: '12px',
     padding: '24px',
     textAlign: 'center',
@@ -398,12 +398,12 @@ const darkPageStyles = {
     fontFamily: "'Outfit', sans-serif",
     fontSize: '0.95rem',
     fontWeight: 600,
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     marginBottom: '8px',
   },
   infoText: {
     fontSize: '0.85rem',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'var(--text-muted)',
     lineHeight: 1.5,
     margin: 0,
   },
@@ -416,28 +416,28 @@ const darkPageStyles = {
     marginTop: '20px',
   },
   th: {
-    background: 'rgba(201,162,39,0.1)',
-    color: '#ffffff',
+    background: 'rgba(var(--accent-gold-rgb),0.1)',
+    color: 'var(--text-primary)',
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: '12px',
     letterSpacing: '0.1em',
     textTransform: 'uppercase',
     padding: '14px 16px',
     textAlign: 'left',
-    borderBottom: '1px solid rgba(255,255,255,0.1)',
+    borderBottom: '1px solid var(--border-light)',
   },
   td: {
     padding: '14px 16px',
     fontSize: '13px',
-    color: 'rgba(255,255,255,0.6)',
-    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    color: 'var(--text-secondary)',
+    borderBottom: '1px solid var(--glass-border)',
     fontFamily: "'Outfit', sans-serif",
   },
 
   /* ── Accordion / FAQ ── */
   faqItem: {
-    background: '#0a0a0a',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'var(--bg-primary)',
+    border: '1px solid var(--glass-border)',
     borderRadius: '10px',
     marginBottom: '10px',
     overflow: 'hidden',
@@ -446,7 +446,7 @@ const darkPageStyles = {
     padding: '18px 22px',
     fontSize: '14px',
     fontWeight: 600,
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     cursor: 'pointer',
     display: 'flex',
     justifyContent: 'space-between',
@@ -456,15 +456,15 @@ const darkPageStyles = {
   faqAnswer: {
     padding: '0 22px 18px',
     fontSize: '13px',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'var(--text-muted)',
     lineHeight: 1.7,
     fontFamily: "'Outfit', sans-serif",
   },
 
   /* ── Job Card / Listing ── */
   jobCard: {
-    background: 'rgba(255,255,255,0.03)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'var(--glass-bg)',
+    border: '1px solid var(--glass-border)',
     borderRadius: '12px',
     padding: '28px',
     marginBottom: '14px',
@@ -474,12 +474,12 @@ const darkPageStyles = {
     fontFamily: "'Outfit', sans-serif",
     fontSize: '1.1rem',
     fontWeight: 600,
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     marginBottom: '8px',
   },
   jobMeta: {
     fontSize: '0.8rem',
-    color: 'rgba(255,255,255,0.4)',
+    color: 'var(--text-muted)',
     marginBottom: '12px',
     display: 'flex',
     gap: '16px',
@@ -487,14 +487,14 @@ const darkPageStyles = {
   },
   jobDesc: {
     fontSize: '0.85rem',
-    color: 'rgba(255,255,255,0.55)',
+    color: 'var(--text-secondary)',
     lineHeight: 1.6,
     margin: 0,
   },
   jobTag: {
     display: 'inline-block',
-    background: 'rgba(201,162,39,0.1)',
-    color: '#ffffff',
+    background: 'rgba(var(--accent-gold-rgb),0.1)',
+    color: 'var(--text-primary)',
     padding: '4px 10px',
     borderRadius: '6px',
     fontSize: '10px',
@@ -508,14 +508,14 @@ const darkPageStyles = {
     fontFamily: "'Outfit', sans-serif",
     fontSize: '13px',
     lineHeight: 1.8,
-    color: 'rgba(255,255,255,0.55)',
+    color: 'var(--text-secondary)',
     marginBottom: '14px',
   },
   legalHeading: {
     fontFamily: "'Outfit', sans-serif",
     fontSize: '1rem',
     fontWeight: 600,
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     marginTop: '28px',
     marginBottom: '12px',
   },
@@ -525,7 +525,7 @@ const darkPageStyles = {
   },
   legalListItem: {
     fontSize: '13px',
-    color: 'rgba(255,255,255,0.55)',
+    color: 'var(--text-secondary)',
     lineHeight: 1.8,
     marginBottom: '6px',
   },
@@ -538,8 +538,8 @@ const darkPageStyles = {
     marginTop: '28px',
   },
   tierCard: {
-    background: 'rgba(255,255,255,0.03)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'var(--glass-bg)',
+    border: '1px solid var(--glass-border)',
     borderRadius: '16px',
     padding: '32px',
     textAlign: 'center',
@@ -547,21 +547,21 @@ const darkPageStyles = {
     position: 'relative',
   },
   tierCardHighlighted: {
-    background: 'rgba(201,162,39,0.06)',
-    border: '1px solid rgba(201,162,39,0.25)',
+    background: 'rgba(var(--accent-gold-rgb),0.06)',
+    border: '1px solid rgba(var(--accent-gold-rgb),0.25)',
   },
   tierTitle: {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: '1.3rem',
     letterSpacing: '0.08em',
-    color: '#ffffff',
+    color: 'var(--text-primary)',
     marginBottom: '8px',
   },
   tierPrice: {
     fontFamily: "'Outfit', sans-serif",
     fontSize: '2rem',
     fontWeight: 700,
-    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+    background: 'linear-gradient(135deg, var(--text-primary), var(--text-secondary))',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     backgroundClip: 'text',
@@ -569,9 +569,9 @@ const darkPageStyles = {
   },
   tierFeature: {
     fontSize: '0.85rem',
-    color: 'rgba(255,255,255,0.5)',
+    color: 'var(--text-muted)',
     padding: '8px 0',
-    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    borderBottom: '1px solid var(--glass-border)',
   },
 };
 

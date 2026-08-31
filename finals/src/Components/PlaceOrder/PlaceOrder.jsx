@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback, useContext } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useContext, useRef } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import './PlaceOrder.css';
 import CartTotal from '../CartTotal/CartTotal';
 import { ShopContext } from '../../Context/ShopContext';
 import API_BASE_URL, { createCheckoutSession } from '../../services/api';
-import { getShippingFee, getShippingTier, getCodFee } from '../../services/shippingFee';
+import { getShippingFee, getShippingTier } from '../../services/shippingFee';
 
 const NCR_REGION_CODE = '1300000000';
 const SIMPLE_CATEGORIES = ['bags', 'collectibles'];
@@ -114,7 +114,9 @@ const VoucherPanel = ({ subtotal, onApply, onRemove, appliedCode }) => {
                   onClick={() => !v.used && handleApply(v.code)}
                 >
                   <div className="v-item-left">
-                    <span className="v-item-discount">{v.discountPercent}% OFF</span>
+                    <span className="v-item-discount">
+                      {v.discountPercent > 0 ? `${v.discountPercent}% OFF` : `₱${v.maxDiscount} OFF`}
+                    </span>
                     <span className="v-item-title">{v.title}</span>
                   </div>
                   <div className="v-item-right">
@@ -136,65 +138,10 @@ const VoucherPanel = ({ subtotal, onApply, onRemove, appliedCode }) => {
   );
 };
 
-// ─── Points Panel ─────────────────────────────────────────────────────────────
-const PointsPanel = ({ subtotal, onDeductionChange, currentDeductionPoints, userPoints }) => {
-  const [usePoints, setUsePoints] = useState(false);
-  
-  const conversionRate = 50 / 100; // ₱50 per 100 points = ₱0.5 per point
-  const maxDeductionValue = subtotal * 0.7; // Max 70% off
-  const maxPointsPossible = Math.min(userPoints, Math.floor(maxDeductionValue / conversionRate));
-  
-  const handleToggle = (e) => {
-    const active = e.target.checked;
-    setUsePoints(active);
-    if (!active) onDeductionChange(0);
-    else onDeductionChange(maxPointsPossible);
-  };
-
-  const handleSliderChange = (e) => {
-    onDeductionChange(Number(e.target.value));
-  };
-
-  const deductionValue = currentDeductionPoints * conversionRate;
-
-  if (userPoints < 100) return null;
-
-  return (
-    <div className="points-panel terminal-section">
-      <div className="section-header-innovative">
-        <div className="indicator-dot"></div>
-        <h3>REWARD POINTS</h3>
-        <span className="points-balance-label">{userPoints.toLocaleString()} PTS AVAILABLE</span>
-      </div>
-      
-      <div className="points-toggle-wrap">
-        <label className="save-checkbox-innovative">
-          <input type="checkbox" checked={usePoints} onChange={handleToggle} />
-          <span>USE POINTS FOR DISCOUNTS</span>
-        </label>
-      </div>
-
-      {usePoints && (
-        <div className="points-slider-wrap content-fade-in">
-          <div className="points-slider-header">
-            <span>Points to use: <strong>{currentDeductionPoints}</strong></span>
-            <span>Value: <strong>−₱{deductionValue.toLocaleString()}</strong></span>
-          </div>
-          <input 
-            type="range" 
-            min="0" 
-            max={maxPointsPossible} 
-            step="100" 
-            value={currentDeductionPoints} 
-            onChange={handleSliderChange}
-            className="points-range-slider"
-          />
-          <p className="points-disclaimer">You can deduct up to 70% of your order value using points.</p>
-        </div>
-      )}
-    </div>
-  );
-};
+// Points-for-discount at checkout was removed — points are now spent solely
+// by redeeming them into a voucher (see MyVouchers), then applying that
+// voucher here like any other. Keeps a single, non-overlapping way to spend
+// points instead of two parallel mechanisms that could stack on one order.
 // const calculateTier = (total) => {
 //   if (total >= 100000) return { name: "PRESTIGE LEGEND", color: "#FFD700", next: null, min: 100000 };
 //   if (total >= 10000) return { name: "ELITE COLLECTOR", color: "#C0C0C0", next: "PRESTIGE LEGEND", min: 10000, nextMin: 100000 };
@@ -203,12 +150,12 @@ const PointsPanel = ({ subtotal, onDeductionChange, currentDeductionPoints, user
 
 
 // ─── Shipping Info Banner ──────────────────────────────────────────────────────
-const ShippingBanner = ({ regionCode, subtotal }) => {
+const ShippingBanner = ({ regionCode }) => {
   if (!regionCode) return null;
   const tier = getShippingTier(regionCode);
   if (!tier) return null;
 
-  const isFree = tier.fee === 0 || subtotal >= 5000;
+  const isFree = tier.fee === 0;
   return (
     <div className={`shipping-banner ${isFree ? 'shipping-banner--free' : 'shipping-banner--paid'}`}>
       <div className="shipping-banner-text">
@@ -247,8 +194,17 @@ const PaymentCancelledBanner = ({ orderNumber, onRetry, retrying }) => (
 const PlaceOrder = () => {
   const [method, setMethod] = useState('online');
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { cartItems, all_product, clearCart } = useContext(ShopContext);
+  const { cartItems: contextCartItems, all_product, clearCart } = useContext(ShopContext);
+
+  // Buy Now hands off a single item via router state instead of the cart —
+  // when present, it stands in for cartItems everywhere below (subtotal,
+  // order payload, CartTotal's summary) without ever touching the real bag.
+  const buyNowItem = location.state?.buyNowItem || null;
+  const cartItems = buyNowItem
+    ? { [`${buyNowItem.id}_${buyNowItem.size || ''}`]: buyNowItem.quantity || 1 }
+    : contextCartItems;
 
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', street: '',
@@ -285,8 +241,27 @@ const PlaceOrder = () => {
   const [hasProvinces, setHasProvinces] = useState(true);
 
   const [appliedVoucher, setAppliedVoucher] = useState(null);
-  const [userPoints, setUserPoints] = useState(0);
-  const [pointsUsed, setPointsUsed] = useState(0);
+
+  const [toasts, setToasts] = useState([]);
+  const toastIdRef = useRef(0);
+  const toastTimersRef = useRef({});
+
+  const removeToast = useCallback((id) => {
+    setToasts((t) => t.filter((x) => x.id !== id));
+    if (toastTimersRef.current[id]) {
+      clearTimeout(toastTimersRef.current[id]);
+      delete toastTimersRef.current[id];
+    }
+  }, []);
+
+  const addToast = useCallback((type, message, duration = 4000) => {
+    const id = ++toastIdRef.current;
+    setToasts((t) => [...t, { id, type, message }]);
+    if (duration > 0) {
+      const timer = setTimeout(() => removeToast(id), duration);
+      toastTimersRef.current[id] = timer;
+    }
+  }, [removeToast]);
 
   const normalizeSizeToken = (sizeToken) => {
     const s = String(sizeToken);
@@ -316,9 +291,8 @@ const PlaceOrder = () => {
   }, 0);
 
   // ── Derived shipping values ────────────────────────────────────────────────
-  const shippingFee = getShippingFee(formData.region, cartSubtotal);
+  const shippingFee = getShippingFee(formData.region);
   const shippingTier = getShippingTier(formData.region, cartSubtotal);
-  const codFee = method === 'cash on delivery' ? getCodFee(formData.region) : 0;
 
   const isAlreadySaved = savedAddresses.some(
     (addr) =>
@@ -355,17 +329,6 @@ const PlaceOrder = () => {
     };
     fetchRegions();
     loadSavedAddresses();
-
-    const fetchPoints = async () => {
-      const token = localStorage.getItem('auth-token');
-      if (!token) return;
-      try {
-        const res = await fetch(`${API_BASE_URL}/my-vouchers`, { headers: { 'auth-token': token } });
-        const data = await res.json();
-        if (data.success) setUserPoints(data.points || 0);
-      } catch {}
-    };
-    fetchPoints();
   }, [loadSavedAddresses]);
 
   useEffect(() => {
@@ -636,8 +599,6 @@ const PlaceOrder = () => {
     finally { setDeletingIndex(null); }
   };
 
-  const pointsDeduction = pointsUsed * 0.5;
-
   const buildOrderPayload = () => {
     const orderItems = Object.entries(cartItems).map(([key, quantity]) => {
       const [id, size] = key.split('_');
@@ -666,9 +627,8 @@ const PlaceOrder = () => {
         deliveryInfo,
         paymentMethod: method,
         voucherCode: appliedVoucher?.code || null,
-        pointsUsed: pointsUsed > 0 ? pointsUsed : null,
         shippingFee,
-        codFee,
+        isBuyNow: Boolean(buyNowItem),
       },
     };
   };
@@ -680,7 +640,7 @@ const PlaceOrder = () => {
     if (sessionData.success && sessionData.checkoutUrl) {
       window.location.href = sessionData.checkoutUrl;
     } else {
-      alert(sessionData.error || 'Order placed, but payment could not be started. Please retry from your order history.');
+      addToast('error', sessionData.error || 'Order placed, but payment could not be started. Please retry from your order history.');
     }
   };
 
@@ -694,11 +654,13 @@ const PlaceOrder = () => {
       });
       const data = await res.json();
       if (!data.success) {
-        alert(data.error);
+        addToast('error', data.error);
         return;
       }
 
-      clearCart();
+      // Buy Now never touched the cart, so there's nothing of ours to clear —
+      // doing it anyway would wipe out whatever the user already had bagged.
+      if (!buyNowItem) clearCart();
 
       if (paymentMethod === 'online') {
         await startPayMongoCheckout(data.orderNumber);
@@ -709,17 +671,16 @@ const PlaceOrder = () => {
         state: {
           orderNumber: data.orderNumber,
           purchasedItems: orderItems,
-          discountAmount: (appliedVoucher?.discountAmount || 0) + pointsDeduction,
+          discountAmount: appliedVoucher?.discountAmount || 0,
           discountPercent: appliedVoucher?.discountPercent || 0,
           voucherCode: appliedVoucher?.code || null,
           shippingFee,
           shippingTierLabel: shippingTier?.label || '',
-          codFee,
           paymentMethod,
         },
       });
     } catch {
-      alert('Checkout failed.');
+      addToast('error', 'Checkout failed.');
     }
   };
 
@@ -753,6 +714,14 @@ const PlaceOrder = () => {
 
   return (
     <div className="checkout-terminal">
+      <div className="toast-container">
+        {toasts.map(t => (
+          <div key={t.id} className={`toast ${t.type}`}>
+            <span>{t.message}</span>
+            <button onClick={() => removeToast(t.id)}>×</button>
+          </div>
+        ))}
+      </div>
       <div className="terminal-wrapper">
         <main className="checkout-main">
           <header className="checkout-header">
@@ -894,7 +863,7 @@ const PlaceOrder = () => {
               <div className="field-group"><label>Phone Number</label><input name="phone" value={formData.phone} onChange={handleInputChange} placeholder="09XXXXXXXXX" required /></div>
 
               {/* ── Dynamic shipping banner ── */}
-              <ShippingBanner regionCode={formData.region} subtotal={cartSubtotal} />
+              <ShippingBanner regionCode={formData.region} />
 
               {isAlreadySaved ? (
                 <p className="address-already-saved-note">✓ This address is already saved</p>
@@ -920,20 +889,11 @@ const PlaceOrder = () => {
                 />
                 {appliedVoucher && (
                   <div className="voucher-discount-summary">
-                    <span>Voucher discount ({appliedVoucher.discountPercent}% off)</span>
+                    <span>Voucher discount {appliedVoucher.discountPercent > 0 ? `(${appliedVoucher.discountPercent}% off)` : ''}</span>
                     <span className="voucher-discount-amount">−₱{appliedVoucher.discountAmount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
                   </div>
                 )}
               </section>
-            )}
-
-            {localStorage.getItem('auth-token') && (
-              <PointsPanel 
-                subtotal={cartSubtotal}
-                userPoints={userPoints}
-                currentDeductionPoints={pointsUsed}
-                onDeductionChange={setPointsUsed}
-              />
             )}
 
             <section className="terminal-section">
@@ -955,10 +915,7 @@ const PlaceOrder = () => {
               {method === 'cash on delivery' && (
                 <div className="cod-fee-notice content-fade-in">
                   <span className="cod-fee-icon">💵</span>
-                  <span>
-                    COD handling fee for <strong>{shippingTier?.label || 'your area'}</strong>:{' '}
-                    <strong>₱{codFee.toLocaleString('en-PH')}</strong>
-                  </span>
+                  <span>Pay in cash when your order arrives — no extra handling fee.</span>
                 </div>
               )}
               {method === 'online' && (
@@ -976,14 +933,13 @@ const PlaceOrder = () => {
         <aside className="checkout-summary">
           <div className="summary-sticker">
             <CartTotal
-              paymentMethod={method}
-              discountAmount={(appliedVoucher?.discountAmount || 0) + (pointsUsed * 0.5)}
+              items={cartItems}
+              discountAmount={appliedVoucher?.discountAmount || 0}
               discountPercent={appliedVoucher?.discountPercent || 0}
               voucherCode={appliedVoucher?.code || null}
               shippingFee={shippingFee}
               shippingTierLabel={shippingTier?.label || ''}
               shippingEta={shippingTier?.eta || ''}
-              codFee={codFee}
             />
           </div>
         </aside>

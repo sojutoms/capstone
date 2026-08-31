@@ -363,7 +363,7 @@ const getUserProfile = async (req, res) => {
 // ─── PUT /user/profile ────────────────────────────────────────────────────────
 const updateUserProfile = async (req, res) => {
   try {
-    const { firstName, lastName, email, newsletter, currency, phone } = req.body;
+    const { firstName, lastName, email, newsletter, currency, phone, place, bio, photo } = req.body;
 
     if (phone !== undefined && phone !== "") {
       if (!/^\d{11}$/.test(phone))
@@ -373,9 +373,38 @@ const updateUserProfile = async (req, res) => {
         return res.status(400).json({ success: false, error: "Phone number is already in use." });
     }
 
+    // Bio is optional, but capped — matches the 15-word max enforced
+    // client-side on mobile.
+    let trimmedBio;
+    if (bio !== undefined) {
+      trimmedBio = String(bio || "").trim();
+      const wordCount = trimmedBio.split(/\s+/).filter(Boolean).length;
+      if (trimmedBio && wordCount > 15)
+        return res.status(400).json({ success: false, error: "Bio must be 15 words or fewer." });
+    }
+
+    // This endpoint is used both for full profile-info saves (web, mobile's
+    // Edit Profile — send everything) and single-field patches (mobile's
+    // avatar upload — sends only `photo`). Only touch fields that were
+    // actually provided, so a photo-only call can never blank out the name
+    // by resolving firstName/lastName as "undefined undefined".
+    const setFields = {};
+    if (firstName !== undefined || lastName !== undefined) {
+      setFields.firstName = firstName;
+      setFields.lastName  = lastName;
+      setFields.name      = `${firstName || ""} ${lastName || ""}`.trim();
+    }
+    if (email !== undefined)      setFields.email      = email;
+    if (newsletter !== undefined) setFields.newsletter = newsletter;
+    if (currency !== undefined)   setFields.currency   = currency;
+    if (phone !== undefined)      setFields.phone      = phone || "";
+    if (place !== undefined)      setFields.place      = String(place || "").trim();
+    if (bio !== undefined)        setFields.bio        = trimmedBio;
+    if (photo !== undefined)      setFields.photo      = String(photo || "");
+
     const updated = await Users.findByIdAndUpdate(
       req.user.id,
-      { $set: { firstName, lastName, name: `${firstName} ${lastName}`.trim(), email, newsletter, currency, phone: phone || "" } },
+      { $set: setFields },
       { new: true, runValidators: true }
     ).select("-password -cartData").lean();
 

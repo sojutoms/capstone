@@ -195,8 +195,8 @@
   align-items: center;
   gap: 6px;
   padding: 8px 22px;
-  background: var(--text-primary, #ffffff);
-  color: #0a0a0a !important;
+  background: var(--white, #ffffff);
+  color: var(--black, #0a0a0a) !important;
   font-family: var(--font-body, 'Outfit', sans-serif);
   font-size: 11px;
   font-weight: 500;

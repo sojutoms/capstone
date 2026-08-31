@@ -1,7 +1,6 @@
 import React, { useContext, useState, useEffect, useRef, useCallback } from "react";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import "./Navbar.css";
-import cart_icon from "../Assets/cart_icon.png";
 import { ShopContext } from "../../Context/ShopContext";
 import { useTheme } from "../../Context/ThemeContext";
 import API_BASE_URL from "../../services/api";
@@ -10,6 +9,14 @@ const SearchIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="11" cy="11" r="8"></circle>
     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  </svg>
+);
+
+const CartIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="21" r="1"></circle>
+    <circle cx="20" cy="21" r="1"></circle>
+    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
   </svg>
 );
 
@@ -359,7 +366,7 @@ const Navbar = () => {
           )}
 
           <div className="nav-cart-wrapper" onClick={() => setCartDrawerOpen(true)}>
-            <img src={cart_icon} alt="Cart" className="nav-cart-icon" />
+            <span className="nav-cart-icon" aria-label="Cart"><CartIcon /></span>
             <div className="nav-cart-count">{getTotalCartItems()}</div>
           </div>
         </div>
@@ -439,17 +446,7 @@ const Navbar = () => {
         <div className="cart-drawer-content">
           {cartItemsArray.length > 0 && (
             <div className="drawer-shipping-promo">
-              {(() => {
-                const total = calculateCartTotal();
-                const remaining = 5000 - total;
-                const progress = Math.min(100, (total / 5000) * 100);
-                return (
-                  <>
-                    <p>{progress >= 100 ? "COMPLIMENTARY SHIPPING UNLOCKED" : `Add ₱${remaining.toLocaleString()} for complimentary shipping`}</p>
-                    <div className="shipping-progress-bg"><div className="shipping-progress-bar" style={{ width: `${progress}%` }} /></div>
-                  </>
-                );
-              })()}
+              <p>COMPLIMENTARY SHIPPING TO METRO MANILA · Rates vary by region at checkout</p>
             </div>
           )}
           <div className="drawer-items">

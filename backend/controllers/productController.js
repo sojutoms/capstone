@@ -26,6 +26,8 @@ const {
   migrateSkuNumbers
 } = require("../utils/migrations");
 
+const { getActiveReservationsMap } = require("../utils/reservations");
+
 const JWT_SECRET = process.env.JWT_SECRET || "secret_ecom";
 
 // ─── Internal Helper: Audit Log ──────────────────────────────────────────────
@@ -59,6 +61,7 @@ const getAllProducts = async (req, res) => {
 
   try {
     const products = await Product.find(filter).lean();
+    const reservedMap = await getActiveReservationsMap();
 
     // Identify top sellers per brand for badges
     const brandGroups = {};
@@ -74,7 +77,7 @@ const getAllProducts = async (req, res) => {
       if (top && top.id !== undefined) topSellerIds.add(String(top.id));
     }
 
-    const productsWithFlags = products.map((p) => formatProduct(p, topSellerIds));
+    const productsWithFlags = products.map((p) => formatProduct(p, topSellerIds, reservedMap));
     res.send(productsWithFlags);
   } catch (err) {
     console.error("Error fetching products:", err);

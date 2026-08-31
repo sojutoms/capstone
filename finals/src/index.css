@@ -32,6 +32,19 @@
   --radius-lg: 16px;
   --radius-md: 10px;
   --radius-sm: 6px;
+  --radius: var(--radius-md);
+
+  --transition: var(--transition-base);
+
+  /* Fixed literal tokens (used by permanently-dark-branded surfaces like the
+     login/signup card, which keep the same look regardless of site theme) */
+  --black: #000000;
+  --white: #ffffff;
+  --dark: #0a0a0a;
+  --dark-light: #1a1a1a;
+  --dark-mid: #141414;
+  --mid: #888888;
+  --danger: #e5484d;
 }
 
 /* Default to Dark Theme (The original look) */
@@ -44,31 +57,41 @@
   --bg-surface-rgb: 26, 26, 26;
   --bg-elevated: #222222;
   --bg-card: #151515;
-  
+  --bg-tertiary: #1e1e1e;
+
   --text-primary: #ffffff;
   --text-primary-rgb: 255, 255, 255;
   --text-secondary: #a0a0a0;
   --text-secondary-rgb: 160, 160, 160;
+  --text-tertiary: #808080;
   --text-muted: #666666;
   --text-inverse: #000000;
-  
+
   --accent-gold: #c5a059;
   --accent-gold-rgb: 197, 160, 89;
+  --accent-gold-rgb-01: rgba(197, 160, 89, 0.15);
   --accent-gold-light: #e2c28d;
   --gold: var(--accent-gold);
-  
+
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-light: rgba(255, 255, 255, 0.15);
-  
+
   --glass-bg: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-bg-hover: rgba(255, 255, 255, 0.06);
+  --glass-border-hover: rgba(255, 255, 255, 0.2);
   --glass-blur: blur(20px);
-  
+
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 30px 70px rgba(0, 0, 0, 0.65);
   --shadow-glow-gold: 0 0 30px rgba(255, 255, 255, 0.05);
+  --gradient-glow: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255, 255, 255, 0.06), transparent 70%);
   --logo-filter: none;
+  /* Inverse of --logo-filter: for icon assets that are drawn dark/black
+     (e.g. cart_icon.png), so they stay visible against a dark navbar. */
+  --dark-icon-filter: invert(1);
   --noise-opacity: 0.025;
   --hero-overlay-start: rgba(10, 10, 10, 0.1);
   --hero-overlay-mid: rgba(10, 10, 10, 0.4);
@@ -86,37 +109,45 @@
   --bg-surface-rgb: 255, 255, 255;
   --bg-elevated: #f4f4f4;
   --bg-card: #ffffff;
-  
+  --bg-tertiary: #eeeeee;
+
   --text-primary: #111111;
   --text-primary-rgb: 17, 17, 17;
   --text-secondary: #444444;
   --text-secondary-rgb: 68, 68, 68;
+  --text-tertiary: #777777;
   --text-muted: #666666;
   --text-inverse: #ffffff;
-  
+
   --hero-overlay-start: rgba(255, 255, 255, 0.1);
   --hero-overlay-mid: rgba(255, 255, 255, 0.5);
   --hero-overlay-end: rgba(255, 255, 255, 0.98);
   --hero-muted: rgba(0, 0, 0, 0.7);
   --accent-gold: #8B6D3D; /* Deep Luxury Gold for Legibility */
   --accent-gold-rgb: 139, 109, 61;
+  --accent-gold-rgb-01: rgba(139, 109, 61, 0.15);
   --accent-gold-light: #B89B6D;
   --gold: var(--accent-gold);
-  
+
   --border-subtle: rgba(0, 0, 0, 0.08);
   --border-light: rgba(0, 0, 0, 0.15);
-  
+
   --glass-bg: rgba(0, 0, 0, 0.03);
   --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-bg-hover: rgba(0, 0, 0, 0.06);
+  --glass-border-hover: rgba(0, 0, 0, 0.2);
   --glass-blur: blur(24px);
-  
+
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 30px 70px rgba(0, 0, 0, 0.16);
   --shadow-glow-gold: 0 0 40px rgba(139, 109, 61, 0.05);
   --shadow-inner: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  --gradient-glow: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0, 0, 0, 0.04), transparent 70%);
   
   --logo-filter: brightness(0);
+  --dark-icon-filter: none;
   --noise-opacity: 0.015;
   
   --gold-gradient: linear-gradient(135deg, #111111 0%, #444444 50%, #111111 100%);

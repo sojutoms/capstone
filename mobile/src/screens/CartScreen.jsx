@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -7,11 +7,31 @@ import {
   FlatList,
   TouchableOpacity,
   StatusBar,
+  ScrollView,
+  RefreshControl,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { useCart } from "../context/CartContext";
+import { useFavorites } from "../context/FavoritesContext";
 
 export default function CartScreen({ navigation }) {
-  const { cart, addToCart, decreaseQuantity, removeFromCart } = useCart();
+  const { cart, addToCart, decreaseQuantity, removeFromCart, refreshCart } = useCart();
+  const { refreshFavorites } = useFavorites();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Picks up anything added/removed from the web app while this tab wasn't
+  // in focus, instead of showing whatever was last fetched at login.
+  useFocusEffect(
+    useCallback(() => {
+      refreshCart();
+    }, [])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([refreshCart(), refreshFavorites()]);
+    setRefreshing(false);
+  };
 
   const calculateTotal = () => {
     return cart.reduce((total, item) => {
@@ -26,7 +46,12 @@ export default function CartScreen({ navigation }) {
 
   if (!cart.length) {
     return (
-      <View style={styles.emptyContainer}>
+      <ScrollView
+        contentContainerStyle={styles.emptyContainer}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+        }
+      >
         <StatusBar barStyle="light-content" backgroundColor="#0a0a0a" />
         <Text style={styles.emptyIcon}>🛒</Text>
         <Text style={styles.emptyTitle}>YOUR CART IS EMPTY</Text>
@@ -39,7 +64,7 @@ export default function CartScreen({ navigation }) {
         >
           <Text style={styles.shopBtnText}>EXPLORE PRODUCTS →</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -59,6 +84,9 @@ export default function CartScreen({ navigation }) {
         data={cart}
         keyExtractor={(item) => `${item.id}_${item.selectedSize}`}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+        }
         renderItem={({ item, index }) => {
           const sizeData = item?.sizes?.[item.selectedSize];
           const price =
@@ -198,6 +226,7 @@ const styles = StyleSheet.create({
   // ── EMPTY STATE ──
   emptyContainer: {
     flex: 1,
+    flexGrow: 1,
     backgroundColor: "#0a0a0a",
     justifyContent: "center",
     alignItems: "center",

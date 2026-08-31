@@ -11,7 +11,7 @@ import { Platform } from "react-native";
 const BASE_URL =
   Platform.OS === "web"
     ? "http://localhost:4000"
-    : "https://unlaboured-charise-unmachined.ngrok-free.dev";
+    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 const FavoritesContext = createContext();
 
@@ -21,42 +21,42 @@ export const FavoritesProvider = ({ children }) => {
   const { userToken } = useAuth();
   const [favorites, setFavorites] = useState([]);
 
-  // 🔁 LOAD FAVORITES + ENRICH WITH PRODUCT DATA
-  useEffect(() => {
-    const loadFavorites = async () => {
-      if (!userToken) {
+  // 🔁 LOAD FAVORITES + ENRICH WITH PRODUCT DATA — also exposed as
+  // refreshFavorites so screens can re-pull this on focus (e.g. after
+  // favoriting something from the web app).
+  const loadFavorites = async () => {
+    if (!userToken) {
+      setFavorites([]);
+      return;
+    }
+
+    try {
+      const data = await getFavoritesAPI(userToken);
+
+      // data.favorites is an array of productId strings (e.g. ["12", "45"])
+      const favoriteIds = data?.favorites || [];
+
+      if (!favoriteIds.length) {
         setFavorites([]);
         return;
       }
 
-      try {
-        const data = await getFavoritesAPI(userToken);
+      // Fetch full product list and filter to favorites
+      const res = await fetch(`${BASE_URL}/allproducts`);
+      const products = await res.json();
 
-        // data.favorites is an array of productId strings (e.g. ["12", "45"])
-        const favoriteIds = data?.favorites || [];
+      const enriched = favoriteIds
+        .map((id) => products.find((p) => String(p.id) === String(id)))
+        .filter(Boolean);
 
-        if (!favoriteIds.length) {
-          setFavorites([]);
-          return;
-        }
+      setFavorites(enriched);
+    } catch (err) {
+      console.log("Favorites load error:", err);
+      setFavorites([]);
+    }
+  };
 
-        // Fetch full product list and filter to favorites
-        const res = await fetch(`${BASE_URL}/allproducts`);
-        const products = await res.json();
-
-        const enriched = favoriteIds
-          .map((id) => products.find((p) => String(p.id) === String(id)))
-          .filter(Boolean);
-
-        setFavorites(enriched);
-      } catch (err) {
-        console.log("Favorites load error:", err);
-        setFavorites([]);
-      }
-    };
-
-    loadFavorites();
-  }, [userToken]);
+  useEffect(() => { loadFavorites(); }, [userToken]);
 
   // ✅ CHECK IF A PRODUCT IS FAVORITED
   const isFavorite = (productId) => {
@@ -149,6 +149,7 @@ export const FavoritesProvider = ({ children }) => {
         removeFromFavorites,
         toggleFavorite,
         clearFavorites,
+        refreshFavorites: loadFavorites,
       }}
     >
       {children}

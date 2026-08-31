@@ -14,6 +14,7 @@ import {
   SafeAreaView,
   Dimensions,
   Animated,
+  RefreshControl,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useCart }      from "../context/CartContext";
@@ -25,7 +26,7 @@ const { width } = Dimensions.get("window");
 const BASE_URL =
   Platform.OS === "web"
     ? "http://localhost:4000"
-    : "https://unlaboured-charise-unmachined.ngrok-free.dev";
+    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 /* ─────────────────── HELPERS ─────────────────── */
 
@@ -81,13 +82,12 @@ const StarRow = ({ rating, size = 13, onPress }) => (
    MAIN COMPONENT
 ═══════════════════════════════════════════════ */
 
-const SHOE_CATEGORIES  = ["nike", "adidas", "puma", "nb"];
-const WATCH_CATEGORIES = ["watch"];
+const SHOE_CATEGORIES = ["nike", "adidas", "puma", "nb"];
 
 export default function ProductDetailScreen({ route }) {
   const navigation                     = useNavigation();
-  const { addToCart }                  = useCart();
-  const { toggleFavorite, isFavorite } = useFavorites();
+  const { addToCart, refreshCart }               = useCart();
+  const { toggleFavorite, isFavorite, refreshFavorites } = useFavorites();
   const { product }                    = route.params || {};
 
   const [selectedSize,     setSelectedSize]     = useState(null);
@@ -96,15 +96,13 @@ export default function ProductDetailScreen({ route }) {
   const [showReviews,      setShowReviews]      = useState(false);
   const [reviews,          setReviews]          = useState([]);
   const [loadingReviews,   setLoadingReviews]   = useState(true);
-  const [reviewText,       setReviewText]       = useState("");
-  const [rating,           setRating]           = useState(0);
-  const [submitting,       setSubmitting]       = useState(false);
+  
 
   const heartScale     = useRef(new Animated.Value(1)).current;
   const imageSliderRef = useRef(null);
 
-  const favorite       = isFavorite(product?.id);
-  const isWatchProduct = WATCH_CATEGORIES.includes((product?.category || "").toLowerCase());
+  const favorite = isFavorite(product?.id);
+  const isShoe   = SHOE_CATEGORIES.includes((product?.category || "").toLowerCase());
 
   if (!product) {
     return (
@@ -128,27 +126,14 @@ export default function ProductDetailScreen({ route }) {
     finally  { setLoadingReviews(false); }
   };
 
-  /* ── submit review ── */
-  const submitReview = async () => {
-    if (!reviewText.trim() || rating === 0) {
-      Toast.show({ type: "error", text1: "Add a rating and review" });
-      return;
-    }
-    try {
-      setSubmitting(true);
-      const res  = await fetch(`${BASE_URL}/addreview`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: product.id, review: reviewText, rating }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        Toast.show({ type: "success", text1: "Review submitted" });
-        setReviewText(""); setRating(0); fetchReviews();
-      } else throw new Error();
-    } catch { Toast.show({ type: "error", text1: "Failed to submit" }); }
-    finally  { setSubmitting(false); }
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchReviews(), refreshCart(), refreshFavorites()]);
+    setRefreshing(false);
   };
+
+ 
 
   /* ── stats ── */
   const averageRating = useMemo(() => {
@@ -240,6 +225,9 @@ export default function ProductDetailScreen({ route }) {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 130 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+        }
       >
 
         {/* ══ IMAGE HERO WITH SLIDER ══ */}
@@ -328,14 +316,10 @@ export default function ProductDetailScreen({ route }) {
         {sortedSizes.length > 0 && (
           <View style={s.sizeBlock}>
             <View style={s.sizeHeader}>
-              <Text style={s.sizeTitle}>
-                {isWatchProduct ? "SELECT CASE SIZE" : "SELECT SIZE"}
-              </Text>
-              {!isWatchProduct && (
-                <TouchableOpacity>
-                  <Text style={s.sizeGuide}>Size Guide ›</Text>
-                </TouchableOpacity>
-              )}
+              <Text style={s.sizeTitle}>SELECT SIZE</Text>
+              <TouchableOpacity>
+                <Text style={s.sizeGuide}>Size Guide ›</Text>
+              </TouchableOpacity>
             </View>
 
             <ScrollView
@@ -356,7 +340,7 @@ export default function ProductDetailScreen({ route }) {
                     activeOpacity={0.7}
                   >
                     <Text style={[s.sizeChipText, active && s.sizeChipTextActive, oos && s.sizeChipTextOos]}>
-                      {isWatchProduct ? `${sz}mm` : sz}
+                      {sz}
                     </Text>
                     {oos && <View style={s.oosLine} />}
                   </TouchableOpacity>
@@ -440,32 +424,7 @@ export default function ProductDetailScreen({ route }) {
                 ))
               )}
 
-              {/* ── Write a review ── */}
-              <View style={s.writeReview}>
-                <Text style={s.writeTitle}>WRITE A REVIEW</Text>
-                <View style={s.writeRatingRow}>
-                  <Text style={s.writeMuted}>Your rating</Text>
-                  <StarRow rating={rating} size={22} onPress={setRating} />
-                </View>
-                <TextInput
-                  style={s.reviewInput}
-                  placeholder="Share your thoughts…"
-                  placeholderTextColor="#383838"
-                  multiline
-                  value={reviewText}
-                  onChangeText={setReviewText}
-                />
-                <TouchableOpacity
-                  style={[s.submitBtn, submitting && { opacity: 0.5 }]}
-                  onPress={submitReview}
-                  disabled={submitting}
-                >
-                  {submitting
-                    ? <ActivityIndicator color="#000" size="small" />
-                    : <Text style={s.submitText}>SUBMIT REVIEW</Text>
-                  }
-                </TouchableOpacity>
-              </View>
+              
             </View>
           )}
         </View>

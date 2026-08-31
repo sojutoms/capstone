@@ -59,6 +59,12 @@ const userSchema = new mongoose.Schema(
     email:          { type: String, required: true, unique: true, lowercase: true, trim: true },
     password:       { type: String, required: true },
     phone:          { type: String, default: "" },
+    // Mobile-only profile extras (city/province + a short bio, capped at 15
+    // words — enforced in the controller, not here, so partial saves from
+    // other flows never get blocked by mongoose validators).
+    place:          { type: String, default: "", trim: true },
+    photo:          { type: String, default: "" },
+    bio:            { type: String, default: "", trim: true },
     status:         { type: String, default: "active", enum: ["active", "inactive", "banned"] },
     cartData:       { type: mongoose.Schema.Types.Mixed, default: {} },
     favorites:      { type: [String], default: [] },

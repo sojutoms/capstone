@@ -14,6 +14,7 @@ import Footer from "./Components/Footer/Footer";
 import ScrollToTop from "./Components/ScrollToTop/ScrollToTop";
 import AdminTrigger from "./Components/AdminTrigger/AdminTrigger";
 import Loader from "./Components/Loader/Loader";
+import ChatWidget from "./Components/Chatbot/ChatWidget";
 
 // Context Providers
 import ShopContextProvider from "./Context/ShopContext";
@@ -36,16 +37,10 @@ const MyVouchers = lazy(() => import("./Pages/MyVouchers"));
 
 // Lazy Loaded Quick Links
 const AboutUs = lazy(() => import("./Pages/AboutUs"));
-const GiftCards = lazy(() => import("./Pages/GiftCards"));
 const ContactUs = lazy(() => import("./Pages/ContactUs"));
 const ShippingInfo = lazy(() => import("./Pages/ShippingInfo"));
 const Returns = lazy(() => import("./Pages/Returns"));
 const SizeGuide = lazy(() => import("./Pages/SizeGuide"));
-const OurStory = lazy(() => import("./Pages/OurStory"));
-const Careers = lazy(() => import("./Pages/Careers"));
-const Sustainability = lazy(() => import("./Pages/Sustainability"));
-const Press = lazy(() => import("./Pages/Press"));
-const Affiliates = lazy(() => import("./Pages/Affiliates"));
 const PrivacyPolicy = lazy(() => import("./Pages/PrivacyPolicy"));
 const Terms = lazy(() => import("./Pages/Terms"));
 const Cookies = lazy(() => import("./Pages/Cookies"));
@@ -97,13 +92,7 @@ function App() {
                     <Route path="/size-guide" element={<SizeGuide />} />
                     <Route path="/track-order" element={<OrderHistory />} />
 
-                    {/* ── Company & Legal ── */}
-                    <Route path="/our-story" element={<OurStory />} />
-                    <Route path="/careers" element={<Careers />} />
-                    <Route path="/gift-cards" element={<GiftCards />} />
-                    <Route path="/sustainability" element={<Sustainability />} />
-                    <Route path="/press" element={<Press />} />
-                    <Route path="/affiliates" element={<Affiliates />} />
+                    {/* ── Legal ── */}
                     <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                     <Route path="/privacy" element={<PrivacyPolicy />} />
                     <Route path="/terms" element={<Terms />} />
@@ -115,6 +104,7 @@ function App() {
                 </Suspense>
               </div>
               <Footer />
+              <ChatWidget />
             </FavoritesProvider>
           </ShopContextProvider>
         </BrowserRouter>

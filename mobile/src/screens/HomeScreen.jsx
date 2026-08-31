@@ -13,17 +13,27 @@ import {
   SafeAreaView,
   Dimensions,
   Animated,
+  RefreshControl,
 } from "react-native";
 import { useFavorites } from "../context/FavoritesContext";
+import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.58;
 const TRENDING_CARD_WIDTH = width * 0.58;
 
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return "GOOD MORNING";
+  if (hour >= 12 && hour < 17) return "GOOD AFTERNOON";
+  return "GOOD EVENING";
+};
+
 const BASE_URL =
   Platform.OS === "web"
     ? "http://localhost:4000"
-    : "https://unlaboured-charise-unmachined.ngrok-free.dev";
+    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 /* ─────────────────── PRICE HELPERS ─────────────────── */
 
@@ -96,21 +106,9 @@ const getLowestPrice = (product) => {
 
 /* ─────────────────── CONFIG ─────────────────── */
 
-const BRANDS = [
-  { label: "All",         value: "all" },
-  { label: "Nike",        value: "nike" },
-  { label: "Adidas",      value: "adidas" },
-  { label: "Puma",        value: "puma" },
-  { label: "New Balance", value: "nb" },
-];
 
-const QUICK_CATS = [
-  { label: "All" },
-  { label: "Shoes" },
-  { label: "Watch" },
-  { label: "Collectibles" },
-  { label: "Bags" },
-];
+
+
 
 const HERO_SLIDES = [
   {
@@ -279,7 +277,10 @@ const DroppedCard = ({ item, onPress }) => {
 /* ─────────────────── MAIN SCREEN ─────────────────── */
 
 export default function HomeScreen({ navigation }) {
-  const { favorites } = useFavorites();
+  const { favorites, refreshFavorites } = useFavorites();
+  const { refreshCart } = useCart();
+  const { userProfile, refreshUserProfile } = useAuth();
+  const displayName = (userProfile?.name || "").trim().split(" ")[0].toUpperCase() || "GOODSOLES";
   const [products,       setProducts]       = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [selectedBrand,  setSelectedBrand]  = useState("all");
@@ -296,6 +297,8 @@ export default function HomeScreen({ navigation }) {
     return () => clearInterval(timer);
   }, [heroIndex]);
 
+  const [refreshing, setRefreshing] = useState(false);
+
   useEffect(() => { fetchProducts(); }, []);
 
   const fetchProducts = async () => {
@@ -309,6 +312,12 @@ export default function HomeScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchProducts(), refreshCart(), refreshFavorites(), refreshUserProfile()]);
+    setRefreshing(false);
   };
 
   const filteredProducts =
@@ -336,13 +345,16 @@ export default function HomeScreen({ navigation }) {
         style={s.container}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 48 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+        }
       >
 
         {/* ── TOP NAV ── */}
         <View style={s.topNav}>
           <View>
-            <Text style={s.eyebrow}>GOOD MORNING</Text>
-            <Text style={s.navTitle}>GOODSOLES</Text>
+            <Text style={s.eyebrow}>{getGreeting()}</Text>
+            <Text style={s.navTitle}>{displayName}</Text>
           </View>
           <View style={s.navIcons}>
             <TouchableOpacity style={s.iconBtn}>
@@ -422,27 +434,6 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        {/* ── QUICK CATEGORIES ── */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={s.quickCatRow}
-          contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
-        >
-          {QUICK_CATS.map((cat) => (
-            <TouchableOpacity
-              key={cat.label}
-              onPress={() => setActiveQuickCat(cat.label)}
-              style={[s.quickCat, activeQuickCat === cat.label && s.quickCatActive]}
-              activeOpacity={0.8}
-            >
-              <Text style={[s.quickCatLabel, activeQuickCat === cat.label && s.quickCatLabelActive]}>
-                {cat.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
         {/* ── TRENDING NOW ── */}
         {trendingProducts.length > 0 && (
           <View style={s.trendingSection}>
@@ -505,55 +496,6 @@ export default function HomeScreen({ navigation }) {
             </ScrollView>
           </View>
         )}
-
-        {/* ── PRODUCTS — horizontal swipe ── */}
-        <View style={{ marginTop: 20 }}>
-          <SectionHeader title="PRODUCTS" onSeeAll={() => {}} />
-
-          {/* Brand chips */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={s.brandsRow}
-            contentContainerStyle={{ paddingHorizontal: 16 }}
-          >
-            {BRANDS.map((b) => (
-              <TouchableOpacity
-                key={b.value}
-                onPress={() => setSelectedBrand(b.value)}
-                style={[s.brandChip, selectedBrand === b.value && s.brandChipActive]}
-              >
-                <Text style={[s.brandChipText, selectedBrand === b.value && s.brandChipTextActive]}>
-                  {b.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          {filteredProducts.length === 0 ? (
-            <View style={s.emptyState}>
-              <Text style={s.emptyText}>No products found</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={filteredProducts}
-              keyExtractor={(item, index) => item._id || String(index)}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={CARD_WIDTH + 12}
-              snapToAlignment="start"
-              decelerationRate="fast"
-              contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: 4 }}
-              renderItem={({ item, index }) => (
-                <ProductCard
-                  item={item}
-                  index={index}
-                  onPress={() => navigation.navigate("ProductDetail", { product: item })}
-                />
-              )}
-            />
-          )}
-        </View>
 
         {/* ── BOTTOM STATS BAR ── */}
         <View style={s.statsBar}>

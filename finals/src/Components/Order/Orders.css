@@ -73,7 +73,7 @@
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
 }
 
 .highlight {
@@ -86,7 +86,7 @@
   font-family: 'Bebas Neue', sans-serif;
   font-size: 14px;
   letter-spacing: 0.2em;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-muted);
   margin-bottom: 24px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   padding-bottom: 8px;
@@ -125,7 +125,7 @@
 
 .item-sub-meta {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   display: flex;
   gap: 12px;
 }
@@ -149,7 +149,7 @@
   justify-content: space-between;
   margin-bottom: 12px;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
 }
 
 .receipt-totals-row--total {
@@ -189,8 +189,8 @@
 
 .terminal-btn--secondary {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
 }
 
 .terminal-btn:hover {
@@ -219,7 +219,7 @@
 .holographic-stamp span {
   font-family: 'Bebas Neue', sans-serif;
   font-size: 12px;
-  color: #ffffff;
+  color: var(--text-primary);
   text-align: center;
 }
 
@@ -266,13 +266,13 @@
 
 .gcash-paid-text strong {
   font-size: 14px;
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: 800;
 }
 
 .gcash-paid-text span {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }

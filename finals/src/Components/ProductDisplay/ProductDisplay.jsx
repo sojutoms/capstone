@@ -298,6 +298,20 @@ const ProductDisplay = ({ product, loading = false }) => {
     return { disabled: false, label: "ADD TO BAG" };
   };
 
+  // Buy Now skips the bag entirely, so it only cares whether the selected
+  // size actually has stock — not how much of it is already sitting in the
+  // user's cart (that's what "MAX IN BAG" is about, and doesn't apply here).
+  const getBuyNowState = () => {
+    if (!product) return { disabled: true, label: "BUY NOW" };
+    if (isSimpleCategory) {
+      const total = Number.isFinite(toNumber(product.stock)) ? Number(toNumber(product.stock)) : 0;
+      if (total <= 0) return { disabled: true, label: "OUT OF STOCK" };
+      return { disabled: false, label: "BUY NOW" };
+    }
+    if (selectedSize && getSizeStock(selectedSize) <= 0) return { disabled: true, label: "OUT OF STOCK" };
+    return { disabled: false, label: "BUY NOW" };
+  };
+
   const fetchReviews = useCallback(async () => {
     if (!product?.id) return;
     try {
@@ -495,6 +509,23 @@ const ProductDisplay = ({ product, loading = false }) => {
     }
   };
 
+  const handleBuyNow = () => {
+    if (!product) return;
+    const token = localStorage.getItem("auth-token");
+    if (!token) { navigate("/login"); return; }
+    const hasSizes = product.sizes && (Array.isArray(product.sizes) ? product.sizes.length > 0 : Object.keys(product.sizes).length > 0);
+    if (hasSizes && !isSimpleCategory && !selectedSize) {
+      addToast("error", "Please select a size before buying.");
+      setSizeDropdownOpen(true);
+      return;
+    }
+    // Doesn't touch the cart at all — PlaceOrder reads this straight from
+    // router state and checks out just this one item.
+    navigate("/place-order", {
+      state: { buyNowItem: { id: product.id, size: selectedSize || "", quantity: 1 } },
+    });
+  };
+
   const handleFavoriteClick = async () => {
     if (!product) return;
     const token = localStorage.getItem("auth-token");
@@ -528,6 +559,7 @@ const ProductDisplay = ({ product, loading = false }) => {
   const isFav = favoriteLocal;
   const lowestAvailablePrice = getLowestAvailablePrice();
   const { disabled: addDisabled, label: addLabel } = getAddToCartState();
+  const { disabled: buyNowDisabled, label: buyNowLabel } = getBuyNowState();
   const hasSizes = product.sizes && (Array.isArray(product.sizes) ? product.sizes.length > 0 : Object.keys(product.sizes).length > 0);
   const selectedSizeRemaining = selectedSize ? getRemainingStock(selectedSize) : null;
 
@@ -672,17 +704,10 @@ const ProductDisplay = ({ product, loading = false }) => {
 
         {/* Shipping Upsell Message */}
         <div className="product-shipping-upsell">
-          { (selectedSize ? displayPrice : lowestAvailablePrice) >= 5000 ? (
-            <div className="upsell-qualified">
-              <span className="upsell-line"></span>
-              <p>This item qualifies for <strong>COMPLIMENTARY SHIPPING</strong></p>
-            </div>
-          ) : Number.isFinite(selectedSize ? displayPrice : lowestAvailablePrice) ? (
-            <div className="upsell-pending">
-              <span className="upsell-line" style={{ width: `${((selectedSize ? displayPrice : lowestAvailablePrice) / 5000) * 100}%` }}></span>
-              <p>Add this to your bag and you're only <strong>₱{(5000 - (selectedSize ? displayPrice : lowestAvailablePrice)).toLocaleString()}</strong> away from elite delivery.</p>
-            </div>
-          ) : null}
+          <div className="upsell-qualified">
+            <span className="upsell-line"></span>
+            <p><strong>COMPLIMENTARY SHIPPING</strong> to Metro Manila &mdash; rates vary by region at checkout</p>
+          </div>
         </div>
 
         {/* Category / Brand / Tags */}
@@ -972,22 +997,28 @@ const ProductDisplay = ({ product, loading = false }) => {
 
         {/* Actions */}
         <div className="product-actions">
-          <button className="add-to-cart-btn" onClick={handleAddToCart} disabled={addingToCart || addDisabled}>
-            {addingToCart ? "Adding..." : addLabel}
-          </button>
+          <div className="product-actions-primary">
+            <button className="add-to-cart-btn" onClick={handleAddToCart} disabled={addingToCart || addDisabled}>
+              {addingToCart ? "Adding..." : addLabel}
+            </button>
+            <button className="buy-now-btn" onClick={handleBuyNow} disabled={buyNowDisabled}>
+              {buyNowLabel}
+            </button>
+          </div>
           <button
             className={`favorite-btn ${isFav ? "active" : ""}`}
             onClick={handleFavoriteClick}
             title={isFav ? "Remove from favorites" : "Add to favorites"}
+            aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
             aria-pressed={isFav}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24"
+            <svg width="18" height="18" viewBox="0 0 24 24"
               fill={isFav ? "currentColor" : "none"}
               stroke="currentColor" strokeWidth="1.5"
               strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
-            <span>Favorite</span>
+            <span>{isFav ? "Saved to Favorites" : "Add to Favorites"}</span>
           </button>
         </div>
       </div>

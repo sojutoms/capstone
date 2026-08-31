@@ -28,3 +28,21 @@ Body: {
     at fulfilled (C:\Users\Administrator\Downloads\FinalProject\FinalProject\backend\node_modules\@getbrevo\brevo\dist\cjs\api\resources\transactionalEmails\client\Client.js:39:58)
     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
 
+[2026-08-17T10:12:04.324Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 112.211.124.10. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 112.211.124.10. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject (2)\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-08-17T10:12:04.980Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 112.211.124.10. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 112.211.124.10. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject (2)\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+

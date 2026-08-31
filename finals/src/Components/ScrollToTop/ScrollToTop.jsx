@@ -5,15 +5,13 @@ const ScrollToTop = () => {
     const { pathname } = useLocation();
 
     useEffect(() => {
-        // Instant scroll to top - not smooth, to avoid any scroll position issues
-        window.scrollTo(0, 0);
-        // Also reset any saved scroll positions
-        if (document.documentElement) {
-            document.documentElement.scrollTop = 0;
-        }
-        if (document.body) {
-            document.body.scrollTop = 0;
-        }
+        // `html { scroll-behavior: smooth }` is set globally, which makes even
+        // this "instant" reset animate — and race with anything that wants a
+        // deliberate smooth scroll shortly after navigating (e.g. Contact Us's
+        // "Find Store" button scrolling to the store map on the home page).
+        // Explicit `behavior: "instant"` opts out of that regardless of the
+        // global CSS setting.
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     }, [pathname]);
 
     return null;

@@ -18,20 +18,20 @@ const PrivacyPolicy = () => {
                     <p style={{ ...s.legalText, fontStyle: 'italic' }}>Last updated: October 2025</p>
                     <h2 style={s.legalHeading}>Introduction</h2>
                     <p style={s.legalText}>
-                        At Sneaky Concepts, we take your privacy seriously. This Privacy Policy explains how we
+                        At Good Soles PH, we take your privacy seriously. This Privacy Policy explains how we
                         collect, use, and protect your personal information when you use our website and services.
                     </p>
                 </section>
 
                 <section style={s.contentSection}>
                     <h2 style={s.legalHeading}>Information We Collect</h2>
-                    <p style={{ ...s.legalText, color: '#ffffff', fontWeight: 600 }}>Personal Information:</p>
+                    <p style={{ ...s.legalText, color: 'var(--text-primary)', fontWeight: 600 }}>Personal Information:</p>
                     <ul style={s.legalList}>
                         {['Name, email address, and phone number', 'Shipping and billing addresses', 'Payment information (processed securely)', 'Order history and preferences'].map((item, i) => (
                             <li key={i} style={s.legalListItem}>{item}</li>
                         ))}
                     </ul>
-                    <p style={{ ...s.legalText, color: '#ffffff', fontWeight: 600, marginTop: '16px' }}>Automatic Information:</p>
+                    <p style={{ ...s.legalText, color: 'var(--text-primary)', fontWeight: 600, marginTop: '16px' }}>Automatic Information:</p>
                     <ul style={s.legalList}>
                         {['Browser type and IP address', 'Cookies and usage data', 'Device information'].map((item, i) => (
                             <li key={i} style={s.legalListItem}>{item}</li>
@@ -70,7 +70,7 @@ const PrivacyPolicy = () => {
                     <h2 style={s.legalHeading}>Contact Us</h2>
                     <p style={s.legalText}>
                         If you have questions about this Privacy Policy, please contact us at{' '}
-                        <span style={{ color: '#ffffff' }}>sneaky-concepts-privacy@gmail.com</span>
+                        <span style={{ color: 'var(--text-primary)' }}>good-soles-ph@gmail.com</span>
                     </p>
                 </section>
             </div>

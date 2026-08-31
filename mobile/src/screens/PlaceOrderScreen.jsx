@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,11 +10,15 @@ import {
   Platform,
   Dimensions,
   ActivityIndicator,
+  Modal,
+  Linking,
+  AppState,
 } from "react-native";
 import axios from "axios";
 import { Picker } from "@react-native-picker/picker";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { getShippingFee, getShippingTier } from "../services/shippingFee";
 
 const NCR_REGION_CODE = "1300000000";
 const { width } = Dimensions.get("window");
@@ -24,7 +28,7 @@ const isTablet = width > 768;
 const BASE_URL =
   Platform.OS === "web"
     ? "http://localhost:4000"
-    : "https://unlaboured-charise-unmachined.ngrok-free.dev";
+    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 /* ─── tiny helpers ─────────────────────────────────────────────────────────── */
 
@@ -43,13 +47,32 @@ export default function PlaceOrderScreen({ navigation }) {
   const { cart, clearCart } = useCart();
   const { userToken }       = useAuth();
 
-  const [method, setMethod] = useState("cod");
+  const [method, setMethod] = useState("online");
 
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", street: "", phone: "",
     region: "", province: "", city: "", barangay: "",
-    cardName: "", cardNumber: "", expiry: "", cvv: "",
   });
+
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [pendingOrderNumber, setPendingOrderNumber] = useState(null);
+  const pendingOrderRef = useRef(null);
+
+  // When the user comes back to the app after paying in the external
+  // browser, verify the payment automatically instead of making them tap
+  // something — pendingOrderRef (not state) so the listener always reads
+  // the latest value without needing to be re-subscribed on every change.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active" && pendingOrderRef.current) {
+        const orderNumber = pendingOrderRef.current;
+        pendingOrderRef.current = null;
+        finalizePayment(orderNumber);
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   const [errors,             setErrors]             = useState({});
   const [saveAddress,        setSaveAddress]        = useState(false);
@@ -83,8 +106,13 @@ export default function PlaceOrderScreen({ navigation }) {
     return Number(item?.new_price) || Number(item?.price) || 0;
   };
 
-  const calculateTotal = () =>
+  const calculateSubtotal = () =>
     cart.reduce((total, item) => total + getSizePrice(item) * item.quantity, 0);
+
+  const shippingFee  = getShippingFee(form.region);
+  const shippingTier = getShippingTier(form.region);
+
+  const calculateTotal = () => calculateSubtotal() + shippingFee;
 
   /* ── mount ── */
   useEffect(() => {
@@ -176,17 +204,48 @@ export default function PlaceOrderScreen({ navigation }) {
     const ph = (form.phone || "").replace(/\D/g, "");
     if (!ph) e.phone = "Phone is required";
     else if (!/^\d{11}$/.test(ph)) e.phone = "Must be 11 digits";
-    if (method === "card") {
-      if (!form.cardName.trim()) e.cardName = "Cardholder name required";
-      if (!form.cardNumber.trim()) e.cardNumber = "Card number required";
-      else if (!/^\d{16}$/.test(form.cardNumber.replace(/\s/g, ""))) e.cardNumber = "Must be 16 digits";
-      if (!form.expiry.trim()) e.expiry = "Expiry required";
-      else if (!/^\d{2}\/\d{2}$/.test(form.expiry)) e.expiry = "Format: MM/YY";
-      if (!form.cvv.trim()) e.cvv = "CVV required";
-      else if (!/^\d{3,4}$/.test(form.cvv)) e.cvv = "CVV must be 3-4 digits";
-    }
     setErrors(e);
     return Object.keys(e).length === 0;
+  };
+
+  /* ── payment: PayMongo hosted checkout ── */
+  const startPayMongoCheckout = async (orderNumber) => {
+    try {
+      const res  = await fetch(`${BASE_URL}/create-checkout-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "auth-token": userToken || "" },
+        body: JSON.stringify({ orderNumber }),
+      });
+      const data = await res.json();
+      if (data.success && data.checkoutUrl) {
+        pendingOrderRef.current = orderNumber;
+        setPendingOrderNumber(orderNumber);
+        await Linking.openURL(data.checkoutUrl);
+      } else {
+        Alert.alert("Payment Error", data.error || "Order placed, but payment could not be started. You can retry from Order History.");
+        goToOrders(orderNumber);
+      }
+    } catch {
+      Alert.alert("Network Error", "Order placed, but payment could not be started. You can retry from Order History.");
+      goToOrders(orderNumber);
+    }
+  };
+
+  const goToOrders = (orderNumber) => {
+    navigation.reset({ index: 0, routes: [{ name: "CartScreen", params: undefined }] });
+    navigation.navigate("Orders", { orderNumber });
+  };
+
+  const finalizePayment = async (orderNumber) => {
+    setPendingOrderNumber(null);
+    setVerifying(true);
+    try {
+      await fetch(`${BASE_URL}/payment/verify/${orderNumber}`, {
+        headers: { "auth-token": userToken || "" },
+      });
+    } catch {}
+    setVerifying(false);
+    goToOrders(orderNumber);
   };
 
   /* ── place order ── */
@@ -223,11 +282,12 @@ export default function PlaceOrderScreen({ navigation }) {
       } catch {}
     }
 
+    setPlacingOrder(true);
     try {
       const res          = await fetch(`${BASE_URL}/placeorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "auth-token": userToken || "" },
-        body: JSON.stringify({ items: payload, total, deliveryInfo, paymentMethod: method }),
+        body: JSON.stringify({ items: payload, total, deliveryInfo, paymentMethod: method, shippingFee }),
       });
       const responseText = await res.text();
       let data;
@@ -236,13 +296,18 @@ export default function PlaceOrderScreen({ navigation }) {
       }
       if (data.success) {
         clearCart();
-        navigation.reset({ index: 0, routes: [{ name: "CartScreen", params: undefined }] });
-        navigation.navigate("Orders", { orderNumber: data.orderNumber, purchasedItems: payload });
+        if (method === "online") {
+          await startPayMongoCheckout(data.orderNumber);
+        } else {
+          goToOrders(data.orderNumber);
+        }
       } else {
         Alert.alert("Order Failed", data.error || data.message || JSON.stringify(data));
       }
     } catch (err) {
       Alert.alert("Network Error", err.message || "Could not place order");
+    } finally {
+      setPlacingOrder(false);
     }
   };
 
@@ -312,14 +377,26 @@ export default function PlaceOrderScreen({ navigation }) {
         ) : (
           <Picker
             style={s.picker}
+            mode="dropdown"
             dropdownIconColor="#666"
             selectedValue={form[field]}
             onValueChange={(v) => handleChange(field, v)}
             enabled={enabled && !loading}
           >
-            <Picker.Item label={`Select ${label}`} value="" color="#555" />
+            <Picker.Item
+              label={`Select ${label}`}
+              value=""
+              color={Platform.OS === "android" ? "#888888" : "#555"}
+              style={Platform.OS === "android" ? { backgroundColor: "#141414", color: "#888888" } : {}}
+            />
             {items.map((item) => (
-              <Picker.Item key={item.code} label={item.name} value={item.code} color="#fff" />
+              <Picker.Item
+                key={item.code}
+                label={item.name}
+                value={item.code}
+                color="#fff"
+                style={Platform.OS === "android" ? { backgroundColor: "#141414", color: "#ffffff" } : {}}
+              />
             ))}
           </Picker>
         )}
@@ -459,8 +536,19 @@ export default function PlaceOrderScreen({ navigation }) {
           <Label text="Province" />
           <View style={[s.pickerWrapper, (!hasProvinces || !form.region) && s.pickerDisabled]}>
             {!hasProvinces ? (
-              <Picker style={s.picker} selectedValue={NCR_REGION_CODE} enabled={false} dropdownIconColor="#666">
-                <Picker.Item label="Metro Manila" value={NCR_REGION_CODE} color="#fff" />
+              <Picker
+                style={s.picker}
+                mode="dropdown"
+                selectedValue={NCR_REGION_CODE}
+                enabled={false}
+                dropdownIconColor="#666"
+              >
+                <Picker.Item
+                  label="Metro Manila"
+                  value={NCR_REGION_CODE}
+                  color="#fff"
+                  style={Platform.OS === "android" ? { backgroundColor: "#141414", color: "#ffffff" } : {}}
+                />
               </Picker>
             ) : loadingProvinces ? (
               <View style={s.pickerLoading}>
@@ -470,14 +558,26 @@ export default function PlaceOrderScreen({ navigation }) {
             ) : (
               <Picker
                 style={s.picker}
+                mode="dropdown"
                 dropdownIconColor="#666"
                 selectedValue={form.province}
                 onValueChange={(v) => handleChange("province", v)}
                 enabled={!!form.region && !loadingProvinces}
               >
-                <Picker.Item label="Select Province" value="" color="#555" />
+                <Picker.Item
+                  label="Select Province"
+                  value=""
+                  color={Platform.OS === "android" ? "#888888" : "#555"}
+                  style={Platform.OS === "android" ? { backgroundColor: "#141414", color: "#888888" } : {}}
+                />
                 {provinces.map((p) => (
-                  <Picker.Item key={p.code} label={p.name} value={p.code} color="#fff" />
+                  <Picker.Item
+                    key={p.code}
+                    label={p.name}
+                    value={p.code}
+                    color="#fff"
+                    style={Platform.OS === "android" ? { backgroundColor: "#141414", color: "#ffffff" } : {}}
+                  />
                 ))}
               </Picker>
             )}
@@ -538,9 +638,8 @@ export default function PlaceOrderScreen({ navigation }) {
 
         <View style={s.methodRow}>
           {[
-            { key: "card", label: "CARD" },
-            { key: "gcash", label: "GCASH" },
-            { key: "cod",   label: "Cash on Delivery" },
+            { key: "online", label: "Card / GCash / Maya" },
+            { key: "cash on delivery", label: "Cash on Delivery" },
           ].map(({ key, label }) => (
             <TouchableOpacity
               key={key}
@@ -555,62 +654,15 @@ export default function PlaceOrderScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Card details */}
-        {method === "card" && (
-          <View style={s.cardDetails}>
-            <View style={s.fieldGroup}>
-              <Label text="Cardholder Name" />
-              <TextInput
-                style={[s.input, errors.cardName && s.inputError]}
-                value={form.cardName}
-                onChangeText={(v) => handleChange("cardName", v)}
-                placeholder="Name on card"
-                placeholderTextColor="#3A3A3A"
-              />
-              <FieldError msg={errors.cardName} />
-            </View>
-            <View style={s.fieldGroup}>
-              <Label text="Card Number" />
-              <TextInput
-                style={[s.input, errors.cardNumber && s.inputError]}
-                value={form.cardNumber}
-                onChangeText={(v) => handleChange("cardNumber", v)}
-                placeholder="1234 5678 9012 3456"
-                placeholderTextColor="#3A3A3A"
-                keyboardType="number-pad"
-                maxLength={19}
-              />
-              <FieldError msg={errors.cardNumber} />
-            </View>
-            <View style={s.row}>
-              <View style={[s.fieldGroup, { flex: 1 }]}>
-                <Label text="Expiry (MM/YY)" />
-                <TextInput
-                  style={[s.input, errors.expiry && s.inputError]}
-                  value={form.expiry}
-                  onChangeText={(v) => handleChange("expiry", v)}
-                  placeholder="MM/YY"
-                  placeholderTextColor="#3A3A3A"
-                  maxLength={5}
-                />
-                <FieldError msg={errors.expiry} />
-              </View>
-              <View style={[s.fieldGroup, { flex: 1 }]}>
-                <Label text="CVV" />
-                <TextInput
-                  style={[s.input, errors.cvv && s.inputError]}
-                  value={form.cvv}
-                  onChangeText={(v) => handleChange("cvv", v)}
-                  placeholder="•••"
-                  placeholderTextColor="#3A3A3A"
-                  secureTextEntry
-                  maxLength={4}
-                  keyboardType="number-pad"
-                />
-                <FieldError msg={errors.cvv} />
-              </View>
-            </View>
-          </View>
+        {method === "online" && (
+          <Text style={s.methodNote}>
+            You'll be taken to a secure PayMongo checkout page to pay by card, GCash, or Maya.
+          </Text>
+        )}
+        {method === "cash on delivery" && (
+          <Text style={s.methodNote}>
+            Pay in cash when your order arrives — no extra handling fee.
+          </Text>
         )}
       </View>
 
@@ -644,6 +696,21 @@ export default function PlaceOrderScreen({ navigation }) {
 
         <Divider />
 
+        <View style={s.subRow}>
+          <Text style={s.subLabel}>Subtotal</Text>
+          <Text style={s.subValue}>₱{calculateSubtotal().toLocaleString()}</Text>
+        </View>
+        <View style={s.subRow}>
+          <Text style={s.subLabel}>
+            Shipping{shippingTier ? ` (${shippingTier.label})` : ""}
+          </Text>
+          <Text style={s.subValue}>
+            {form.region ? (shippingFee > 0 ? `₱${shippingFee.toLocaleString()}` : "FREE") : "Select a region"}
+          </Text>
+        </View>
+
+        <Divider />
+
         <View style={s.totalRow}>
           <Text style={s.totalLabel}>Total</Text>
           <Text style={s.totalAmount}>₱{calculateTotal().toLocaleString()}</Text>
@@ -651,11 +718,36 @@ export default function PlaceOrderScreen({ navigation }) {
       </View>
 
       {/* ── PLACE ORDER CTA ── */}
-      <TouchableOpacity style={s.ctaBtn} onPress={handlePlaceOrder} activeOpacity={0.88}>
-        <Text style={s.ctaText}>PLACE ORDER</Text>
+      <TouchableOpacity
+        style={[s.ctaBtn, placingOrder && s.ctaBtnDisabled]}
+        onPress={handlePlaceOrder}
+        activeOpacity={0.88}
+        disabled={placingOrder}
+      >
+        {placingOrder ? (
+          <ActivityIndicator size="small" color="#000000" />
+        ) : (
+          <Text style={s.ctaText}>PLACE ORDER</Text>
+        )}
       </TouchableOpacity>
 
       <View style={{ height: 48 }} />
+
+      {/* ── WAITING ON EXTERNAL BROWSER PAYMENT ── */}
+      <Modal visible={!!pendingOrderNumber && !verifying} transparent animationType="fade">
+        <View style={s.verifyOverlay}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={s.verifyText}>Complete your payment in the browser, then come back here.</Text>
+        </View>
+      </Modal>
+
+      {/* ── VERIFYING PAYMENT OVERLAY ── */}
+      <Modal visible={verifying} transparent animationType="fade">
+        <View style={s.verifyOverlay}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+          <Text style={s.verifyText}>Confirming your payment…</Text>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -727,19 +819,20 @@ const s = StyleSheet.create({
     marginTop: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#1E1E1E",
+    borderColor: "#2A2A2A",
     overflow: "hidden",
+    backgroundColor: "#111111",
   },
   savedItem: {
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#1A1A1A",
-    backgroundColor: "#131313",
+    borderBottomColor: "#222222",
+    backgroundColor: "#111111",
     gap: 2,
   },
-  savedName:  { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
-  savedMeta:  { fontSize: 12, color: "#555" },
-  savedPhone: { fontSize: 12, color: "#888", marginTop: 2 },
+  savedName:  { fontSize: 14, fontWeight: "700", color: "#EEEEEE" },
+  savedMeta:  { fontSize: 12, color: "#888888" },
+  savedPhone: { fontSize: 12, color: "#AAAAAA", marginTop: 2 },
 
   /* ── form ── */
   row:       { flexDirection: "row", gap: 10 },
@@ -776,7 +869,7 @@ const s = StyleSheet.create({
     overflow: "hidden",
   },
   pickerDisabled: { backgroundColor: "#0D0D0D", opacity: 0.5 },
-  picker:         { height: 50, width: "100%", color: "#FFFFFF" },
+  picker:         { height: 50, width: "100%", color: "#FFFFFF", backgroundColor: "#141414" },
   pickerLoading: {
     flexDirection: "row",
     alignItems: "center",
@@ -824,17 +917,7 @@ const s = StyleSheet.create({
   methodChipActive:     { borderColor: "#FFFFFF", backgroundColor: "#FFFFFF" },
   methodChipText:       { fontSize: 12, fontWeight: "700", color: "#555", letterSpacing: 0.5 },
   methodChipTextActive: { color: "#000" },
-
-  /* ── card details ── */
-  cardDetails: {
-    marginTop: 16,
-    backgroundColor: "#0A0A0A",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#1A1A1A",
-    padding: 14,
-    gap: 0,
-  },
+  methodNote:           { fontSize: 12, color: "#666", marginTop: 12, lineHeight: 18 },
 
   /* ── order summary ── */
   summaryItem: {
@@ -854,6 +937,15 @@ const s = StyleSheet.create({
   summaryPrice: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
 
   divider: { height: 1, backgroundColor: "#141414", marginVertical: 14 },
+
+  subRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  subLabel: { fontSize: 12, color: "#777" },
+  subValue: { fontSize: 13, fontWeight: "600", color: "#CCCCCC" },
 
   totalRow: {
     flexDirection: "row",
@@ -877,4 +969,15 @@ const s = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 3,
   },
+  ctaBtnDisabled: { opacity: 0.6 },
+
+  verifyOverlay: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.85)",
+    gap: 14,
+    paddingHorizontal: 40,
+  },
+  verifyText: { color: "#CCCCCC", fontSize: 13, letterSpacing: 0.5, textAlign: "center" },
 });

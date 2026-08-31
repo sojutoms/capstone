@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -8,14 +8,32 @@ import {
   TouchableOpacity,
   StatusBar,
   SafeAreaView,
+  RefreshControl,
+  ScrollView,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { useFavorites } from "../context/FavoritesContext";
 import { useCart }      from "../context/CartContext";
 import Toast            from "react-native-toast-message";
 
 export default function FavoritesScreen({ navigation }) {
-  const { favorites, removeFromFavorites, clearFavorites } = useFavorites();
-  const { addToCart } = useCart();
+  const { favorites, removeFromFavorites, clearFavorites, refreshFavorites } = useFavorites();
+  const { addToCart, refreshCart } = useCart();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Picks up anything favorited/unfavorited from the web app while this tab
+  // wasn't in focus, instead of showing whatever was last fetched at login.
+  useFocusEffect(
+    useCallback(() => {
+      refreshFavorites();
+    }, [])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([refreshFavorites(), refreshCart()]);
+    setRefreshing(false);
+  };
 
   const isOutOfStock = (item) => {
     if (!item.sizes || !Object.keys(item.sizes).length)
@@ -70,7 +88,12 @@ export default function FavoritesScreen({ navigation }) {
     return (
       <SafeAreaView style={styles.safe}>
         <StatusBar barStyle="light-content" backgroundColor="#0A0A0A" />
-        <View style={styles.emptyWrap}>
+        <ScrollView
+          contentContainerStyle={styles.emptyWrap}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+          }
+        >
           {/* heart icon */}
           <View style={styles.emptyIcon}>
             <Text style={styles.emptyHeart}>♡</Text>
@@ -79,7 +102,7 @@ export default function FavoritesScreen({ navigation }) {
           <Text style={styles.emptySub}>
             Tap the heart on any product to save it here
           </Text>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -114,6 +137,9 @@ export default function FavoritesScreen({ navigation }) {
         keyExtractor={(item) => String(item.id)}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+        }
         renderItem={({ item, index }) => {
           const price      = getDisplayPrice(item);
           const outOfStock = isOutOfStock(item);
@@ -362,6 +388,7 @@ const styles = StyleSheet.create({
   /* ── empty ── */
   emptyWrap: {
     flex: 1,
+    flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,

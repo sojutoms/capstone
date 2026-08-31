@@ -1,9 +1,16 @@
 const crypto = require("crypto");
 const paymongo = require("../utils/paymongo");
 const Orders = require("../models/Orders");
+const Product = require("../models/Product");
+const { finalizeOnlineOrderPayment, SIMPLE_CATEGORIES } = require("./orderController");
+const { getReservedQtyForItem } = require("../utils/reservations");
 
 const FRONTEND_URL = (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "");
 const WEBHOOK_SECRET = process.env.PAYMONGO_WEBHOOK_SECRET || "";
+
+// How long a checkout session "holds" the last unit(s) of an item for the
+// buyer who clicked Pay Now, before another buyer can claim them instead.
+const CHECKOUT_RESERVATION_MINUTES = 15;
 
 // ─── POST /create-checkout-session ─────────────────────────────────────────────
 const createCheckoutSession = async (req, res) => {
@@ -18,9 +25,115 @@ const createCheckoutSession = async (req, res) => {
     if (order.paymentStatus === "paid")
       return res.status(400).json({ success: false, error: "Order is already paid" });
 
+    // Inventory isn't committed for online orders until payment is confirmed,
+    // so re-check current availability (minus what other in-flight checkouts
+    // are already holding) right before sending this buyer to pay. This is
+    // what actually stops a second buyer from paying for the last unit —
+    // finalizeOnlineOrderPayment's oversold flag is only the fallback for the
+    // (much narrower) case where two of these checks land at the same instant.
+    if (!order.inventoryCommitted) {
+      // Nothing was ever deducted for this order (deferred commit), so a sold-out
+      // checkout can never be completed — cancel it right away instead of leaving
+      // an "unpaid" order sitting in the buyer's order history that looks like
+      // it's still pending. Same endpoint serves both a fresh checkout attempt
+      // (PlaceOrder) and a retry from an existing order (OrderHistory), so this
+      // fixes the phantom-order issue in both places at once.
+      const cancelDeadOrder = async () => {
+        await Orders.updateOne(
+          { orderNumber, status: "pending" },
+          { $set: { status: "cancelled", updatedAt: new Date() } }
+        );
+      };
+
+      // checkoutReservedUntil is a hard, non-renewable deadline: it's set once
+      // on the *first* checkout attempt and never pushed back by a retry. If a
+      // retry click reset it every time, a buyer could keep an item's stock
+      // reserved indefinitely just by repeatedly clicking "Complete Payment"
+      // without ever actually paying. Once the original 15-minute window is
+      // up, cancel it right here (don't wait for the cron) and refuse to
+      // start a new session for it.
+      if (order.checkoutReservedUntil && order.checkoutReservedUntil <= new Date()) {
+        await cancelDeadOrder();
+        return res.status(410).json({
+          success: false,
+          expired: true,
+          error: "This order's 15-minute payment window has expired and it has been cancelled. Please place a new order.",
+        });
+      }
+
+      for (const it of order.items) {
+        const product = await Product.findOne({ id: it.id, isDeleted: { $ne: true } });
+        if (!product) {
+          await cancelDeadOrder();
+          return res.status(409).json({ success: false, error: `${it.name} is no longer available.`, soldOut: true });
+        }
+
+        const isSimple = SIMPLE_CATEGORIES.includes(String(product.category || "").toLowerCase());
+        let actualStock;
+        if (isSimple) {
+          actualStock = Number(product.stock || 0);
+        } else {
+          const sizesArray = Array.isArray(product.sizes) ? product.sizes : [];
+          const sizeEntry = sizesArray.find((s) => String(s.size).trim() === String(it.size || "").trim());
+          actualStock = sizeEntry ? Number(sizeEntry.quantity || 0) : 0;
+        }
+
+        const reservedByOthers = await getReservedQtyForItem(it.id, it.size, order.orderNumber);
+        const trulyAvailable = actualStock - reservedByOthers;
+
+        if (trulyAvailable < it.quantity) {
+          await cancelDeadOrder();
+          return res.status(409).json({
+            success: false,
+            soldOut: true,
+            error: `${it.name}${it.size ? ` (size ${it.size})` : ""} is no longer available — someone else is already checking out the last unit.`,
+          });
+        }
+      }
+
+      // Only set the deadline on the first attempt — a retry within the same
+      // window reuses it as-is rather than pushing it further out.
+      if (!order.checkoutReservedUntil) {
+        order.checkoutReservedUntil = new Date(Date.now() + CHECKOUT_RESERVATION_MINUTES * 60 * 1000);
+      }
+    }
+
     const amountCentavos = Math.round(Number(order.total) * 100);
     if (!Number.isFinite(amountCentavos) || amountCentavos <= 0)
       return res.status(400).json({ success: false, error: "Invalid order total" });
+
+    // Break the charge into separate line items so the shipping fee is
+    // actually visible on PayMongo's own hosted page — bundling everything
+    // into one lump "Order X" line (as before) meant the fee was correctly
+    // charged but invisible there, which read as "shipping isn't working"
+    // even though the saved order total always included it correctly.
+    const subtotalCentavos = Math.round(Number(order.subtotal || 0) * 100);
+    const discountCentavos = Math.round(Number(order.discountAmount || 0) * 100);
+    const shippingCentavos = Math.round(Number(order.shippingFee || 0) * 100);
+    const merchandiseCentavos = Math.max(0, subtotalCentavos - discountCentavos);
+
+    const lineItems = [
+      {
+        currency: "PHP",
+        amount: merchandiseCentavos,
+        name: `Order ${order.orderNumber} — Merchandise${discountCentavos > 0 ? " (after discount)" : ""}`,
+        quantity: 1,
+      },
+    ];
+    if (shippingCentavos > 0) {
+      lineItems.push({
+        currency: "PHP",
+        amount: shippingCentavos,
+        name: "Shipping Fee",
+        quantity: 1,
+      });
+    }
+    // Reconcile any rounding drift onto the merchandise line so the sum
+    // charged always matches order.total exactly.
+    const lineItemsSum = lineItems.reduce((sum, li) => sum + li.amount, 0);
+    if (lineItemsSum !== amountCentavos) {
+      lineItems[0].amount += amountCentavos - lineItemsSum;
+    }
 
     const response = await paymongo.post("/checkout_sessions", {
       data: {
@@ -29,14 +142,7 @@ const createCheckoutSession = async (req, res) => {
           show_description: true,
           show_line_items: true,
           description: `GoodSoles Order ${order.orderNumber}`,
-          line_items: [
-            {
-              currency: "PHP",
-              amount: amountCentavos,
-              name: `Order ${order.orderNumber}`,
-              quantity: 1,
-            },
-          ],
+          line_items: lineItems,
           payment_method_types: ["card", "gcash", "paymaya"],
           success_url: `${FRONTEND_URL}/orders?paymentStatus=success&orderNumber=${encodeURIComponent(order.orderNumber)}`,
           cancel_url: `${FRONTEND_URL}/placeorder?paymentStatus=cancelled&orderNumber=${encodeURIComponent(order.orderNumber)}`,
@@ -87,13 +193,12 @@ const verifyPayment = async (req, res) => {
     const { status, paymentIntentId } = resolveSessionPaymentStatus(response.data.data);
 
     if (status === "paid" && order.paymentStatus !== "paid") {
-      order.paymentStatus = "paid";
-      order.paymentIntentId = paymentIntentId;
-      order.paidAt = new Date();
-      await order.save();
+      if (paymentIntentId) await Orders.updateOne({ orderNumber }, { $set: { paymentIntentId } });
+      await finalizeOnlineOrderPayment(orderNumber);
     }
 
-    return res.json({ success: true, paymentStatus: order.paymentStatus });
+    const fresh = await Orders.findOne({ orderNumber }, "paymentStatus oversold");
+    return res.json({ success: true, paymentStatus: fresh.paymentStatus, oversold: fresh.oversold });
   } catch (err) {
     console.error("verifyPayment error:", err.response?.data || err.message);
     return res.status(500).json({ success: false, error: "Could not verify payment" });
@@ -127,10 +232,9 @@ const handlePaymongoWebhook = async (req, res) => {
       const sessionId = eventData?.id;
       const order = sessionId ? await Orders.findOne({ checkoutSessionId: sessionId }) : null;
       if (order && order.paymentStatus !== "paid") {
-        order.paymentStatus = "paid";
-        order.paidAt = new Date();
-        order.paymentIntentId = eventData?.attributes?.payment_intent?.id || order.paymentIntentId;
-        await order.save();
+        const paymentIntentId = eventData?.attributes?.payment_intent?.id;
+        if (paymentIntentId) await Orders.updateOne({ _id: order._id }, { $set: { paymentIntentId } });
+        await finalizeOnlineOrderPayment(order.orderNumber);
       }
     }
 

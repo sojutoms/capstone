@@ -141,7 +141,7 @@ const StoreMap = () => {
   };
 
   return (
-    <div className={`store-map${expanded ? " store-map--expanded" : ""}`}>
+    <div id="store-map" className={`store-map${expanded ? " store-map--expanded" : ""}`}>
       <div className="store-map__header">
         <div className="store-map__title-group">
           <div className="store-map__dot" />

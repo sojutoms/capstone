@@ -1,4 +1,5 @@
 const Users = require("../models/Users");
+const { computeVoucherDiscount } = require("../utils/vouchers");
 
 // ─── GET /my-vouchers ─────────────────────────────────────────────────────────
 // Returns all vouchers on the authenticated user's account.
@@ -78,11 +79,7 @@ const applyVoucher = async (req, res) => {
       return res.status(400).json({ success: false, error: "This voucher has expired" });
 
     // Compute discount
-    const rawDiscount = (subtotal * voucher.discountPercent) / 100;
-    const discountAmount = voucher.maxDiscount > 0
-      ? Math.min(rawDiscount, voucher.maxDiscount)
-      : rawDiscount;
-    const discountAmountRounded = Math.round(discountAmount * 100) / 100;
+    const discountAmountRounded = computeVoucherDiscount(voucher, subtotal);
     const newTotal = Math.max(0, Math.round((subtotal - discountAmountRounded) * 100) / 100);
 
     return res.json({
