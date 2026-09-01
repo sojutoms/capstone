@@ -14,6 +14,9 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../api/config";
 import { useAuth } from "../context/AuthContext";
+import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
+import { subscribeChatWidget } from "../utils/chatWidgetBus";
+import { getActiveRouteName, subscribeActiveRoute } from "../navigation/activeRoute";
 
 const STORAGE_KEY = "gs_chat_sessions";
 const MAX_SESSIONS = 20;
@@ -43,7 +46,13 @@ export default function ChatWidget() {
   const [error, setError] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [routeName, setRouteName] = useState(getActiveRouteName());
   const scrollRef = useRef(null);
+
+  // The Home hero has its own chat icon (next to the profile avatar) that
+  // publishes here instead of rendering a second entry point on that screen.
+  useEffect(() => subscribeChatWidget(() => setOpen(true)), []);
+  useEffect(() => subscribeActiveRoute(setRouteName), []);
 
   // Wait a couple seconds after login before showing the FAB, so it doesn't
   // pop in immediately on top of the home screen's own load-in animations.
@@ -153,11 +162,13 @@ export default function ChatWidget() {
 
   return (
     <>
-      <TouchableOpacity style={styles.fab} onPress={() => setOpen(true)} activeOpacity={0.85}>
-        <View style={styles.fabBubble}>
-          <View style={styles.fabBubbleTail} />
-        </View>
-      </TouchableOpacity>
+      {routeName !== "HomeScreen" && (
+        <TouchableOpacity style={styles.fab} onPress={() => setOpen(true)} activeOpacity={0.85}>
+          <View style={styles.fabBubble}>
+            <View style={styles.fabBubbleTail} />
+          </View>
+        </TouchableOpacity>
+      )}
 
       <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
         <View style={styles.overlay}>
@@ -250,7 +261,9 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 18,
-    bottom: 96,
+    // Clears the floating glass-pill nav — same clearance every screen
+    // pads its own bottom content by, plus a small visible gap above it.
+    bottom: TAB_BAR_CLEARANCE + 8,
     width: 54,
     height: 54,
     borderRadius: 27,

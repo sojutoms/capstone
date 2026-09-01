@@ -20,6 +20,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { colors, fonts, radius, typography } from "../theme";
+import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const BASE_URL =
   Platform.OS === "web"
@@ -354,7 +355,7 @@ export default function ProfileScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgPrimary },
-  scroll: { paddingBottom: 40 },
+  scroll: { paddingBottom: TAB_BAR_CLEARANCE },
   heroSection: {
     alignItems: "center",
     paddingTop: 24,

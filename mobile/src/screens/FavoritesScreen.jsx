@@ -16,6 +16,7 @@ import { useFavorites } from "../context/FavoritesContext";
 import { useCart }      from "../context/CartContext";
 import Toast            from "react-native-toast-message";
 import { colors, fonts, radius, typography } from "../theme";
+import { triggerFlyToCart } from "../utils/flyToCartBus";
 
 export default function FavoritesScreen({ navigation }) {
   const { favorites, removeFromFavorites, clearFavorites, refreshFavorites } = useFavorites();
@@ -189,7 +190,13 @@ export default function FavoritesScreen({ navigation }) {
                 <TouchableOpacity
                   style={[styles.cartBtn, outOfStock && styles.cartBtnDim]}
                   disabled={outOfStock}
-                  onPress={() => handleAddToCart(item)}
+                  onPress={(e) => {
+                    // No ref plumbing needed inside a FlatList renderItem —
+                    // the tap coordinates from the event are enough to
+                    // start the flight from roughly where the finger was.
+                    triggerFlyToCart({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY, width: 0, height: 0 });
+                    handleAddToCart(item);
+                  }}
                   hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
                   <Text style={styles.cartBtnText}>+ BAG</Text>

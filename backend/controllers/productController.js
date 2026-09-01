@@ -299,7 +299,24 @@ const addReview = async (req, res) => {
 const getReviews = async (req, res) => {
   try {
     const reviews = await Review.find({ productId: Number(req.params.productId) }).sort({ date: -1 }).lean();
-    res.json(reviews);
+
+    // Review.userId is a string copy of the reviewer's Users._id captured at
+    // write time — reviews don't store a photo themselves, so it's joined
+    // in here rather than duplicating it onto every review document.
+    const userIds = [...new Set(
+      reviews.map((r) => r.userId).filter((id) => id && mongoose.Types.ObjectId.isValid(id))
+    )];
+    const users = userIds.length
+      ? await Users.find({ _id: { $in: userIds } }).select("photo").lean()
+      : [];
+    const photoById = new Map(users.map((u) => [String(u._id), u.photo]));
+
+    const reviewsWithPhoto = reviews.map((r) => ({
+      ...r,
+      userPhoto: photoById.get(String(r.userId)) || "",
+    }));
+
+    res.json(reviewsWithPhoto);
   } catch (err) { res.status(500).json({ success: false }); }
 };
 

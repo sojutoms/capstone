@@ -15,12 +15,18 @@ import {
   Dimensions,
   Animated,
   RefreshControl,
+  Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import ImageViewing from "react-native-image-viewing";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCart }      from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import Toast            from "react-native-toast-message";
 import { colors, fonts, radius, typography } from "../theme";
+import PressScale from "../components/PressScale";
+import { triggerFlyToCart } from "../utils/flyToCartBus";
+import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const { width } = Dimensions.get("window");
 
@@ -61,6 +67,12 @@ const formatPrice = (price) => {
   }).format(num);
 };
 
+const formatReviewDate = (dateStr) => {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+};
+
 /* ─────────────────── STAR ROW ─────────────────── */
 
 const StarRow = ({ rating, size = 13, onPress }) => (
@@ -97,10 +109,13 @@ export default function ProductDetailScreen({ route }) {
   const [showReviews,      setShowReviews]      = useState(false);
   const [reviews,          setReviews]          = useState([]);
   const [loadingReviews,   setLoadingReviews]   = useState(true);
+  const [sizeGuideVisible, setSizeGuideVisible] = useState(false);
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
   
 
   const heartScale     = useRef(new Animated.Value(1)).current;
   const imageSliderRef = useRef(null);
+  const addBtnRef      = useRef(null);
 
   const favorite = isFavorite(product?.id);
   const isShoe   = SHOE_CATEGORIES.includes((product?.category || "").toLowerCase());
@@ -171,6 +186,9 @@ export default function ProductDetailScreen({ route }) {
       Toast.show({ type: "error", text1: "Select a size first" });
       return;
     }
+    addBtnRef.current?.measureInWindow((x, y, width, height) => {
+      triggerFlyToCart({ x, y, width, height });
+    });
     addToCart(product, selectedSize);
     Toast.show({ type: "success", text1: "Added to cart", text2: product.name });
   };
@@ -225,7 +243,7 @@ export default function ProductDetailScreen({ route }) {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 130 }}
+        contentContainerStyle={{ paddingBottom: 130 + TAB_BAR_CLEARANCE }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
         }
@@ -243,9 +261,13 @@ export default function ProductDetailScreen({ route }) {
             onScroll={onSliderScroll}
             scrollEventThrottle={16}
             renderItem={({ item }) => (
-              <View style={s.slideItem}>
+              <TouchableOpacity
+                style={s.slideItem}
+                activeOpacity={0.9}
+                onPress={() => setImageViewerVisible(true)}
+              >
                 <Image source={{ uri: item }} style={s.slideImage} resizeMode="contain" />
-              </View>
+              </TouchableOpacity>
             )}
           />
 
@@ -318,7 +340,7 @@ export default function ProductDetailScreen({ route }) {
           <View style={s.sizeBlock}>
             <View style={s.sizeHeader}>
               <Text style={s.sizeTitle}>SELECT SIZE</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => setSizeGuideVisible(true)}>
                 <Text style={s.sizeGuide}>Size Guide ›</Text>
               </TouchableOpacity>
             </View>
@@ -419,6 +441,19 @@ export default function ProductDetailScreen({ route }) {
               ) : (
                 reviews.map((r, i) => (
                   <View key={i} style={s.reviewCard}>
+                    <View style={s.reviewHeader}>
+                      <View style={s.reviewAvatarWrap}>
+                        {r.userPhoto ? (
+                          <Image source={{ uri: r.userPhoto }} style={s.reviewAvatarImg} />
+                        ) : (
+                          <Ionicons name="person" size={14} color={colors.textMuted} />
+                        )}
+                      </View>
+                      <Text style={s.reviewAuthor} numberOfLines={1}>
+                        {r.userName && r.userName !== "Anonymous" ? r.userName : "Anonymous"}
+                      </Text>
+                      {r.date && <Text style={s.reviewDate}>{formatReviewDate(r.date)}</Text>}
+                    </View>
                     <StarRow rating={r.rating || 0} size={11} />
                     <Text style={s.reviewText}>{r.review}</Text>
                   </View>
@@ -440,22 +475,137 @@ export default function ProductDetailScreen({ route }) {
         </View>
 
         {/* ADD TO BAG */}
-        <TouchableOpacity
+        <PressScale
+          ref={addBtnRef}
           style={[s.addBtn, !selectedSize && product.sizes && s.addBtnDim]}
           onPress={handleAddToCart}
-          activeOpacity={0.85}
         >
           <Text style={[s.addBtnText, !selectedSize && product.sizes && s.addBtnTextDim]}>
             {selectedSize || !product.sizes ? "ADD TO BAG" : "SELECT SIZE"}
           </Text>
-        </TouchableOpacity>
+        </PressScale>
 
         {/* PAY button */}
-        <TouchableOpacity style={s.payBtn} onPress={handleAddToCart} activeOpacity={0.85}>
+        <PressScale style={s.payBtn} onPress={handleAddToCart}>
           <Text style={s.payIcon}>⊟</Text>
           <Text style={s.payText}>PAY</Text>
-        </TouchableOpacity>
+        </PressScale>
       </View>
+
+      {/* ══ SIZE GUIDE MODAL — same charts as the web app's /size-guide page ══ */}
+      <Modal
+        visible={sizeGuideVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSizeGuideVisible(false)}
+      >
+        <View style={s.sgOverlay}>
+          <View style={s.sgPanel}>
+            <View style={s.sgHeader}>
+              <View>
+                <Text style={s.sgTitle}>SIZE GUIDE</Text>
+                <Text style={s.sgSubtitle}>Find your perfect fit</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSizeGuideVisible(false)} style={s.sgCloseBtn}>
+                <Text style={s.sgCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.sgBody}>
+              {/* How to measure */}
+              <Text style={s.sgSectionTitle}>How to Measure Your Feet</Text>
+              <View style={s.sgCard}>
+                {[
+                  "Measure your feet at the end of the day when they're largest",
+                  "Stand on a piece of paper and trace your foot",
+                  "Measure from heel to longest toe",
+                  "Use the measurement in inches or centimeters",
+                  "If between sizes, we recommend sizing up",
+                ].map((tip, i) => (
+                  <View key={i} style={s.sgTipRow}>
+                    <Text style={s.sgTipCheck}>✓</Text>
+                    <Text style={s.sgTipText}>{tip}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Men's chart */}
+              <Text style={s.sgSectionTitle}>Men's Shoe Size Chart</Text>
+              <View style={s.sgCard}>
+                <View style={s.sgTableHeader}>
+                  <Text style={[s.sgTh, s.sgCol]}>US</Text>
+                  <Text style={[s.sgTh, s.sgCol]}>UK</Text>
+                  <Text style={[s.sgTh, s.sgCol]}>EU</Text>
+                  <Text style={[s.sgTh, s.sgCol]}>CM</Text>
+                </View>
+                {[
+                  ["7", "6", "40", "25.0"],
+                  ["8", "7", "41", "25.5"],
+                  ["9", "8", "42", "26.0"],
+                  ["10", "9", "43", "27.0"],
+                  ["11", "10", "44", "27.5"],
+                  ["12", "11", "45", "28.0"],
+                ].map((row, i) => (
+                  <View key={i} style={s.sgTableRow}>
+                    {row.map((cell, j) => (
+                      <Text key={j} style={[s.sgTd, s.sgCol]}>{cell}</Text>
+                    ))}
+                  </View>
+                ))}
+              </View>
+
+              {/* Women's chart */}
+              <Text style={s.sgSectionTitle}>Women's Shoe Size Chart</Text>
+              <View style={s.sgCard}>
+                <View style={s.sgTableHeader}>
+                  <Text style={[s.sgTh, s.sgCol]}>US</Text>
+                  <Text style={[s.sgTh, s.sgCol]}>UK</Text>
+                  <Text style={[s.sgTh, s.sgCol]}>EU</Text>
+                  <Text style={[s.sgTh, s.sgCol]}>CM</Text>
+                </View>
+                {[
+                  ["6", "4", "36", "22.5"],
+                  ["7", "5", "37", "23.0"],
+                  ["8", "6", "38", "23.5"],
+                  ["9", "7", "39", "24.0"],
+                  ["10", "8", "40", "25.0"],
+                  ["11", "9", "41", "25.5"],
+                ].map((row, i) => (
+                  <View key={i} style={s.sgTableRow}>
+                    {row.map((cell, j) => (
+                      <Text key={j} style={[s.sgTd, s.sgCol]}>{cell}</Text>
+                    ))}
+                  </View>
+                ))}
+              </View>
+
+              {/* Width guide */}
+              <Text style={s.sgSectionTitle}>Width Guide</Text>
+              <View style={s.sgWidthRow}>
+                {[
+                  { label: "Narrow (B)", desc: "For feet that are slimmer than average" },
+                  { label: "Medium (D)", desc: "Standard width for most people" },
+                  { label: "Wide (E/EE)", desc: "For feet that are wider than average" },
+                ].map((w, i) => (
+                  <View key={i} style={s.sgWidthCard}>
+                    <Text style={s.sgWidthLabel}>{w.label}</Text>
+                    <Text style={s.sgWidthDesc}>{w.desc}</Text>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ══ FULL-SCREEN IMAGE VIEWER — pinch to zoom, swipe between shots ══ */}
+      <ImageViewing
+        images={images.map((uri) => ({ uri }))}
+        imageIndex={activeImageIndex}
+        visible={imageViewerVisible}
+        onRequestClose={() => setImageViewerVisible(false)}
+        onImageIndexChange={setActiveImageIndex}
+      />
     </SafeAreaView>
   );
 }
@@ -794,6 +944,33 @@ const s = StyleSheet.create({
     fontFamily: fonts.bodyRegular,
     lineHeight: 20,
   },
+  reviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  reviewAvatarWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.bgTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  reviewAvatarImg: { width: "100%", height: "100%" },
+  reviewAuthor: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.textPrimary,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 0.2,
+  },
+  reviewDate: {
+    fontSize: 10,
+    color: colors.textMuted,
+    fontFamily: fonts.bodyRegular,
+  },
   noReviews: {
     fontSize: 13,
     color: colors.textMuted,
@@ -852,7 +1029,9 @@ const s = StyleSheet.create({
   /* ── sticky bottom bar ── */
   stickyBar: {
     position: "absolute",
-    bottom: 0,
+    // Lifted above the floating pill nav instead of sitting flush at the
+    // screen edge — this screen stays reachable behind the pill's tab bar.
+    bottom: TAB_BAR_CLEARANCE,
     left: 0,
     right: 0,
     flexDirection: "row",
@@ -862,7 +1041,6 @@ const s = StyleSheet.create({
     borderTopColor: colors.borderSubtle,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    paddingBottom: Platform.OS === "ios" ? 30 : 14,
     gap: 10,
   },
   stickyLeft: {
@@ -921,4 +1099,82 @@ const s = StyleSheet.create({
     color: colors.textInverse,
     fontSize: 13,
   },
+
+  /* ══ SIZE GUIDE MODAL ══ */
+  sgOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.6)" },
+  sgPanel: {
+    maxHeight: "85%",
+    backgroundColor: colors.bgPrimary,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    overflow: "hidden",
+  },
+  sgHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  sgTitle: { fontSize: 22, color: colors.textPrimary, letterSpacing: 1, fontFamily: fonts.display },
+  sgSubtitle: { fontSize: 12, color: colors.textMuted, marginTop: 2, fontFamily: fonts.bodyRegular },
+  sgCloseBtn: { width: 30, height: 30, alignItems: "center", justifyContent: "center" },
+  sgCloseText: { color: colors.textSecondary, fontSize: 16 },
+
+  sgBody: { padding: 20, paddingBottom: 40 },
+  sgSectionTitle: {
+    fontSize: 15,
+    color: colors.textPrimary,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 0.3,
+    marginTop: 22,
+    marginBottom: 10,
+  },
+  sgCard: {
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    overflow: "hidden",
+  },
+
+  sgTipRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.accentGold,
+  },
+  sgTipCheck: { color: colors.accentGold, fontSize: 13, fontFamily: fonts.bodyBold, marginTop: 1 },
+  sgTipText: { flex: 1, color: colors.textSecondary, fontSize: 13, lineHeight: 19, fontFamily: fonts.bodyRegular },
+
+  sgTableHeader: {
+    flexDirection: "row",
+    backgroundColor: colors.accentGoldWash,
+    paddingVertical: 10,
+  },
+  sgTableRow: {
+    flexDirection: "row",
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+  },
+  sgCol: { flex: 1, textAlign: "center" },
+  sgTh: { fontSize: 11, color: colors.accentGoldLight, letterSpacing: 1, fontFamily: fonts.bodyBold },
+  sgTd: { fontSize: 13, color: colors.textSecondary, fontFamily: fonts.bodyRegular },
+
+  sgWidthRow: { flexDirection: "row", gap: 10 },
+  sgWidthCard: {
+    flex: 1,
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    padding: 12,
+  },
+  sgWidthLabel: { fontSize: 12, color: colors.textPrimary, fontFamily: fonts.bodyBold, marginBottom: 6 },
+  sgWidthDesc: { fontSize: 10.5, color: colors.textMuted, lineHeight: 15, fontFamily: fonts.bodyRegular },
 });

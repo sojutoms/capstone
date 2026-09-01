@@ -9,11 +9,15 @@ import {
   StatusBar,
   ScrollView,
   RefreshControl,
+  SafeAreaView,
+  Platform,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
-import { colors, fonts, radius, typography } from "../theme";
+import { colors, fonts, radius, shadows, spacing, typography } from "../theme";
+import PressScale from "../components/PressScale";
+import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 export default function CartScreen({ navigation }) {
   const { cart, addToCart, decreaseQuantity, removeFromCart, refreshCart } = useCart();
@@ -47,30 +51,32 @@ export default function CartScreen({ navigation }) {
 
   if (!cart.length) {
     return (
-      <ScrollView
-        contentContainerStyle={styles.emptyContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
-        }
-      >
+      <SafeAreaView style={styles.root}>
         <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
-        <Text style={styles.emptyIcon}>🛒</Text>
-        <Text style={styles.emptyTitle}>YOUR CART IS EMPTY</Text>
-        <Text style={styles.emptySubtitle}>
-          Looks like you haven't added anything yet.
-        </Text>
-        <TouchableOpacity
-          style={styles.shopBtn}
-          onPress={() => navigation.goBack()}
+        <ScrollView
+          contentContainerStyle={styles.emptyContainer}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
+          }
         >
-          <Text style={styles.shopBtnText}>EXPLORE PRODUCTS →</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <Text style={styles.emptyIcon}>🛒</Text>
+          <Text style={styles.emptyTitle}>YOUR CART IS EMPTY</Text>
+          <Text style={styles.emptySubtitle}>
+            Looks like you haven't added anything yet.
+          </Text>
+          <TouchableOpacity
+            style={styles.shopBtn}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.shopBtnText}>EXPLORE PRODUCTS →</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.root}>
+    <SafeAreaView style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
 
       {/* ── HEADER ── */}
@@ -79,8 +85,13 @@ export default function CartScreen({ navigation }) {
         <Text style={styles.headerCount}>{cart.length} item{cart.length !== 1 ? "s" : ""}</Text>
       </View>
 
-      {/* ── CART LIST ── */}
+      {/* ── CART LIST ──
+          flex:1 so it fills exactly the space between the header and the
+          summary panel below — the summary sits in normal flow after it,
+          not position:absolute, so it's never separated from a short list
+          by a big fixed paddingBottom hack. */}
       <FlatList
+        style={styles.list}
         contentContainerStyle={styles.listContent}
         data={cart}
         keyExtractor={(item) => `${item.id}_${item.selectedSize}`}
@@ -179,7 +190,7 @@ export default function CartScreen({ navigation }) {
             </View>
           );
         }}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       />
 
       {/* ── ORDER SUMMARY ── */}
@@ -205,16 +216,15 @@ export default function CartScreen({ navigation }) {
           <Text style={styles.totalValue}>₱{calculateTotal().toLocaleString()}</Text>
         </View>
 
-        <TouchableOpacity
+        <PressScale
           style={styles.checkoutBtn}
           onPress={() => navigation.navigate("PlaceOrder")}
-          activeOpacity={0.85}
         >
           <Text style={styles.checkoutText}>PROCEED TO CHECKOUT</Text>
           <Text style={styles.checkoutArrow}>→</Text>
-        </TouchableOpacity>
+        </PressScale>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -232,6 +242,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,
+    paddingBottom: TAB_BAR_CLEARANCE,
   },
   emptyIcon: {
     fontSize: 52,
@@ -258,7 +269,7 @@ const styles = StyleSheet.create({
     borderColor: colors.textPrimary,
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
   },
   shopBtnText: {
     ...typography.button,
@@ -291,23 +302,22 @@ const styles = StyleSheet.create({
   },
 
   // ── LIST ──
+  list: {
+    flex: 1,
+  },
   listContent: {
     padding: 16,
-    paddingBottom: 240,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: colors.borderSubtle,
-    marginVertical: 4,
+    paddingBottom: 16,
   },
 
   // ── CARD ──
   card: {
     flexDirection: "row",
     backgroundColor: colors.bgCard,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     padding: 14,
     gap: 14,
+    ...shadows.sm,
   },
   imageWrapper: {
     position: "relative",
@@ -437,16 +447,18 @@ const styles = StyleSheet.create({
   },
 
   // ── SUMMARY ──
+  // Normal flow, not position:absolute — it sits directly below the list
+  // (which has flex:1 above it) so a short cart never leaves a dead gap
+  // between the last item and this panel.
   summaryContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: colors.bgCard,
     padding: 20,
-    paddingBottom: 28,
+    paddingBottom: TAB_BAR_CLEARANCE,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
+    ...shadows.md,
   },
   summaryTitle: {
     color: colors.textMuted,
@@ -507,7 +519,7 @@ const styles = StyleSheet.create({
   checkoutBtn: {
     backgroundColor: colors.textPrimary,
     paddingVertical: 16,
-    borderRadius: radius.sm,
+    borderRadius: radius.full,
     marginTop: 16,
     flexDirection: "row",
     justifyContent: "center",

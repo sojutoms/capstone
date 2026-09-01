@@ -11,7 +11,7 @@ import LoginScreen from "../screens/LoginScreen";
 import SignupScreen from "../screens/SignupScreen";
 import MainTabs from "./MainTabs";
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
-
+import { stackScreenOptions } from "./screenTransition";
 
 const Stack = createNativeStackNavigator();
 
@@ -27,7 +27,7 @@ export default function AppNavigator() {
   if (showSplash || loading) return <SplashScreen />;
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={stackScreenOptions}>
       {userToken ? (
         // ── Logged in ──────────────────────────────
         <Stack.Screen name="MainTabs" component={MainTabs} />

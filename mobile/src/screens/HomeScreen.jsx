@@ -14,15 +14,231 @@ import {
   Dimensions,
   Animated,
   RefreshControl,
+  Linking,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { CommonActions } from "@react-navigation/native";
 import { useFavorites } from "../context/FavoritesContext";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
-import { colors, fonts, radius, typography } from "../theme";
+import { colors, fonts, radius, shadows, typography } from "../theme";
+import FadeInItem from "../components/FadeInItem";
+import ProductCard from "../components/ProductCard";
+import { getLowestPrice, isOutOfStock } from "../utils/productHelpers";
+import Toast from "react-native-toast-message";
+import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
+import { openChatWidget } from "../utils/chatWidgetBus";
 
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = width * 0.58;
-const TRENDING_CARD_WIDTH = width * 0.58;
+
+const BRAND_LOGO = require("../../assets/GSPH-removebg.png");
+
+// Pure image carousel now — no text overlay, since the greeting/eyebrow/
+// question all live in the header above it instead.
+const HERO_SLIDES = [
+  { id: "1", image: require("../../assets/Running.jpg") },
+  { id: "2", image: require("../../assets/Own.jpg") },
+  { id: "3", image: require("../../assets/Built.jpg") },
+];
+
+/* ─────────────────── CATEGORY DROPDOWN (copied from ShopScreen.jsx,
+   which stays untouched — same CATEGORIES config, AccordionTile, and
+   tileStyles) ─────────────────── */
+
+const CATEGORIES = [
+  {
+    key: "shoes",
+    label: "Shoes",
+    active: true,
+    screen: "ShoesScreen",
+    directNav: false,         // has brand sub-rows
+    brands: [
+      { label: "All Brands", value: "all" },
+      { label: "Nike",        value: "nike" },
+      { label: "Adidas",      value: "adidas" },
+      { label: "Puma",        value: "puma" },
+      { label: "New Balance", value: "nb" },
+    ],
+  },
+  {
+    key: "watches",
+    label: "Watches",
+    active: true,
+    screen: "WatchesScreen",
+    directNav: true,          // navigate directly, no brand sub-rows
+    brands: [],
+  },
+  {
+    key: "bags",
+    label: "Bags",
+    active: true,
+    screen: "BagsScreen",
+    directNav: true,
+    brands: [],
+  },
+  {
+    key: "collectibles",
+    label: "Collectibles",
+    active: true,
+    screen: "CollectiblesScreen",
+    directNav: true,
+    brands: [],
+  },
+];
+
+const AccordionTile = ({ category, onBrandSelect, onDirectNav }) => {
+  const [open, setOpen] = useState(false);
+  const animHeight = useRef(new Animated.Value(0)).current;
+  const animRotate = useRef(new Animated.Value(0)).current;
+
+  const ROW_HEIGHT = 52;
+  const expandedHeight = category.brands.length * ROW_HEIGHT;
+
+  const toggle = () => {
+    if (!category.active) return;
+
+    // Direct navigation — no accordion needed
+    if (category.directNav) {
+      onDirectNav(category);
+      return;
+    }
+
+    const toValue = open ? 0 : 1;
+    setOpen(!open);
+    Animated.parallel([
+      Animated.timing(animHeight, {
+        toValue,
+        duration: 240,
+        useNativeDriver: false,
+      }),
+      Animated.timing(animRotate, {
+        toValue,
+        duration: 240,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const rotate = animRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
+  const maxH = animHeight.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, expandedHeight],
+  });
+
+  return (
+    <View style={tileStyles.wrapper}>
+      {/* ── MAIN TILE BUTTON ── */}
+      <TouchableOpacity
+        style={[tileStyles.tile, !category.active && tileStyles.tileDisabled]}
+        onPress={toggle}
+        activeOpacity={category.active ? 0.85 : 1}
+      >
+        <Text style={[tileStyles.label, !category.active && tileStyles.labelDisabled]}>
+          {category.label}
+        </Text>
+
+        {category.active ? (
+          // For directNav items, always show a static › arrow (no rotation)
+          category.directNav ? (
+            <Text style={tileStyles.chevron}>›</Text>
+          ) : (
+            <Animated.Text style={[tileStyles.chevron, { transform: [{ rotate }] }]}>
+              ›
+            </Animated.Text>
+          )
+        ) : (
+          <Text style={tileStyles.comingSoon}>COMING SOON</Text>
+        )}
+      </TouchableOpacity>
+
+      {/* ── DIVIDER ── */}
+      <View style={tileStyles.divider} />
+
+      {/* ── BRAND SUB-ROWS (only for non-directNav categories) ── */}
+      {category.active && !category.directNav && (
+        <Animated.View style={[tileStyles.subList, { maxHeight: maxH, overflow: "hidden" }]}>
+          {category.brands.map((brand, idx) => (
+            <React.Fragment key={brand.value}>
+              <TouchableOpacity
+                style={tileStyles.brandRow}
+                onPress={() => onBrandSelect(category, brand)}
+                activeOpacity={0.7}
+              >
+                <Text style={tileStyles.brandLabel}>{brand.label}</Text>
+                <Text style={tileStyles.brandArrow}>›</Text>
+              </TouchableOpacity>
+              {idx < category.brands.length - 1 && (
+                <View style={tileStyles.brandDivider} />
+              )}
+            </React.Fragment>
+          ))}
+        </Animated.View>
+      )}
+    </View>
+  );
+};
+
+/* ─────────────────── STORE MAP SECTION (moved from ShopScreen.jsx) ─────────────────── */
+
+const STORE = {
+  name: "GoodSoles PH",
+  lat: 14.5861,
+  lng: 121.0569,
+  address: "Robinsons Galleria, EDSA, Quezon City",
+  hours: "Mon–Sun: 10:00 AM – 9:00 PM",
+  phone: "+63 917 123 4567",
+};
+
+const StoreMapSection = () => {
+  const openInMaps = () => {
+    const url = `https://www.google.com/maps/search/?api=1&query=${STORE.lat},${STORE.lng}`;
+    Linking.openURL(url);
+  };
+  const callStore = () => Linking.openURL(`tel:${STORE.phone}`);
+
+  return (
+    <View style={mapStyles.container}>
+      <View style={mapStyles.sectionHeader}>
+        <Text style={mapStyles.sectionEyebrow}>FIND US</Text>
+        <Text style={mapStyles.sectionTitle}>Our Store</Text>
+      </View>
+
+      
+      
+
+      <View style={mapStyles.infoCard}>
+        <View style={mapStyles.storeNameRow}>
+          <View style={mapStyles.liveDot} />
+          <Text style={mapStyles.storeName}>{STORE.name}</Text>
+        </View>
+        <View style={mapStyles.divider} />
+        <View style={mapStyles.infoRow}>
+          <Text style={mapStyles.infoIcon}>📍</Text>
+          <Text style={mapStyles.infoText}>{STORE.address}</Text>
+        </View>
+        <View style={mapStyles.infoRow}>
+          <Text style={mapStyles.infoIcon}>🕐</Text>
+          <Text style={mapStyles.infoText}>{STORE.hours}</Text>
+        </View>
+        <View style={mapStyles.infoRow}>
+          <Text style={mapStyles.infoIcon}>📞</Text>
+          <TouchableOpacity onPress={callStore}>
+            <Text style={[mapStyles.infoText, mapStyles.infoTextLink]}>{STORE.phone}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <TouchableOpacity style={mapStyles.directionsBtn} onPress={openInMaps} activeOpacity={0.85}>
+        <Text style={mapStyles.directionsBtnText}>GET DIRECTIONS  →</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -35,135 +251,6 @@ const BASE_URL =
   Platform.OS === "web"
     ? "http://localhost:4000"
     : "https://lifting-manpower-corral.ngrok-free.dev";
-
-/* ─────────────────── PRICE HELPERS ─────────────────── */
-
-const toNumber = (v) => {
-  if (v === null || v === undefined || v === "") return NaN;
-  if (typeof v === "object") return NaN;
-  if (typeof v === "string") return Number(v.replace(/[, ]+/g, ""));
-  return Number(v);
-};
-
-const PRICE_KEYS = ["price", "amount", "retail_price", "value", "new_price", "price_php", "php", "p"];
-const QTY_KEYS   = ["quantity", "qty", "stock", "available", "inventory"];
-
-const findPriceInEntry = (entry) => {
-  if (!entry) return NaN;
-  if (typeof entry === "number" || typeof entry === "string") {
-    const n = toNumber(entry);
-    return Number.isFinite(n) ? n : NaN;
-  }
-  if (Array.isArray(entry)) {
-    for (const it of entry) {
-      const p = findPriceInEntry(it);
-      if (Number.isFinite(p)) return p;
-    }
-  }
-  if (typeof entry === "object") {
-    for (const k of PRICE_KEYS) {
-      if (entry[k] !== undefined) {
-        const p = toNumber(entry[k]);
-        if (Number.isFinite(p)) return p;
-      }
-    }
-    for (const val of Object.values(entry)) {
-      const p = findPriceInEntry(val);
-      if (Number.isFinite(p)) return p;
-    }
-  }
-  return NaN;
-};
-
-const isAvailableEntry = (entry) => {
-  if (!entry) return false;
-  if (typeof entry !== "object") return true;
-  for (const k of QTY_KEYS) {
-    if (entry[k] !== undefined) {
-      const q = toNumber(entry[k]);
-      return Number.isFinite(q) && q > 0;
-    }
-  }
-  return true;
-};
-
-const getLowestPrice = (product) => {
-  let prices = [];
-  if (product.sizes) {
-    Object.values(product.sizes).forEach((entry) => {
-      if (!isAvailableEntry(entry)) return;
-      const p = findPriceInEntry(entry);
-      if (Number.isFinite(p) && p > 0) prices.push(p);
-    });
-  }
-  if (prices.length === 0) {
-    const p1 = findPriceInEntry(product.new_price);
-    const p2 = findPriceInEntry(product.price);
-    if (Number.isFinite(p1)) prices.push(p1);
-    if (Number.isFinite(p2)) prices.push(p2);
-  }
-  return prices.length === 0 ? null : Math.min(...prices);
-};
-
-/* ─────────────────── CONFIG ─────────────────── */
-
-
-
-
-
-const HERO_SLIDES = [
-  {
-    id: "1",
-    tag: "● NEW SEASON",
-    title: "Run\nBeyond\nLimits",
-    sub: "Spring / Summer 2025",
-    btnLabel: "SHOP NOW",
-    image: require("../../assets/Running.jpg"),
-  },
-  {
-    id: "2",
-    tag: "● EXCLUSIVE DROP",
-    title: "Own\nThe\nStreet",
-    sub: "Limited Edition Collection",
-    btnLabel: "EXPLORE",
-    image: require("../../assets/Own.jpg"),
-  },
-  {
-    id: "3",
-    tag: "● BEST SELLERS",
-    title: "Built\nTo\nLast",
-    sub: "Premium Performance Line",
-    btnLabel: "VIEW ALL",
-    image: require("../../assets/Built.jpg"),
-  },
-];
-
-const getBadge = (product, index) => {
-  if (product.is_new || product.badge === "new") return { label: "NEW", style: "new" };
-  if (product.is_hot || product.badge === "hot") return { label: "HOT", style: "hot" };
-  if (product.old_price)                         return { label: "SALE", style: "sale" };
-  if (index % 5 === 0)                           return { label: "NEW", style: "new" };
-  if (index % 7 === 3)                           return { label: "HOT", style: "hot" };
-  return null;
-};
-
-/* ─────────────────── PRESS SCALE WRAPPER ─────────────────── */
-
-const PressScale = ({ children, style, onPress }) => {
-  const scale = useRef(new Animated.Value(1)).current;
-  return (
-    <TouchableOpacity
-      activeOpacity={1}
-      onPressIn={() => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, speed: 50, bounciness: 0 }).start()}
-      onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 6 }).start()}
-      onPress={onPress}
-    >
-      <Animated.View style={[style, { transform: [{ scale }] }]}>
-        {children}
-      </Animated.View>
-    </TouchableOpacity>
-  );
-};
 
 /* ─────────────────── SECTION HEADER ─────────────────── */
 
@@ -181,113 +268,84 @@ const SectionHeader = ({ eyebrow, title, onSeeAll }) => (
   </View>
 );
 
-/* ─────────────────── PRODUCT CARD (horizontal swipe) ─────────────────── */
-
-const ProductCard = ({ item, index, onPress }) => {
-  const price       = getLowestPrice(item);
-  const hasMultiple = item.sizes && Object.keys(item.sizes).length > 1;
-  const badge       = getBadge(item, index);
-
-  return (
-    <PressScale style={s.card} onPress={onPress}>
-      <View style={s.cardImageWrap}>
-        {badge && (
-          <View style={[s.badge, s[`badge_${badge.style}`]]}>
-            <Text style={[s.badgeText, s[`badgeText_${badge.style}`]]}>
-              {badge.label}
-            </Text>
-          </View>
-        )}
-        <TouchableOpacity style={s.heartBtn} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-          <Text style={s.heartIcon}>♡</Text>
-        </TouchableOpacity>
-        <Image source={{ uri: item.image }} style={s.cardImage} resizeMode="contain" />
-      </View>
-      <View style={s.cardBody}>
-        <Text style={s.cardBrand} numberOfLines={1}>
-          {(item.category || item.brand || "").toUpperCase()}
-        </Text>
-        <Text style={s.cardName} numberOfLines={2}>{item.name}</Text>
-        <View style={s.cardFooter}>
-          <View>
-            {item.old_price && (
-              <Text style={s.oldPrice}>₱{toNumber(item.old_price)?.toLocaleString("en-PH")}</Text>
-            )}
-            <Text style={s.newPrice}>
-              {price ? `${hasMultiple ? "From " : ""}₱${price.toLocaleString("en-PH")}` : "TBA"}
-            </Text>
-          </View>
-          <TouchableOpacity style={s.addBtn} onPress={onPress} hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}>
-            <Text style={s.addBtnText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </PressScale>
-  );
-};
-
-/* ─────────────────── TRENDING CARD ─────────────────── */
-
-const TrendingCard = ({ item, index, onPress }) => {
-  const price = getLowestPrice(item);
-  const trendBadges = ["🔥 Popular", "⚡ Trending", "💎 Limited", "🏆 Best Seller"];
-  const badge = trendBadges[index % trendBadges.length];
-
-  return (
-    <PressScale style={s.trendCard} onPress={onPress}>
-      <View style={s.trendImageWrap}>
-        <Image source={{ uri: item.image }} style={s.trendImage} resizeMode="contain" />
-        <View style={s.trendBadgeWrap}>
-          <Text style={s.trendBadge}>{badge}</Text>
-        </View>
-      </View>
-      <View style={s.trendBody}>
-        <Text style={s.trendBrand}>{(item.category || item.brand || "").toUpperCase()}</Text>
-        <Text style={s.trendName} numberOfLines={2}>{item.name}</Text>
-        <Text style={s.trendPrice}>
-          {price ? `₱${price.toLocaleString("en-PH")}` : "TBA"}
-        </Text>
-      </View>
-    </PressScale>
-  );
-};
-
-/* ─────────────────── JUST DROPPED CARD ─────────────────── */
-
-const DroppedCard = ({ item, onPress }) => {
-  const price = getLowestPrice(item);
-  return (
-    <PressScale style={s.droppedCard} onPress={onPress}>
-      <View style={s.droppedImageWrap}>
-        <Image source={{ uri: item.image }} style={s.droppedImage} resizeMode="contain" />
-        <View style={s.droppedOverlay} />
-        <View style={s.droppedInfo}>
-          <Text style={s.droppedBrand}>{(item.category || item.brand || "").toUpperCase()}</Text>
-          <Text style={s.droppedName} numberOfLines={1}>{item.name}</Text>
-          <Text style={s.droppedPrice}>{price ? `₱${price.toLocaleString("en-PH")}` : "TBA"}</Text>
-        </View>
-        <View style={s.limitedTag}>
-          <View style={s.limitedDot} />
-          <Text style={s.limitedText}>LIMITED STOCK</Text>
-        </View>
-      </View>
-    </PressScale>
-  );
-};
-
 /* ─────────────────── MAIN SCREEN ─────────────────── */
 
 export default function HomeScreen({ navigation }) {
-  const { refreshFavorites } = useFavorites();
-  const { refreshCart } = useCart();
+  const { toggleFavorite, isFavorite, refreshFavorites } = useFavorites();
+  const { addToCart, refreshCart } = useCart();
   const { userProfile, refreshUserProfile } = useAuth();
-  const displayName = (userProfile?.name || "").trim().split(" ")[0].toUpperCase() || "GOODSOLES";
+
+  const handleAddToCart = (item) => {
+    if (isOutOfStock(item)) {
+      Toast.show({ type: "error", text1: "Out of stock" });
+      return;
+    }
+    const sizes = item.sizes ? Object.keys(item.sizes) : [];
+    const available = sizes.filter((sz) => {
+      const d = item.sizes[sz];
+      return Number((typeof d === "object" ? d.quantity : d) || 0) > 0;
+    });
+    if (available.length === 1) {
+      addToCart(item, available[0]);
+      Toast.show({ type: "success", text1: "Added to cart", text2: item.name });
+    } else if (available.length > 1) {
+      Toast.show({ type: "info", text1: "Select a size first" });
+      navigation.navigate("ProductDetail", { product: item });
+    } else {
+      addToCart(item, null);
+      Toast.show({ type: "success", text1: "Added to cart", text2: item.name });
+    }
+  };
+
+  // Unlike ShopScreen's own version of these handlers, this one switches to
+  // the Shop TAB itself (so the bottom nav highlights "Shop") and drills
+  // into that tab's stack, instead of pushing a duplicate screen onto
+  // Home's own stack.
+  //
+  // A plain cross-tab navigate({screen, params}) pushes onto whatever
+  // history Shop's stack already has from earlier in the session — so
+  // "back" from the new screen can land on some unrelated screen left over
+  // from the last time Shop was visited. If Shop already has history, we
+  // explicitly reset it to [ShopScreen, target] first, so back always goes
+  // to ShopScreen. A first-ever visit has no history to reset, so it just
+  // navigates normally.
+  const navigateToShopCategory = (screenName, params) => {
+    const tabNav = navigation.getParent();
+    const shopRoute = tabNav?.getState()?.routes.find((r) => r.name === "Shop");
+    if (tabNav && shopRoute?.state?.key) {
+      tabNav.dispatch({
+        ...CommonActions.reset({
+          index: 1,
+          routes: [{ name: "ShopScreen" }, { name: screenName, params }],
+        }),
+        target: shopRoute.state.key,
+      });
+      tabNav.navigate("Shop");
+    } else {
+      navigation.navigate("Shop", { screen: screenName, params });
+    }
+  };
+
+  const handleBrandSelect = (category, brand) => {
+    navigateToShopCategory(category.screen, { selectedBrand: brand.value });
+  };
+
+  const handleDirectNav = (category) => {
+    navigateToShopCategory(category.screen);
+  };
+  const rawFirstName = (userProfile?.name || "").trim().split(" ")[0];
+  const firstName = rawFirstName
+    ? rawFirstName.charAt(0).toUpperCase() + rawFirstName.slice(1).toLowerCase()
+    : "there";
+  const avatarUri = userProfile?.photoURL;
   const [products,       setProducts]       = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [selectedBrand,  setSelectedBrand]  = useState("all");
   const [activeQuickCat, setActiveQuickCat] = useState("All");
   const [heroIndex,      setHeroIndex]      = useState(0);
   const heroRef = useRef(null);
+
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -298,7 +356,71 @@ export default function HomeScreen({ navigation }) {
     return () => clearInterval(timer);
   }, [heroIndex]);
 
-  const [refreshing, setRefreshing] = useState(false);
+  // Drives the sticky header's collapse: the greeting block (eyebrow + name
+  // + question) fades/shrinks away and the header panel's background fades
+  // toward transparent as the user scrolls, leaving just the logo + chat
+  // icon in a slim bar.
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const HEADER_COLLAPSE_RANGE = 88;
+  const headerGreetingOpacity = scrollY.interpolate({
+    inputRange: [0, HEADER_COLLAPSE_RANGE * 0.6],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+  const headerGreetingHeight = scrollY.interpolate({
+    inputRange: [0, HEADER_COLLAPSE_RANGE],
+    outputRange: [HEADER_COLLAPSE_RANGE, 0],
+    extrapolate: "clamp",
+  });
+  const headerBgOpacity = scrollY.interpolate({
+    inputRange: [0, HEADER_COLLAPSE_RANGE],
+    outputRange: [1, 0.5],
+    extrapolate: "clamp",
+  });
+
+  // Logo morph: travels from its resting top-left spot (inside the same
+  // row as the chat icon — no cross-container positioning, so nothing can
+  // clip or mis-stack it) to the row's horizontal center and grows
+  // slightly, via transform (translate + scale) rather than animating raw
+  // width/height/left/top — the more reliable way to do this in RN. A
+  // small halo the same color as the header rides along with it (same
+  // transform, so it never drifts out of sync) instead of animating
+  // separately. The "GOODSOLES" wordmark rises into the spot it vacated.
+  const collapseProgress = scrollY.interpolate({
+    inputRange: [0, HEADER_COLLAPSE_RANGE],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+  const LOGO_BASE_SIZE = 42;
+  const LOGO_BASE_LEFT = 24; // matches pageLogoBase's fixed left
+  const LOGO_GROWTH = 1.25; // modest — "sakto lang", not a big jump
+  // pageLogoBase is positioned relative to the full-width header now (not
+  // the padded row), so its start/target centers are computed in that same
+  // full-width coordinate space.
+  const logoStartCenterX = LOGO_BASE_LEFT + LOGO_BASE_SIZE / 2;
+  const logoTargetCenterX = width / 2;
+  const logoTranslateX = collapseProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, logoTargetCenterX - logoStartCenterX],
+  });
+  // Pushes the logo down as it centers so it ends up sitting on the
+  // header's own bottom edge — half inside, half dipping into the content
+  // below — instead of staying centered inside the row the whole time.
+  // 57 = the fully collapsed header's total height (20 padTop + 50 row +
+  // 32 padBottom = 102) minus the logo's own start center-y (45).
+  const logoTranslateY = collapseProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 57],
+  });
+  const logoScale = collapseProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, LOGO_GROWTH],
+  });
+  const BULGE_PAD = 8; // small halo around the logo, not a big oversized circle
+  const brandLabelTranslateY = collapseProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [16, 0],
+  });
 
   useEffect(() => { fetchProducts(); }, []);
 
@@ -332,7 +454,7 @@ export default function HomeScreen({ navigation }) {
   if (loading) {
     return (
       <View style={s.loader}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color={colors.accentGold} />
         <Text style={s.loaderText}>Loading drops…</Text>
       </View>
     );
@@ -342,32 +464,105 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
 
-      <ScrollView
+      {/* ── PAGE HEADER (logo + greeting + chat) ──
+          Sibling of the ScrollView, not inside it, so it stays fixed in
+          place while the hero and everything below it scrolls underneath.
+          The greeting/name collapses away on scroll, leaving just the logo
+          + chat icon in a slim, more transparent bar — and the logo itself
+          morphs from top-left to a centered, slightly bigger mark with a
+          small matching-color halo, while the "GOODSOLES" wordmark rises
+          into the spot it vacated. */}
+      <View style={s.pageHeaderShadowWrap}>
+        <View style={s.pageHeaderClip}>
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, s.pageHeaderBgLayer, { opacity: headerBgOpacity }]}
+          />
+          <View style={s.pageHeaderTopRow}>
+            <Animated.View
+              style={[
+                s.headerBrandLabelWrap,
+                { opacity: collapseProgress, transform: [{ translateY: brandLabelTranslateY }] },
+              ]}
+            >
+              <TouchableOpacity
+                style={s.headerAvatarBtn}
+                onPress={() => navigation.navigate("Profile")}
+                activeOpacity={0.8}
+              >
+                {avatarUri ? (
+                  <Image source={{ uri: avatarUri }} style={s.headerAvatarImg} />
+                ) : (
+                  <Ionicons name="person" size={16} color={colors.textPrimary} />
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+            <TouchableOpacity
+              style={s.heroIconBtn}
+              onPress={openChatWidget}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+          <Animated.View style={{ opacity: headerGreetingOpacity, height: headerGreetingHeight, overflow: "hidden" }}>
+            <Text style={s.headerEyebrow}>{getGreeting()}</Text>
+            <Text style={s.headerGreeting} numberOfLines={1}>Hello, {firstName}</Text>
+            <Text style={s.headerQuestion}>What's your next pair?</Text>
+          </Animated.View>
+        </View>
+
+        {/* Halo + logo render outside the clipped panel (as siblings of
+            it, not inside) so they can dip past the header's rounded
+            bottom edge into the content below without being clipped. Fixed
+            base left/top here, matching where they'd naturally sit inside
+            the row — transform (not animated left/top) does all the
+            movement, which is what actually renders reliably. */}
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            s.headerBulge,
+            {
+              transform: [
+                { translateX: logoTranslateX },
+                { translateY: logoTranslateY },
+                { scale: logoScale },
+              ],
+              opacity: collapseProgress,
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            s.pageLogoBase,
+            {
+              transform: [
+                { translateX: logoTranslateX },
+                { translateY: logoTranslateY },
+                { scale: logoScale },
+              ],
+            },
+          ]}
+        >
+          <Image source={BRAND_LOGO} style={s.pageLogo} resizeMode="contain" />
+        </Animated.View>
+      </View>
+
+      <Animated.ScrollView
         style={s.container}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 48 }}
+        contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE }}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
         }
       >
 
-        {/* ── TOP NAV ── */}
-        <View style={s.topNav}>
-          <View>
-            <Text style={s.eyebrow}>{getGreeting()}</Text>
-            <Text style={s.navTitle}>{displayName}</Text>
-          </View>
-          <View style={s.navIcons}>
-            <TouchableOpacity style={s.iconBtn}>
-              <Text style={s.iconText}>🔍</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* ── THIN DIVIDER ── */}
-        <View style={s.navDivider} />
-
-        {/* ── HERO CAROUSEL ── */}
+        {/* ── HERO — pure swipeable image carousel, no text overlay ── */}
         <View style={s.heroCarouselWrap}>
           <FlatList
             ref={heroRef}
@@ -389,24 +584,6 @@ export default function HomeScreen({ navigation }) {
             renderItem={({ item }) => (
               <View style={s.hero}>
                 <Image source={item.image} style={s.heroBgImage} resizeMode="cover" />
-                <View style={s.heroOverlay} />
-                <View style={s.heroDecorCircle} />
-                <View style={s.heroDecorCircle2} />
-                <View style={s.heroContent}>
-                  <View style={s.heroTagWrap}>
-                    <Text style={s.heroTag}>{item.tag}</Text>
-                  </View>
-                  <Text style={s.heroTitle}>{item.title}</Text>
-                  <Text style={s.heroSub}>{item.sub}</Text>
-                  <TouchableOpacity style={s.shopBtn} activeOpacity={0.85}>
-                    <Text style={s.shopBtnText}>{item.btnLabel} →</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={s.heroSlideNum}>
-                  <Text style={s.heroSlideNumText}>
-                    {HERO_SLIDES.indexOf(item) + 1}/{HERO_SLIDES.length}
-                  </Text>
-                </View>
               </View>
             )}
           />
@@ -439,16 +616,32 @@ export default function HomeScreen({ navigation }) {
               contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
             >
               {trendingProducts.map((item, index) => (
-                <TrendingCard
-                  key={item._id || index}
-                  item={item}
-                  index={index}
-                  onPress={() => navigation.navigate("ProductDetail", { product: item })}
-                />
+                <FadeInItem key={item._id || index} index={index}>
+                  <ProductCard
+                    item={item}
+                    index={index}
+                    onPress={() => navigation.navigate("ProductDetail", { product: item })}
+                    onAddToCart={handleAddToCart}
+                    favorited={isFavorite(item.id)}
+                    onToggleFavorite={() => toggleFavorite(item.id)}
+                  />
+                </FadeInItem>
               ))}
             </ScrollView>
           </View>
         )}
+
+        {/* ── CATEGORY DROPDOWN (same as ShopScreen.jsx) ── */}
+        <View style={s.categoryList}>
+          {CATEGORIES.map((cat) => (
+            <AccordionTile
+              key={cat.key}
+              category={cat}
+              onBrandSelect={handleBrandSelect}
+              onDirectNav={handleDirectNav}
+            />
+          ))}
+        </View>
 
         {/* ── FEATURED EDITORIAL BANNER ── */}
         <View style={s.editorialWrap}>
@@ -478,15 +671,23 @@ export default function HomeScreen({ navigation }) {
               contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
             >
               {droppedProducts.map((item, index) => (
-                <DroppedCard
-                  key={item._id || index}
-                  item={item}
-                  onPress={() => navigation.navigate("ProductDetail", { product: item })}
-                />
+                <FadeInItem key={item._id || index} index={index}>
+                  <ProductCard
+                    item={item}
+                    index={index}
+                    onPress={() => navigation.navigate("ProductDetail", { product: item })}
+                    onAddToCart={handleAddToCart}
+                    favorited={isFavorite(item.id)}
+                    onToggleFavorite={() => toggleFavorite(item.id)}
+                  />
+                </FadeInItem>
               ))}
             </ScrollView>
           </View>
         )}
+
+        {/* ── STORE MAP SECTION (moved from ShopScreen.jsx) ── */}
+        <StoreMapSection />
 
         {/* ── BOTTOM STATS BAR ── */}
         <View style={s.statsBar}>
@@ -511,7 +712,7 @@ export default function HomeScreen({ navigation }) {
           <Text style={s.footerTagSub}>Where your next pair begins.</Text>
         </View>
 
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }
@@ -524,67 +725,92 @@ const s = StyleSheet.create({
   loaderText: { color: colors.textMuted, fontSize: 10, letterSpacing: 3, textTransform: "uppercase", marginTop: 14, fontFamily: fonts.bodyMedium },
   container:  { flex: 1, backgroundColor: colors.bgPrimary },
 
-  /* TOP NAV */
-  topNav: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14,
+  /* PAGE HEADER — logo + greeting + chat, fixed above the scrolling content.
+     Split into a shadow wrapper (no overflow:hidden, so the shadow isn't
+     clipped) and an inner clipped layer that holds the animated background
+     fade + rounded bottom corners. */
+  pageHeaderShadowWrap: {
+    borderBottomLeftRadius: radius.xl,
+    borderBottomRightRadius: radius.xl,
+    zIndex: 20,
+    elevation: 20,
+    ...shadows.sm,
   },
-  eyebrow:  { fontSize: 8, letterSpacing: 3, color: colors.textTertiary, fontFamily: fonts.bodySemibold, marginBottom: 2 },
-  navTitle: { fontSize: 26, color: colors.textPrimary, letterSpacing: 2, fontFamily: fonts.display },
-  navDivider: { height: 0.5, backgroundColor: colors.borderSubtle, marginHorizontal: 16, marginBottom: 14 },
-  navIcons: { flexDirection: "row", gap: 8 },
-  iconBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: colors.bgCard, borderWidth: 0.5, borderColor: colors.borderLight,
+  pageHeaderClip: {
+    borderBottomLeftRadius: radius.xl,
+    borderBottomRightRadius: radius.xl,
+    overflow: "hidden",
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 32,
+  },
+  pageHeaderBgLayer: { backgroundColor: colors.bgCard },
+  // Fixed height so the profile icon/label's absolute positioning inside
+  // it is predictable. Only the chat button is a normal-flow child now (the
+  // logo/halo render outside this row entirely — see pageLogoBase/
+  // headerBulge below — so it's the only thing justifyContent needs to
+  // push to the row's end).
+  pageHeaderTopRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    height: 50,
+  },
+  // Plain, fixed-size Image — its wrapping Animated.View (pageLogoBase)
+  // handles the travel-to-center + grow via transform, not by animating
+  // width/height directly (more reliable, and matches how the logo
+  // rendered correctly before this effect was added).
+  pageLogo: { width: 42, height: 42 },
+  // Rendered outside pageHeaderClip (as a sibling of it, not inside), so
+  // it can dip past the header's rounded bottom edge without being
+  // clipped. left/top here match where the logo would sit inside the row
+  // (clip's paddingTop 20 + row's own vertical centering for a 42px icon
+  // in a 50px row) — transform does all the animated movement from there.
+  pageLogoBase: { position: "absolute", left: 24, top: 24, zIndex: 2 },
+  // Small halo behind the logo, same color as the header so it blends —
+  // same base spot and the exact same transform as the logo, so it can
+  // never drift out of sync with it.
+  headerBulge: {
+    position: "absolute",
+    left: 16,
+    top: 16,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: colors.bgCard,
+    zIndex: 1,
+  },
+  headerBrandLabelWrap: { position: "absolute", left: 0, top: 0, height: 50, justifyContent: "center" },
+  headerAvatarBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: colors.accentGold,
+    justifyContent: "center", alignItems: "center", overflow: "hidden",
+  },
+  headerAvatarImg: { width: "100%", height: "100%" },
+  heroIconBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 0.5, borderColor: "rgba(255,255,255,0.15)",
     justifyContent: "center", alignItems: "center",
   },
-  iconText: { fontSize: 14 },
+  headerEyebrow: { fontSize: 9, letterSpacing: 3, color: "rgba(255,255,255,0.5)", fontFamily: fonts.bodySemibold, marginTop: 16 },
+  headerGreeting: { fontSize: 26, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display, marginTop: 10 },
+  headerQuestion: { fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 4, fontFamily: fonts.bodyRegular, letterSpacing: 0.3 },
 
-  /* HERO */
-  heroCarouselWrap: { marginHorizontal: 16, marginBottom: 4 },
+  /* HERO — pure swipeable image carousel below the header */
+  heroCarouselWrap: { marginHorizontal: 16, marginTop: 16, marginBottom: 4 },
   hero: {
     width: width - 32,
     backgroundColor: colors.bgCard,
     borderRadius: radius.xl, borderWidth: 0.5, borderColor: colors.borderLight,
-    overflow: "hidden", height: 280, position: "relative",
+    overflow: "hidden", height: 200,
   },
-  heroBgImage: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%" },
-  heroOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.62)" },
-  heroDecorCircle: {
-    position: "absolute", right: -40, top: -40,
-    width: 180, height: 180, borderRadius: 90,
-    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.05)",
-  },
-  heroDecorCircle2: {
-    position: "absolute", right: 50, bottom: -60,
-    width: 130, height: 130, borderRadius: 65,
-    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.03)",
-  },
-  heroContent:  { position: "absolute", bottom: 24, left: 22, right: 22 },
-  heroTagWrap:  {
-    alignSelf: "flex-start",
-    backgroundColor: colors.accentGoldWash,
-    borderRadius: 4, borderWidth: 0.5, borderColor: colors.accentGold,
-    paddingHorizontal: 8, paddingVertical: 3, marginBottom: 10,
-  },
-  heroTag:   { fontSize: 8, letterSpacing: 2.5, color: colors.accentGoldLight, fontFamily: fonts.bodyBold },
-  heroTitle: { fontSize: 42, color: colors.textPrimary, lineHeight: 42, letterSpacing: 0.5, maxWidth: 230, fontFamily: fonts.display },
-  heroSub:   { fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 6, letterSpacing: 1.5, fontFamily: fonts.bodyRegular },
-  shopBtn: {
-    marginTop: 16, backgroundColor: colors.textPrimary, alignSelf: "flex-start",
-    paddingVertical: 10, paddingHorizontal: 20, borderRadius: radius.full,
-  },
-  shopBtnText: { ...typography.button, fontSize: 11, color: colors.bgPrimary },
-  heroSlideNum: {
-    position: "absolute", top: 16, right: 16,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
-    borderWidth: 0.5, borderColor: "rgba(255,255,255,0.08)",
-  },
-  heroSlideNumText: { fontSize: 9, color: "rgba(255,255,255,0.5)", fontFamily: fonts.bodyBold, letterSpacing: 1 },
+  heroBgImage: { width: "100%", height: "100%" },
   heroDots: { flexDirection: "row", gap: 4, marginTop: 12, justifyContent: "center", alignItems: "center" },
   dot:       { width: 5, height: 3, borderRadius: 2, backgroundColor: colors.bgTertiary },
   dotActive: { width: 22, backgroundColor: colors.accentGold },
+
+  /* CATEGORY DROPDOWN (same as ShopScreen.jsx) */
+  categoryList: { marginTop: 20, borderTopWidth: 1, borderTopColor: colors.bgTertiary },
 
   /* QUICK CATEGORIES */
   quickCatRow: { marginTop: 18 },
@@ -600,39 +826,18 @@ const s = StyleSheet.create({
   /* SECTION HEADER */
   sectionHeader: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end",
-    paddingHorizontal: 16, marginTop: 26, marginBottom: 12,
+    paddingHorizontal: 16, marginTop: 32, marginBottom: 14,
   },
   sectionEyebrow: { fontSize: 8, letterSpacing: 3, color: colors.textTertiary, fontFamily: fonts.bodyBold, marginBottom: 4 },
   sectionTitle:   { fontSize: 24, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display },
   seeAllBtn:      { paddingBottom: 2 },
-  seeAll:         { fontSize: 9, color: colors.accentGold, letterSpacing: 1.5, fontFamily: fonts.bodySemibold },
+  seeAll:         { fontSize: 9, color: colors.textSecondary, letterSpacing: 1.5, fontFamily: fonts.bodySemibold },
 
   /* TRENDING */
   trendingSection: { marginTop: 4 },
-  trendCard: {
-    width: TRENDING_CARD_WIDTH,
-    backgroundColor: colors.bgCard,
-    borderRadius: radius.lg, borderWidth: 0.5, borderColor: colors.borderLight, overflow: "hidden",
-  },
-  trendImageWrap: {
-    width: "100%", height: 160, backgroundColor: colors.bgTertiary,
-    justifyContent: "center", alignItems: "center", position: "relative",
-  },
-  trendImage:     { width: "75%", height: "75%" },
-  trendBadgeWrap: {
-    position: "absolute", bottom: 10, left: 10,
-    backgroundColor: "rgba(0,0,0,0.75)",
-    borderRadius: 5, paddingHorizontal: 8, paddingVertical: 3,
-    borderWidth: 0.5, borderColor: colors.bgTertiary,
-  },
-  trendBadge:  { fontSize: 9, color: colors.textPrimary, fontFamily: fonts.bodySemibold },
-  trendBody:   { padding: 12 },
-  trendBrand:  { fontSize: 7, fontFamily: fonts.bodyBold, letterSpacing: 2.5, color: colors.textTertiary, marginBottom: 3 },
-  trendName:   { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.textPrimary, lineHeight: 18, marginBottom: 6 },
-  trendPrice:  { fontSize: 15, fontFamily: fonts.bodyBold, color: colors.accentGold },
 
   /* EDITORIAL BANNER */
-  editorialWrap: { marginHorizontal: 16, marginTop: 26 },
+  editorialWrap: { marginHorizontal: 16, marginTop: 32 },
   editorial: {
     backgroundColor: colors.bgCard,
     borderWidth: 0.5, borderColor: colors.borderLight,
@@ -653,7 +858,7 @@ const s = StyleSheet.create({
     width: 80, height: 80, borderRadius: 40,
     borderWidth: 0.5, borderColor: colors.bgSurface,
   },
-  editorialEye:   { fontSize: 8, letterSpacing: 3.5, color: colors.accentGold, marginBottom: 10, fontFamily: fonts.bodyBold },
+  editorialEye:   { fontSize: 8, letterSpacing: 3.5, color: colors.textTertiary, marginBottom: 10, fontFamily: fonts.bodyBold },
   editorialTitle: { fontSize: 34, color: colors.textPrimary, lineHeight: 36, letterSpacing: 0.3, fontFamily: fonts.display },
   editorialBtn: {
     marginTop: 20, borderWidth: 0.5, borderColor: colors.borderLight,
@@ -661,34 +866,6 @@ const s = StyleSheet.create({
     borderRadius: radius.full, backgroundColor: "rgba(255,255,255,0.04)",
   },
   editorialBtnText: { ...typography.button, fontSize: 10, color: colors.textPrimary },
-
-  /* JUST DROPPED */
-  droppedCard: {
-    width: width * 0.72,
-    borderRadius: radius.lg, overflow: "hidden", borderWidth: 0.5, borderColor: colors.borderLight,
-  },
-  droppedImageWrap: {
-    height: 190, backgroundColor: colors.bgCard,
-    justifyContent: "center", alignItems: "center", position: "relative",
-  },
-  droppedImage:   { width: "70%", height: "70%" },
-  droppedOverlay: {
-    position: "absolute", bottom: 0, left: 0, right: 0, height: "55%",
-    backgroundColor: "rgba(0,0,0,0.78)",
-  },
-  droppedInfo:  { position: "absolute", bottom: 16, left: 14, right: 14 },
-  droppedBrand: { fontSize: 7, fontFamily: fonts.bodyBold, letterSpacing: 2.5, color: "rgba(255,255,255,0.4)", marginBottom: 3 },
-  droppedName:  { fontSize: 15, color: colors.textPrimary, marginBottom: 4, fontFamily: fonts.display, letterSpacing: 0.3 },
-  droppedPrice: { fontSize: 16, fontFamily: fonts.bodyBold, color: colors.accentGold },
-  limitedTag: {
-    position: "absolute", top: 12, right: 12,
-    flexDirection: "row", alignItems: "center", gap: 5,
-    backgroundColor: "rgba(0,0,0,0.65)",
-    borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
-    borderWidth: 0.5, borderColor: colors.borderLight,
-  },
-  limitedDot:  { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.success },
-  limitedText: { fontSize: 7, fontFamily: fonts.bodyBold, letterSpacing: 1.5, color: colors.textPrimary },
 
   /* BRAND CHIPS */
   brandsRow: { marginBottom: 8 },
@@ -701,40 +878,6 @@ const s = StyleSheet.create({
   brandChipText:       { fontSize: 11, fontWeight: "500", color: "#444" },
   brandChipTextActive: { color: "#000", fontWeight: "800" },
 
-  /* PRODUCT CARD — now sized for horizontal swipe */
-  card: {
-    width: CARD_WIDTH,
-    backgroundColor: colors.bgCard,
-    borderRadius: radius.lg, borderWidth: 0.5, borderColor: colors.borderLight, overflow: "hidden",
-  },
-  cardImageWrap: {
-    width: "100%", aspectRatio: 1, backgroundColor: colors.bgTertiary,
-    justifyContent: "center", alignItems: "center", position: "relative",
-  },
-  cardImage:  { width: "80%", height: "80%" },
-  heartBtn: {
-    position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: 13,
-    backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", alignItems: "center",
-    borderWidth: 0.5, borderColor: colors.borderLight,
-  },
-  heartIcon:        { color: colors.textPrimary, fontSize: 12 },
-  badge:            { position: "absolute", top: 8, left: 8, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 4, zIndex: 1 },
-  badge_new:        { backgroundColor: colors.accentGold },
-  badge_hot:        { backgroundColor: colors.danger },
-  badge_sale:       { backgroundColor: colors.bgSurface, borderWidth: 0.5, borderColor: colors.borderLight },
-  badgeText:        { fontSize: 7, fontFamily: fonts.bodyBold, letterSpacing: 1.5 },
-  badgeText_new:    { color: colors.bgPrimary },
-  badgeText_hot:    { color: colors.textPrimary },
-  badgeText_sale:   { color: colors.textMuted },
-  cardBody:         { padding: 10 },
-  cardBrand:        { fontSize: 7, fontFamily: fonts.bodyBold, letterSpacing: 2.5, color: colors.textTertiary, marginBottom: 3 },
-  cardName:         { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.textPrimary, lineHeight: 18, marginBottom: 8 },
-  cardFooter:       { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
-  oldPrice:         { fontSize: 10, color: colors.textMuted, textDecorationLine: "line-through", marginBottom: 1 },
-  newPrice:         { fontSize: 14, fontFamily: fonts.bodyBold, color: colors.accentGold },
-  addBtn:           { width: 28, height: 28, backgroundColor: colors.textPrimary, borderRadius: 7, justifyContent: "center", alignItems: "center" },
-  addBtnText:       { color: colors.bgPrimary, fontSize: 18, fontWeight: "300", lineHeight: 22 },
-
   /* EMPTY */
   emptyState: { paddingVertical: 40, alignItems: "center" },
   emptyText:  { fontSize: 12, color: colors.textMuted, letterSpacing: 2 },
@@ -742,17 +885,150 @@ const s = StyleSheet.create({
   /* STATS BAR */
   statsBar: {
     flexDirection: "row", justifyContent: "space-around", alignItems: "center",
-    marginHorizontal: 16, marginTop: 28,
+    marginHorizontal: 16, marginTop: 36,
     backgroundColor: colors.bgCard, borderWidth: 0.5, borderColor: colors.borderLight,
     borderRadius: radius.lg, paddingVertical: 18,
+    ...shadows.sm,
   },
   statDivider: { width: 0.5, height: 28, backgroundColor: colors.borderLight },
   statItem:    { alignItems: "center", flex: 1 },
-  statNum:     { fontSize: 22, color: colors.accentGold, letterSpacing: 0.5, fontFamily: fonts.display },
+  statNum:     { fontSize: 22, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display },
   statLabel:   { fontSize: 8, color: colors.textTertiary, letterSpacing: 2.5, fontFamily: fonts.bodyBold, marginTop: 4 },
 
   /* BRAND FOOTER TAG */
-  footerTag: { alignItems: "center", marginTop: 32, paddingBottom: 8 },
+  footerTag: { alignItems: "center", marginTop: 40, paddingBottom: 8 },
   footerTagText: { fontSize: 13, color: colors.bgTertiary, letterSpacing: 5, fontFamily: fonts.display },
   footerTagSub:  { fontSize: 9, color: colors.bgTertiary, letterSpacing: 1.5, marginTop: 4, fontFamily: fonts.bodyRegular },
+});
+
+/* ─────────────────── TILE STYLES (copied from ShopScreen.jsx) ─────────────────── */
+
+const tileStyles = StyleSheet.create({
+  wrapper: {
+    backgroundColor: colors.bgPrimary,
+  },
+  tile: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    backgroundColor: colors.bgPrimary,
+  },
+  tileDisabled: { opacity: 0.4 },
+  label: {
+    fontSize: 22,
+    color: colors.textPrimary,
+    letterSpacing: 0.5,
+    fontFamily: fonts.display,
+  },
+  labelDisabled: { color: colors.textMuted },
+  chevron: {
+    fontSize: 28,
+    color: colors.textSecondary,
+    fontWeight: "300",
+    lineHeight: 30,
+    transform: [{ rotate: "90deg" }],
+  },
+  comingSoon: {
+    fontSize: 8,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 1.5,
+    color: colors.textMuted,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.bgTertiary,
+    marginHorizontal: 0,
+  },
+  subList: {
+    backgroundColor: colors.bgPrimary,
+  },
+  brandRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 28,
+    height: 52,
+  },
+  brandLabel: {
+    fontSize: 16,
+    fontFamily: fonts.bodyMedium,
+    color: colors.textSecondary,
+    letterSpacing: 0.2,
+  },
+  brandArrow: {
+    fontSize: 22,
+    color: colors.textMuted,
+    fontWeight: "300",
+  },
+  brandDivider: {
+    height: 1,
+    backgroundColor: colors.bgCard,
+    marginLeft: 28,
+  },
+});
+
+/* ─────────────────── STORE MAP STYLES (moved from ShopScreen.jsx) ─────────────────── */
+
+const mapStyles = StyleSheet.create({
+  container:      { marginTop: 32, marginHorizontal: 4, paddingHorizontal: 12 },
+  sectionHeader:  { marginBottom: 14, paddingHorizontal: 4 },
+  sectionEyebrow: { fontSize: 9, letterSpacing: 3, color: colors.textMuted, fontFamily: fonts.bodyRegular, marginBottom: 2 },
+  sectionTitle:   { fontSize: 26, color: colors.textPrimary, letterSpacing: 1, fontFamily: fonts.display },
+  mapCard: {
+    height: 190, backgroundColor: colors.bgCard, borderRadius: radius.xl,
+    borderWidth: 1, borderColor: colors.borderLight, overflow: "hidden",
+    marginBottom: 10, position: "relative",
+  },
+  mapBg:      { flex: 1, backgroundColor: colors.bgCard, position: "relative" },
+  gridLine:   { position: "absolute", backgroundColor: "rgba(255,255,255,0.04)" },
+  gridLineH:  { left: 0, right: 0, height: 1 },
+  gridLineV:  { top: 0, bottom: 0, width: 1 },
+  road:       { position: "absolute", backgroundColor: "rgba(255,255,255,0.06)" },
+  roadH:      { left: 0, right: 0, height: 10 },
+  roadV:      { top: 0, bottom: 0, width: 10 },
+  pinContainer: { position: "absolute", top: "32%", left: "48%", alignItems: "center", justifyContent: "center" },
+  pinGlow: {
+    position: "absolute",
+    width: 46, height: 46, borderRadius: 23,
+    backgroundColor: colors.accentGoldWash,
+  },
+  pin: {
+    width: 26, height: 26, borderRadius: 13, borderBottomRightRadius: 0,
+    backgroundColor: colors.accentGold, transform: [{ rotate: "-45deg" }],
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 2, borderColor: colors.bgPrimary,
+    ...shadows.sm,
+  },
+  pinDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.bgPrimary, transform: [{ rotate: "45deg" }] },
+  locationChip: {
+    position: "absolute", left: 12, bottom: 12, right: 90,
+  },
+  locationChipTitle: { fontSize: 13, color: colors.textPrimary, fontFamily: fonts.bodyBold, letterSpacing: 0.2 },
+  locationChipSub:   { fontSize: 10, color: "rgba(255,255,255,0.5)", fontFamily: fonts.bodyRegular, marginTop: 1 },
+  mapHint: {
+    position: "absolute", bottom: 10, right: 12,
+    backgroundColor: "rgba(0,0,0,0.7)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.sm,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+  },
+  mapHintText:  { fontSize: 8, letterSpacing: 1.5, color: colors.textSecondary, fontFamily: fonts.bodySemibold },
+  infoCard: {
+    backgroundColor: colors.bgCard, borderRadius: radius.xl, borderWidth: 1,
+    borderColor: colors.borderLight, padding: 16, marginBottom: 12,
+    ...shadows.sm,
+  },
+  storeNameRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
+  liveDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
+  storeName:    { fontSize: 17, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display },
+  divider:      { height: 1, backgroundColor: colors.bgTertiary, marginBottom: 12 },
+  infoRow:      { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 10 },
+  infoIcon:     { fontSize: 13, marginTop: 1 },
+  infoText:     { fontSize: 12, color: colors.textSecondary, flex: 1, lineHeight: 18, letterSpacing: 0.3, fontFamily: fonts.bodyRegular },
+  infoTextLink: { color: colors.accentGold, textDecorationLine: "underline" },
+  directionsBtn: {
+    backgroundColor: colors.textPrimary, borderRadius: radius.full,
+    paddingVertical: 14, alignItems: "center", justifyContent: "center", marginBottom: 8,
+  },
+  directionsBtnText: { ...typography.button, fontSize: 11, color: colors.bgPrimary },
 });

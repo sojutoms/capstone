@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { colors, fonts, radius, typography } from '../theme';
+import { TAB_BAR_CLEARANCE } from '../navigation/tabBarMetrics';
 
 const { width, height } = Dimensions.get('window');
 
@@ -377,13 +378,14 @@ const s = StyleSheet.create({
   /* ── bottom bar ── */
   bottomBar: {
     position: 'absolute',
-    bottom: 0, left: 0, right: 0,
+    // Lifted above the floating pill nav, same as ProductDetail's sticky bar.
+    bottom: TAB_BAR_CLEARANCE, left: 0, right: 0,
     backgroundColor: 'rgba(13,13,13,0.96)',
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: Platform.OS === 'ios' ? 36 : 20,
+    paddingBottom: 16,
     gap: 14,
   },
   productRow: {

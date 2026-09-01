@@ -10,6 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { colors, fonts, radius, typography } from "../theme";
+import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const { width } = Dimensions.get("window");
 const isSmall = width < 380;
@@ -124,7 +125,7 @@ export default function OrdersScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgPrimary },
-  contentContainer: { padding: isSmall ? 16 : 20 },
+  contentContainer: { padding: isSmall ? 16 : 20, paddingBottom: TAB_BAR_CLEARANCE },
 
   // Header
   header: { alignItems: "center", paddingVertical: 28 },

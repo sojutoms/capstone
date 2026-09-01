@@ -6,13 +6,13 @@ import OrderHistoryScreen from "../screens/OrderHistoryScreen";
 import EditProfileScreen from "../screens/EditProfileScreen";
 import FavoritesScreen from "../screens/FavoritesScreen";
 import MyReviewsScreen from "../screens/MyReviewsScreen";
-
+import { stackScreenOptions } from "./screenTransition";
 
 const Stack = createNativeStackNavigator();
 
 export default function ProfileStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={stackScreenOptions}>
       <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
 
       <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />

@@ -14,6 +14,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
 import { colors, fonts, radius } from "../theme";
+import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const BASE_URL =
   Platform.OS === "web"
@@ -148,7 +149,7 @@ const s = StyleSheet.create({
   emptyTitle: { color: colors.textPrimary, fontSize: 17, fontFamily: fonts.display, letterSpacing: 1.5, marginBottom: 8 },
   emptySubtitle: { color: colors.textMuted, fontSize: 13, textAlign: "center", lineHeight: 20 },
 
-  listContent: { padding: 16 },
+  listContent: { padding: 16, paddingBottom: TAB_BAR_CLEARANCE },
 
   card: { backgroundColor: colors.bgCard, borderRadius: radius.md, padding: 14 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 },

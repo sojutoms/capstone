@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { colors, fonts, radius, typography } from "../theme";
+import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const BASE_URL =
   Platform.OS === "web"
@@ -233,7 +234,7 @@ export default function EditProfileScreen({ navigation }) {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgPrimary },
   center: { flex: 1, backgroundColor: colors.bgPrimary, alignItems: "center", justifyContent: "center" },
-  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 20 },
+  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: TAB_BAR_CLEARANCE },
 
   backBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 20, alignSelf: "flex-start" },
   backArrow: { color: colors.textPrimary, fontSize: 20, fontWeight: "300" },

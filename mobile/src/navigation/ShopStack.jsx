@@ -11,12 +11,13 @@ import FavoritesScreen from "../screens/FavoritesScreen";
 import ARTryOnScreen from "../screens/ARTryOnScreen";
 import BagsScreen from "../screens/BagsScreen";
 import CollectiblesScreen from "../screens/CollectiblesScreen";
+import { stackScreenOptions } from "./screenTransition";
 
 const Stack = createNativeStackNavigator();
 
 export default function ShopStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={stackScreenOptions}>
       <Stack.Screen name="ShopScreen"         component={ShopScreen} />
       <Stack.Screen name="ShoesScreen"        component={ShoesScreen} />
       <Stack.Screen name="WatchesScreen"      component={WatchesScreen} />

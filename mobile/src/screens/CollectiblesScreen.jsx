@@ -19,92 +19,18 @@ import {
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { colors, fonts, radius, typography } from "../theme";
+import FadeInItem from "../components/FadeInItem";
+import ProductCard from "../components/ProductCard";
+import { getLowestPrice, isOutOfStock } from "../utils/productHelpers";
+import Toast from "react-native-toast-message";
+import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = (width - 48) / 2;
 
 const BASE_URL =
   Platform.OS === "web"
     ? "http://localhost:4000"
     : "https://lifting-manpower-corral.ngrok-free.dev";
-
-/* ─────────────────── PRICE HELPERS ─────────────────── */
-
-const toNumber = (v) => {
-  if (v === null || v === undefined || v === "") return NaN;
-  if (typeof v === "object") return NaN;
-  if (typeof v === "string") return Number(v.replace(/[, ]+/g, ""));
-  return Number(v);
-};
-
-const PRICE_KEYS = ["price", "amount", "retail_price", "value", "new_price", "price_php", "php", "p"];
-const QTY_KEYS   = ["quantity", "qty", "stock", "available", "inventory"];
-
-const findPriceInEntry = (entry) => {
-  if (!entry) return NaN;
-  if (typeof entry === "number" || typeof entry === "string") {
-    const n = toNumber(entry);
-    return Number.isFinite(n) ? n : NaN;
-  }
-  if (Array.isArray(entry)) {
-    for (const it of entry) {
-      const p = findPriceInEntry(it);
-      if (Number.isFinite(p)) return p;
-    }
-  }
-  if (typeof entry === "object") {
-    for (const k of PRICE_KEYS) {
-      if (entry[k] !== undefined) {
-        const p = toNumber(entry[k]);
-        if (Number.isFinite(p)) return p;
-      }
-    }
-    for (const val of Object.values(entry)) {
-      const p = findPriceInEntry(val);
-      if (Number.isFinite(p)) return p;
-    }
-  }
-  return NaN;
-};
-
-const isAvailableEntry = (entry) => {
-  if (!entry) return false;
-  if (typeof entry !== "object") return true;
-  for (const k of QTY_KEYS) {
-    if (entry[k] !== undefined) {
-      const q = toNumber(entry[k]);
-      return Number.isFinite(q) && q > 0;
-    }
-  }
-  return true;
-};
-
-const getLowestPrice = (product) => {
-  let prices = [];
-  if (product.sizes) {
-    Object.values(product.sizes).forEach((entry) => {
-      if (!isAvailableEntry(entry)) return;
-      const p = findPriceInEntry(entry);
-      if (Number.isFinite(p) && p > 0) prices.push(p);
-    });
-  }
-  if (prices.length === 0) {
-    const p1 = findPriceInEntry(product.new_price);
-    const p2 = findPriceInEntry(product.price);
-    if (Number.isFinite(p1)) prices.push(p1);
-    if (Number.isFinite(p2)) prices.push(p2);
-  }
-  return prices.length === 0 ? null : Math.min(...prices);
-};
-
-const getBadge = (product, index) => {
-  if (product.is_new || product.badge === "new") return { label: "NEW", style: "new" };
-  if (product.is_hot || product.badge === "hot") return { label: "HOT", style: "hot" };
-  if (product.old_price)                         return { label: "SALE", style: "sale" };
-  if (index % 5 === 0)                           return { label: "NEW", style: "new" };
-  if (index % 7 === 3)                           return { label: "HOT", style: "hot" };
-  return null;
-};
 
 /* ─────────────────── CONFIG ─────────────────── */
 
@@ -115,58 +41,33 @@ const SORT_OPTIONS = [
   { label: "Name A–Z",           value: "name_asc" },
 ];
 
-/* ─────────────────── PRODUCT CARD ─────────────────── */
-
-const ProductCard = ({ item, index, onPress }) => {
-  const price       = getLowestPrice(item);
-  const hasMultiple = item.sizes && Object.keys(item.sizes).length > 1;
-  const badge       = getBadge(item, index);
-
-  return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
-      <View style={styles.cardImageWrap}>
-        {badge && (
-          <View style={[styles.badge, styles[`badge_${badge.style}`]]}>
-            <Text style={[styles.badgeText, styles[`badgeText_${badge.style}`]]}>
-              {badge.label}
-            </Text>
-          </View>
-        )}
-        <TouchableOpacity style={styles.heartBtn} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-          <Text style={styles.heartIcon}>♡</Text>
-        </TouchableOpacity>
-        <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="contain" />
-      </View>
-      <View style={styles.cardBody}>
-        <Text style={styles.cardBrand} numberOfLines={1}>
-          {(item.brand || item.category || "").toUpperCase()}
-        </Text>
-        <Text style={styles.cardName} numberOfLines={2}>{item.name}</Text>
-        <View style={styles.cardFooter}>
-          <View>
-            {item.old_price && (
-              <Text style={styles.oldPrice}>
-                ₱{toNumber(item.old_price)?.toLocaleString("en-PH")}
-              </Text>
-            )}
-            <Text style={styles.newPrice}>
-              {price ? `${hasMultiple ? "From " : ""}₱${price.toLocaleString("en-PH")}` : "TBA"}
-            </Text>
-          </View>
-          <TouchableOpacity style={styles.addBtn} onPress={onPress} hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}>
-            <Text style={styles.addBtnText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-};
-
 /* ─────────────────── MAIN SCREEN ─────────────────── */
 
 export default function CollectiblesScreen({ navigation }) {
-  const { refreshCart } = useCart();
-  const { refreshFavorites } = useFavorites();
+  const { addToCart, refreshCart } = useCart();
+  const { toggleFavorite, isFavorite, refreshFavorites } = useFavorites();
+
+  const handleAddToCart = (item) => {
+    if (isOutOfStock(item)) {
+      Toast.show({ type: "error", text1: "Out of stock" });
+      return;
+    }
+    const sizes = item.sizes ? Object.keys(item.sizes) : [];
+    const available = sizes.filter((sz) => {
+      const d = item.sizes[sz];
+      return Number((typeof d === "object" ? d.quantity : d) || 0) > 0;
+    });
+    if (available.length === 1) {
+      addToCart(item, available[0]);
+      Toast.show({ type: "success", text1: "Added to cart", text2: item.name });
+    } else if (available.length > 1) {
+      Toast.show({ type: "info", text1: "Select a size first" });
+      navigation.navigate("ProductDetail", { product: item });
+    } else {
+      addToCart(item, null);
+      Toast.show({ type: "success", text1: "Added to cart", text2: item.name });
+    }
+  };
 
   const [products,      setProducts]      = useState([]);
   const [loading,       setLoading]       = useState(true);
@@ -311,7 +212,7 @@ export default function CollectiblesScreen({ navigation }) {
       <ScrollView
         style={styles.container}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE }}
         stickyHeaderIndices={[0]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
@@ -355,12 +256,16 @@ export default function CollectiblesScreen({ navigation }) {
         ) : (
           <View style={styles.grid}>
             {displayed.map((item, index) => (
-              <ProductCard
-                key={item._id || index}
-                item={item}
-                index={index}
-                onPress={() => navigation.navigate("ProductDetail", { product: item })}
-              />
+              <FadeInItem key={item._id || index} index={index}>
+                <ProductCard
+                  item={item}
+                  index={index}
+                  onPress={() => navigation.navigate("ProductDetail", { product: item })}
+                  onAddToCart={handleAddToCart}
+                  favorited={isFavorite(item.id)}
+                  onToggleFavorite={() => toggleFavorite(item.id)}
+                />
+              </FadeInItem>
             ))}
           </View>
         )}
@@ -472,30 +377,6 @@ const styles = StyleSheet.create({
   sortBtnIcon: { color: colors.textPrimary, fontSize: 10 },
 
   grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 12, gap: 10, paddingTop: 4 },
-
-  card:          { width: CARD_WIDTH, backgroundColor: colors.bgCard, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderLight, overflow: "hidden" },
-  cardImageWrap: { width: "100%", aspectRatio: 1, backgroundColor: colors.bgSurface, justifyContent: "center", alignItems: "center", position: "relative" },
-  cardImage:     { width: "80%", height: "80%" },
-  heartBtn:      { position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
-  heartIcon:     { color: colors.textPrimary, fontSize: 12 },
-
-  badge:           { position: "absolute", top: 8, left: 8, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 4, zIndex: 1 },
-  badge_new:       { backgroundColor: colors.accentGold },
-  badge_hot:       { backgroundColor: "#E53E1A" },
-  badge_sale:      { backgroundColor: colors.bgSurface, borderWidth: 1, borderColor: colors.borderLight },
-  badgeText:       { fontSize: 7, fontWeight: "700", letterSpacing: 1.5 },
-  badgeText_new:   { color: colors.textInverse },
-  badgeText_hot:   { color: colors.textPrimary },
-  badgeText_sale:  { color: colors.textMuted },
-
-  cardBody:    { padding: 10 },
-  cardBrand:   { fontSize: 8, fontFamily: fonts.bodySemibold, letterSpacing: 2, color: colors.textMuted, marginBottom: 2 },
-  cardName:    { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.textPrimary, lineHeight: 18, marginBottom: 8 },
-  cardFooter:  { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
-  oldPrice:    { fontSize: 10, color: colors.textMuted, textDecorationLine: "line-through", marginBottom: 1 },
-  newPrice:    { fontSize: 13, fontWeight: "700", color: colors.accentGold },
-  addBtn:      { width: 28, height: 28, backgroundColor: colors.textPrimary, borderRadius: 7, justifyContent: "center", alignItems: "center" },
-  addBtnText:  { color: colors.textInverse, fontSize: 18, fontWeight: "300", lineHeight: 22 },
 
   emptyState:    { paddingVertical: 60, alignItems: "center", paddingHorizontal: 40 },
   emptyIcon:     { fontSize: 48, marginBottom: 16 },

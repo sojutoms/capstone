@@ -20,6 +20,7 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { getShippingFee, getShippingTier } from "../services/shippingFee";
 import { colors, fonts, radius, typography } from "../theme";
+import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const NCR_REGION_CODE = "1300000000";
 const { width } = Dimensions.get("window");
@@ -759,7 +760,7 @@ export default function PlaceOrderScreen({ navigation }) {
 
 const s = StyleSheet.create({
   root:    { flex: 1, backgroundColor: colors.bgPrimary },
-  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 20 },
+  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: TAB_BAR_CLEARANCE },
 
   /* ── nav ── */
   backBtn: {

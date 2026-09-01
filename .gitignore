@@ -7,3 +7,4 @@ build/
 .env.development.local
 .claude/settings.local.json
 mobile1/
+mobile.zip

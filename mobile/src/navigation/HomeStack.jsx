@@ -10,6 +10,7 @@ import ARTryOnScreen from "../screens/ARTryOnScreen";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../context/AuthContext";
+import { stackScreenOptions } from "./screenTransition";
 
 
 const Stack = createNativeStackNavigator();
@@ -21,7 +22,7 @@ export default function HomeStack() {
 
   return (
     <Stack.Navigator
-      screenOptions={{ headerShown: false }}
+      screenOptions={stackScreenOptions}
       screenListeners={{
         // Fires whenever any screen in this stack comes into focus (e.g.
         // navigating back from ProductDetail to Home, or into Favorites) —
@@ -35,14 +36,14 @@ export default function HomeStack() {
       }}
     >
 
-      <Stack.Screen 
-        name="HomeScreen" 
-        component={HomeScreen} 
+      <Stack.Screen
+        name="HomeScreen"
+        component={HomeScreen}
       />
 
-      <Stack.Screen 
-        name="ProductDetail" 
-        component={ProductDetail} 
+      <Stack.Screen
+        name="ProductDetail"
+        component={ProductDetail}
       />
 
       <Stack.Screen

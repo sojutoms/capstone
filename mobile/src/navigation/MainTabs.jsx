@@ -2,13 +2,15 @@ import React, { useRef, useEffect } from "react";
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   Platform,
   TouchableOpacity,
   Animated,
-  Dimensions,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { BlurView } from "expo-blur";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import HomeStack from "./HomeStack";
 import CartStack from "./CartStack";
@@ -19,84 +21,25 @@ import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../context/AuthContext";
 import ShopStack from "./ShopStack";
-import { colors, fonts } from "../theme";
+import { colors, radius, shadows, typography } from "../theme";
+import { TAB_BAR_CLEARANCE } from "./tabBarMetrics";
 
 const Tab = createBottomTabNavigator();
-const { width } = Dimensions.get("window");
 
 /* ══════════════════════════════════════
-   ICONS
-══════════════════════════════════════ */
+   TAB CONFIG
 
-const HomeIcon = ({ on }) => {
-  const c = on ? colors.accentGold : "#484848";
-  return (
-    <View style={styles.icon}>
-      <View style={[styles.homeBase, { borderColor: c }]} />
-      <View style={[styles.homeDoor, { borderColor: c }]} />
-      <View style={[styles.homeRoofLeft, { backgroundColor: c }]} />
-      <View style={[styles.homeRoofRight, { backgroundColor: c }]} />
-    </View>
-  );
-};
-
-const ShopIcon = ({ on }) => {
-  const c = on ? colors.accentGold : "#484848";
-  return (
-    <View style={styles.icon}>
-      <View style={[styles.bagHandle, { borderColor: c }]} />
-      <View style={[styles.bagBody, { borderColor: c }]} />
-    </View>
-  );
-};
-
-const CameraIcon = ({ on }) => {
-  const c = on ? colors.accentGold : "#888";
-  return (
-    <View style={styles.cameraWrap}>
-      <View style={[styles.cameraTop, { borderColor: c }]} />
-      <View style={[styles.cameraBody, { borderColor: c }]}>
-        <View style={[styles.lensOuter, { borderColor: c }]}>
-          <View style={[styles.lensInner, { backgroundColor: c }]} />
-        </View>
-      </View>
-    </View>
-  );
-};
-
-const CartIcon = ({ on }) => {
-  const c = on ? colors.accentGold : "#484848";
-  return (
-    <View style={styles.icon}>
-      <View style={[styles.cartBasket, { borderColor: c }]} />
-      <View style={[styles.cartHandle, { borderColor: c }]} />
-    </View>
-  );
-};
-
-const PersonIcon = ({ on }) => {
-  const c = on ? colors.accentGold : "#484848";
-  return (
-    <View style={styles.icon}>
-      <View style={[styles.personHead, { borderColor: c }]} />
-      <View style={[styles.personBody, { borderColor: c }]} />
-    </View>
-  );
-};
-
-/* ══════════════════════════════════════
-   TAB CONFIG (single source of truth)
+   Outline glyph when inactive, filled/solid glyph when active — the same
+   shape-change iOS/Netflix use for their tab bars, not just a color swap.
 ══════════════════════════════════════ */
 
 const TABS = [
-  { name: "Home", label: "HOME", icon: HomeIcon, component: HomeStack },
-  { name: "Shop", label: "SHOP", icon: ShopIcon, component: ShopStack },
-  { name: "Camera", label: "CAMERA", icon: CameraIcon, component: CameraScreen, center: true },
-  { name: "Cart", label: "BAG", icon: CartIcon, component: CartStack },
-  { name: "Profile", label: "PROFILE", icon: PersonIcon, component: ProfileStack },
+  { name: "Home", label: "Home", iconOutline: "home-outline", iconFilled: "home", component: HomeStack },
+  { name: "Shop", label: "Shop", iconOutline: "bag-outline", iconFilled: "bag", component: ShopStack },
+  { name: "Camera", label: "Try-On", iconOutline: "camera-outline", iconFilled: "camera", component: CameraScreen },
+  { name: "Cart", label: "Bag", iconOutline: "cart-outline", iconFilled: "cart", component: CartStack },
+  { name: "Profile", label: "Profile", iconOutline: "person-outline", iconFilled: "person", component: ProfileStack, isProfile: true },
 ];
-
-const TAB_W = width / TABS.length;
 
 /* ══════════════════════════════════════ */
 
@@ -107,19 +50,25 @@ const Badge = ({ count }) =>
     </View>
   ) : null;
 
-/* ══════════════════════════════════════ */
+/* ══════════════════════════════════════
+   FLOATING GLASS PILL NAV (Netflix-quality shading)
+
+   Detached from the screen edges with a shadow underneath — reads as a
+   distinct floating surface, not a seam glued to the bottom edge. The
+   translucent fill is tuned close to the app's actual background color so
+   it blends rather than looking like a lighter grey patch.
+══════════════════════════════════════ */
 
 function ElegantTabBar({ state, navigation }) {
   if (state.index === 2) return null;
 
   const { cart, refreshCart } = useCart();
   const { refreshFavorites } = useFavorites();
-  const { refreshUserProfile } = useAuth();
+  const { userProfile, refreshUserProfile } = useAuth();
+  const avatarUri = userProfile?.photoURL;
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
   const counts = { Cart: cartCount };
-
-  const dotX = useRef(new Animated.Value(state.index * TAB_W + TAB_W / 2 - 2)).current;
 
   const ops = useRef(
     TABS.map((_, i) => new Animated.Value(i === state.index ? 1 : 0))
@@ -130,11 +79,6 @@ function ElegantTabBar({ state, navigation }) {
   ).current;
 
   useEffect(() => {
-    Animated.spring(dotX, {
-      toValue: state.index * TAB_W + TAB_W / 2 - 2,
-      useNativeDriver: true,
-    }).start();
-
     ops.forEach((op, i) =>
       Animated.timing(op, {
         toValue: i === state.index ? 1 : 0,
@@ -164,54 +108,74 @@ function ElegantTabBar({ state, navigation }) {
     refreshUserProfile();
   };
 
+  const renderIcon = (tab, i) => {
+    if (tab.isProfile && avatarUri) {
+      // A circular photo, not an icon glyph — matches the reference
+      // screenshot's "My Netflix" tab shape, distinct from the other
+      // outline/filled icon tabs.
+      return (
+        <>
+          <View style={styles.avatarRing}>
+            <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
+          </View>
+          <Animated.View style={[styles.iconOverlay, { opacity: ops[i] }]}>
+            <View style={[styles.avatarRing, styles.avatarRingActive]}>
+              <Image source={{ uri: avatarUri }} style={styles.avatarImg} />
+            </View>
+          </Animated.View>
+        </>
+      );
+    }
+    return (
+      <>
+        {/* Muted outline icon, always rendered; the gold filled version
+            fades in on top via opacity — animating the icon's own
+            color/name prop directly isn't supported on this component. */}
+        <Ionicons name={tab.iconOutline} size={21} color={colors.textTertiary} />
+        <Animated.View style={[styles.iconOverlay, { opacity: ops[i] }]}>
+          <Ionicons name={tab.iconFilled} size={21} color={colors.accentGold} />
+        </Animated.View>
+      </>
+    );
+  };
+
   return (
     <View style={styles.bar}>
-      <View style={styles.topLine} />
-      <Animated.View style={[styles.dot, { transform: [{ translateX: dotX }] }]} />
+      <View style={styles.pillShadowWrap}>
+        <BlurView intensity={45} tint="dark" style={styles.pill}>
+          {TABS.map((tab, i) => {
+            const count = counts[tab.name] || 0;
 
-      {TABS.map((tab, i) => {
-        const Icon = tab.icon;
-        const isCenter = tab.center;
-        const count = counts[tab.name] || 0;
+            return (
+              <TouchableOpacity
+                key={tab.name}
+                onPress={() => pressTab(i)}
+                style={styles.tab}
+                activeOpacity={0.7}
+              >
+                <Animated.View style={[styles.tabInner, { transform: [{ scale: scales[i] }] }]}>
+                  <View style={styles.iconSlot}>
+                    {renderIcon(tab, i)}
+                    <Badge count={count} />
+                  </View>
 
-        return (
-          <TouchableOpacity
-            key={tab.name}
-            onPress={() => pressTab(i)}
-            style={[styles.tab, isCenter && styles.tabCenter]}
-          >
-            <Animated.View style={[
-              styles.tabInner,
-              isCenter && styles.tabInnerCenter,
-              { transform: [{ scale: scales[i] }] }
-            ]}>
-              <View style={{ position: "relative" }}>
-                <View style={isCenter ? styles.iconWrapBig : styles.iconWrap}>
-                  <Icon on={false} />
-                  <Animated.View style={[StyleSheet.absoluteFill, { opacity: ops[i] }]}>
-                    <Icon on={true} />
-                  </Animated.View>
-                </View>
-                <Badge count={count} />
-              </View>
-
-              {!isCenter && (
-                <Animated.Text style={[
-                  styles.label,
-                  {
-                    color: ops[i].interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["#383838", colors.accentGold],
-                    }),
-                  },
-                ]}>
-                  {tab.label}
-                </Animated.Text>
-              )}
-            </Animated.View>
-          </TouchableOpacity>
-        );
-      })}
+                  <View style={styles.labelSlot}>
+                    <Text style={[styles.label, styles.labelMuted]} numberOfLines={1}>
+                      {tab.label}
+                    </Text>
+                    <Animated.Text
+                      style={[styles.label, styles.labelGold, styles.labelOverlay, { opacity: ops[i] }]}
+                      numberOfLines={1}
+                    >
+                      {tab.label}
+                    </Animated.Text>
+                  </View>
+                </Animated.View>
+              </TouchableOpacity>
+            );
+          })}
+        </BlurView>
+      </View>
     </View>
   );
 }
@@ -222,14 +186,40 @@ export default function MainTabs() {
   return (
     <Tab.Navigator
       tabBar={(props) => <ElegantTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        // "shift" gives a subtle horizontal slide + fade between tabs
+        // (React Navigation v7) instead of the default instant cut —
+        // switching tabs was the one navigation action with zero animation.
+        animation: "shift",
+        // position:'absolute' is what tells the navigator not to reserve
+        // layout space for the tab bar at all — screens render full-height
+        // behind it, so real content (not a flat color) shows through the
+        // pill's transparent margins. Every screen needs its own bottom
+        // padding now (see TAB_BAR_CLEARANCE) since nothing pushes their
+        // content up automatically anymore.
+        tabBarStyle: {
+          position: "absolute",
+          backgroundColor: "transparent",
+          elevation: 0,
+          borderTopWidth: 0,
+        },
+      }}
     >
       {TABS.map((tab) => (
         <Tab.Screen
           key={tab.name}
           name={tab.name}
           component={tab.component}
-          options={tab.center ? { tabBarStyle: { display: "none" } } : {}}
+          // Shop's stack gets fully unmounted (and re-mounted fresh at
+          // ShopScreen) every time you leave the tab — otherwise, jumping
+          // into it from Home's category dropdown (a cross-tab navigate)
+          // lands on top of whatever screen was left over from the last
+          // time you visited Shop, so the back button goes to that stale
+          // screen instead of somewhere sensible. Shop's own screens don't
+          // hold state worth preserving (it's a category menu + product
+          // grids), so resetting on every visit is a safe, simple fix.
+          options={tab.name === "Shop" ? { unmountOnBlur: true } : undefined}
         />
       ))}
     </Tab.Navigator>
@@ -240,44 +230,71 @@ export default function MainTabs() {
 
 const styles = StyleSheet.create({
   bar: {
-    height: Platform.OS === "ios" ? 82 : 64,
-    backgroundColor: colors.bgPrimary,
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "transparent",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === "ios" ? 30 : 14,
+  },
+
+  pillShadowWrap: {
+    borderRadius: radius.full,
+    ...shadows.md,
+  },
+  pill: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    paddingBottom: Platform.OS === "ios" ? 22 : 8,
+    alignItems: "center",
+    height: 60,
+    paddingHorizontal: 6,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    // Tuned close to the app's actual background color (bgPrimary) instead
+    // of a lighter/greyer translucent tint, so the pill reads as "the same
+    // dark surface, slightly elevated" rather than a mismatched grey patch.
+    backgroundColor: "rgba(10,10,10,0.85)",
+    overflow: "hidden",
   },
-  tab: { flex: 1, alignItems: "center" },
-  tabCenter: { overflow: "visible" },
-  tabInner: { alignItems: "center", gap: 5 },
-  tabInnerCenter: { marginBottom: 14 },
-  // Matches web's .nav-link: Bebas Neue, uppercase, ~0.12em tracking.
-  label: { fontFamily: fonts.display, fontSize: 9, letterSpacing: 1 },
 
-  // Web's active-tab indicator is a 20px gold underline; this mirrors that
-  // at bottom-nav scale (a small centered gold dot per tab).
-  dot: {
+  tab: { flex: 1, height: "100%", alignItems: "center", justifyContent: "center" },
+  tabInner: { alignItems: "center", justifyContent: "center", gap: 5 },
+
+  iconSlot: { position: "relative", width: 24, height: 24, alignItems: "center", justifyContent: "center" },
+  iconOverlay: {
     position: "absolute",
-    top: 0,
-    width: 4,
-    height: 2,
-    backgroundColor: colors.accentGold,
+    top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  topLine: {
-    position: "absolute",
-    top: 0,
-    height: 1,
-    width: "100%",
-    backgroundColor: colors.bgTertiary,
+  avatarRing: {
+    width: 21,
+    height: 21,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: colors.textTertiary,
+    overflow: "hidden",
   },
+  avatarRingActive: { borderColor: colors.accentGold },
+  avatarImg: { width: "100%", height: "100%" },
 
-  iconWrap: { width: 20, height: 18 },
-  iconWrapBig: { width: 30, height: 26 },
+  labelSlot: { position: "relative" },
+  label: {
+    ...typography.label,
+    fontSize: 9,
+    letterSpacing: 0.4,
+  },
+  labelMuted: { color: colors.textTertiary },
+  labelGold: { color: colors.accentGold },
+  labelOverlay: { position: "absolute", top: 0, left: 0, right: 0 },
 
   badge: {
     position: "absolute",
-    top: -5,
-    right: -9,
+    top: -4,
+    right: -6,
     backgroundColor: "#E53E1A",
     borderRadius: 7,
     minWidth: 13,
@@ -285,28 +302,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  badgeText: { fontSize: 6.5, color: "#FFF" },
-
-  icon: { width: 20, height: 18 },
-
-  /* shapes (cleaned) */
-  homeBase: { position:"absolute", bottom:0, left:3, right:3, height:9, borderWidth:1.5, borderTopWidth:0 },
-  homeDoor: { position:"absolute", bottom:0, alignSelf:"center", width:5, height:5, borderWidth:1.5, borderBottomWidth:0 },
-  homeRoofLeft: { position:"absolute", top:2, left:0, width:11, height:1.5, transform:[{rotate:"-33deg"}] },
-  homeRoofRight: { position:"absolute", top:2, right:0, width:11, height:1.5, transform:[{rotate:"33deg"}] },
-
-  bagHandle: { position:"absolute", top:0, alignSelf:"center", width:9, height:5, borderWidth:1.5, borderBottomWidth:0 },
-  bagBody: { position:"absolute", bottom:0, width:16, height:12, borderWidth:1.5 },
-
-  cartBasket: { position:"absolute", bottom:0, width:16, height:10, borderWidth:1.5 },
-  cartHandle: { position:"absolute", top:0, width:10, height:5, borderWidth:1.5, borderBottomWidth:0 },
-
-  personHead: { position:"absolute", top:0, width:8, height:8, borderRadius:4, borderWidth:1.5 },
-  personBody: { position:"absolute", bottom:0, width:16, height:8, borderTopLeftRadius:8, borderTopRightRadius:8, borderWidth:1.5, borderBottomWidth:0 },
-
-  cameraWrap: { width: 30, height: 26 },
-  cameraTop: { position:"absolute", top:0, width:10, height:5, borderWidth:1.8, borderBottomWidth:0 },
-  cameraBody: { position:"absolute", bottom:0, width:28, height:18, borderWidth:1.8, alignItems:"center", justifyContent:"center" },
-  lensOuter: { width:11, height:11, borderRadius:5.5, borderWidth:1.8, alignItems:"center", justifyContent:"center" },
-  lensInner: { width:4, height:4, borderRadius:2 },
+  badgeText: { fontSize: 6.5, color: colors.textPrimary },
 });

@@ -113,9 +113,18 @@ export const fonts = {
 // fontFamily/letterSpacing/textTransform combinations so screens don't
 // have to repeat them.
 export const typography = {
+  // True headings only — screen titles, hero copy. Overusing this everywhere
+  // is what made the app read as "shouty web page" instead of "premium app."
   display: {
     fontFamily: fonts.display,
     letterSpacing: 1.2, // ~0.08em at typical mobile sizes
+    textTransform: "uppercase",
+  },
+  // Section eyebrows, card labels, badges, tab labels — the small caps text
+  // that used to reach for Bebas Neue. Quieter, still structured.
+  label: {
+    fontFamily: fonts.bodySemibold,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
   },
   button: {

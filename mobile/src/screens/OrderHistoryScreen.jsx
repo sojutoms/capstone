@@ -23,6 +23,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { colors, fonts, radius, typography } from "../theme";
+import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const { width } = Dimensions.get("window");
 const isSmall = width < 380;
@@ -1166,7 +1167,7 @@ const styles = StyleSheet.create({
   shopBtnText: { ...typography.button, color: colors.textPrimary, fontSize: 13 },
 
   // ── List ──
-  listContent: { padding: 16, paddingBottom: 40 },
+  listContent: { padding: 16, paddingBottom: TAB_BAR_CLEARANCE },
 
   // ── Card ──
   card: {
