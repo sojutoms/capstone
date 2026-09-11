@@ -12,6 +12,7 @@ import puma_banner from "./Components/Assets/Banner/banner_puma.png";
 import Navbar from "./Components/Navbar/Navbar";
 import Footer from "./Components/Footer/Footer";
 import ScrollToTop from "./Components/ScrollToTop/ScrollToTop";
+import CanonicalUrl from "./Components/CanonicalUrl/CanonicalUrl";
 import AdminTrigger from "./Components/AdminTrigger/AdminTrigger";
 import Loader from "./Components/Loader/Loader";
 import ChatWidget from "./Components/Chatbot/ChatWidget";
@@ -52,6 +53,7 @@ function App() {
         <BrowserRouter>
           <AdminTrigger />
           <ScrollToTop />
+          <CanonicalUrl />
           <ShopContextProvider>
             <FavoritesProvider>
               <Navbar />
