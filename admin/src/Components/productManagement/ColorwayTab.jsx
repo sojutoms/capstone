@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import API_BASE_URL, { authorizedFetch } from "../../services/api";
+import Model3DPanel from "../Model3D/Model3DPanel";
 
 const FALLBACK_SHOE_SIZES = ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13", "13.5", "14"];
 const SIMPLE_CATEGORIES = ["bags", "collectibles"];
@@ -47,6 +48,8 @@ const ColorwayTab = ({ allproducts, getEffectiveSizes, showToast, onColorwayAdde
   const [sizes, setSizes] = useState({});
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [createdId, setCreatedId] = useState(null);
+  const [createdImages, setCreatedImages] = useState([]);
 
   const authH = { "Content-Type": "application/json" };
 
@@ -81,7 +84,7 @@ const ColorwayTab = ({ allproducts, getEffectiveSizes, showToast, onColorwayAdde
     setMainImgFile(null); setMainImgPrev("");
     setSubImgFiles([]); setSubImgPrevs([]);
     setSizes({}); setErrors({});
-    setSaving(false);
+    setSaving(false); setCreatedId(null); setCreatedImages([]);
   };
 
   const handleMainImg = (file) => {
@@ -176,7 +179,9 @@ const ColorwayTab = ({ allproducts, getEffectiveSizes, showToast, onColorwayAdde
       if (data.success) {
         showToast({ message: `Colorway added — SKU #${data.id}`, type: "success" });
         if (onColorwayAdded) onColorwayAdded();
-        reset();
+        setCreatedId(data.id);
+        setCreatedImages([imageUrl, ...subImageUrls]);
+        setStep("success");
       } else { showToast({ message: data.error || "Failed to add colorway.", type: "error" }); }
     } catch (err) { showToast({ message: "Error: " + err.message, type: "error" }); }
     finally { setSaving(false); }
@@ -220,6 +225,34 @@ const ColorwayTab = ({ allproducts, getEffectiveSizes, showToast, onColorwayAdde
               </div>
             );
           })}
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "success") {
+    return (
+      <div className="acw-form-container animate-in">
+        <div className="form-header">
+          <button className="back-btn-luxe" onClick={reset}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m15 18-6-6 6-6"/></svg>
+            BACK TO SELECTION
+          </button>
+        </div>
+
+        <div className="acw-grid" style={{ gridTemplateColumns: "1fr" }}>
+          <div className="acw-left">
+            <div className="inventory-section glass-strong">
+              <div className="section-header">
+                <h3 className="section-title">COLORWAY CREATED — SKU #{createdId}</h3>
+              </div>
+              <Model3DPanel productId={createdId} images={createdImages} disabled={!mainImgPrev} />
+            </div>
+          </div>
+        </div>
+
+        <div className="acw-footer">
+          <button className="footer-btn-primary" onClick={reset}>Done</button>
         </div>
       </div>
     );

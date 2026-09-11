@@ -20,7 +20,10 @@ export default function AppNavigator() {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 1500);
+    // Matches SplashScreen's own animation length (1000ms grow-in + 700ms
+    // hold + 700ms grow/fade-out ≈ 2400ms) so the app doesn't swap in
+    // before that smooth exit actually finishes playing.
+    const timer = setTimeout(() => setShowSplash(false), 2400);
     return () => clearTimeout(timer);
   }, []);
 

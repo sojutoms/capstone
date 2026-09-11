@@ -14,8 +14,8 @@ import {
   Image,
   Modal,
   TouchableOpacity,
-  Alert,
 } from "react-native";
+import { Alert } from "../utils/customAlert";
 import { useAuth } from "../context/AuthContext";
 import { colors, fonts } from "../theme";
 

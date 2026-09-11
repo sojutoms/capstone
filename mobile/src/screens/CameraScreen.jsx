@@ -4,10 +4,10 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   StatusBar,
   GestureResponderEvent,
 } from "react-native";
+import { Alert } from "../utils/customAlert";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { colors, fonts, typography } from "../theme";
 

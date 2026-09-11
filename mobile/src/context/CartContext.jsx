@@ -5,7 +5,8 @@ import {
   addToCartAPI,
   removeFromCartAPI,
 } from "../api/cartApi";
-import { Platform, Alert } from "react-native";
+import { Platform } from "react-native";
+import { Alert } from "../utils/customAlert";
 
 const BASE_URL =
   Platform.OS === "web"

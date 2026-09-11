@@ -7,7 +7,6 @@ import {
   FlatList,
   Image,
   TouchableOpacity,
-  ActivityIndicator,
   Platform,
   StatusBar,
   SafeAreaView,
@@ -25,6 +24,7 @@ import { useAuth } from "../context/AuthContext";
 import { colors, fonts, radius, shadows, typography } from "../theme";
 import FadeInItem from "../components/FadeInItem";
 import ProductCard from "../components/ProductCard";
+import ProductCardSkeleton from "../components/ProductCardSkeleton";
 import { getLowestPrice, isOutOfStock } from "../utils/productHelpers";
 import Toast from "react-native-toast-message";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
@@ -33,6 +33,10 @@ import { openChatWidget } from "../utils/chatWidgetBus";
 const { width } = Dimensions.get("window");
 
 const BRAND_LOGO = require("../../assets/GSPH-removebg.png");
+
+// Space reserved at the top of the ScrollView so its content starts below
+// the floating header panel (logo + greeting) instead of underneath it.
+const FLOATING_HEADER_CLEARANCE = 216;
 
 // Pure image carousel now — no text overlay, since the greeting/eyebrow/
 // question all live in the header above it instead.
@@ -218,15 +222,15 @@ const StoreMapSection = () => {
         </View>
         <View style={mapStyles.divider} />
         <View style={mapStyles.infoRow}>
-          <Text style={mapStyles.infoIcon}>📍</Text>
+          <Ionicons name="location-outline" size={14} color={colors.textMuted} style={mapStyles.infoIcon} />
           <Text style={mapStyles.infoText}>{STORE.address}</Text>
         </View>
         <View style={mapStyles.infoRow}>
-          <Text style={mapStyles.infoIcon}>🕐</Text>
+          <Ionicons name="time-outline" size={14} color={colors.textMuted} style={mapStyles.infoIcon} />
           <Text style={mapStyles.infoText}>{STORE.hours}</Text>
         </View>
         <View style={mapStyles.infoRow}>
-          <Text style={mapStyles.infoIcon}>📞</Text>
+          <Ionicons name="call-outline" size={14} color={colors.textMuted} style={mapStyles.infoIcon} />
           <TouchableOpacity onPress={callStore}>
             <Text style={[mapStyles.infoText, mapStyles.infoTextLink]}>{STORE.phone}</Text>
           </TouchableOpacity>
@@ -234,7 +238,7 @@ const StoreMapSection = () => {
       </View>
 
       <TouchableOpacity style={mapStyles.directionsBtn} onPress={openInMaps} activeOpacity={0.85}>
-        <Text style={mapStyles.directionsBtnText}>GET DIRECTIONS  →</Text>
+        <Text style={mapStyles.directionsBtnText}>GET DIRECTIONS</Text>
       </TouchableOpacity>
     </View>
   );
@@ -337,13 +341,22 @@ export default function HomeScreen({ navigation }) {
   const firstName = rawFirstName
     ? rawFirstName.charAt(0).toUpperCase() + rawFirstName.slice(1).toLowerCase()
     : "there";
-  const avatarUri = userProfile?.photoURL;
   const [products,       setProducts]       = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [selectedBrand,  setSelectedBrand]  = useState("all");
   const [activeQuickCat, setActiveQuickCat] = useState("All");
   const [heroIndex,      setHeroIndex]      = useState(0);
   const heroRef = useRef(null);
+  const chatBtnRef = useRef(null);
+
+  // Measures the header chat icon's actual position and passes it along so
+  // ChatWidget's pop-out animation originates from here, not its own FAB
+  // (which is hidden on this screen).
+  const handleOpenChat = () => {
+    chatBtnRef.current?.measureInWindow((x, y, width, height) => {
+      openChatWidget({ x: x + width / 2, y: y + height / 2 });
+    });
+  };
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -356,71 +369,21 @@ export default function HomeScreen({ navigation }) {
     return () => clearInterval(timer);
   }, [heroIndex]);
 
-  // Drives the sticky header's collapse: the greeting block (eyebrow + name
-  // + question) fades/shrinks away and the header panel's background fades
-  // toward transparent as the user scrolls, leaving just the logo + chat
-  // icon in a slim bar.
+  // Drives the floating header's fade: the whole panel — logo (sitting
+  // where the profile icon used to be, top-left) + greeting text — fades
+  // out together as the user scrolls, leaving only the chat button, which
+  // lives outside this fading group entirely so it keeps floating on its
+  // own with no panel behind it.
   const scrollY = useRef(new Animated.Value(0)).current;
-  const HEADER_COLLAPSE_RANGE = 88;
-  const headerGreetingOpacity = scrollY.interpolate({
-    inputRange: [0, HEADER_COLLAPSE_RANGE * 0.6],
+  const HEADER_COLLAPSE_RANGE = 170;
+  const headerOpacity = scrollY.interpolate({
+    inputRange: [0, HEADER_COLLAPSE_RANGE],
     outputRange: [1, 0],
     extrapolate: "clamp",
   });
-  const headerGreetingHeight = scrollY.interpolate({
-    inputRange: [0, HEADER_COLLAPSE_RANGE],
-    outputRange: [HEADER_COLLAPSE_RANGE, 0],
-    extrapolate: "clamp",
-  });
-  const headerBgOpacity = scrollY.interpolate({
-    inputRange: [0, HEADER_COLLAPSE_RANGE],
-    outputRange: [1, 0.5],
-    extrapolate: "clamp",
-  });
-
-  // Logo morph: travels from its resting top-left spot (inside the same
-  // row as the chat icon — no cross-container positioning, so nothing can
-  // clip or mis-stack it) to the row's horizontal center and grows
-  // slightly, via transform (translate + scale) rather than animating raw
-  // width/height/left/top — the more reliable way to do this in RN. A
-  // small halo the same color as the header rides along with it (same
-  // transform, so it never drifts out of sync) instead of animating
-  // separately. The "GOODSOLES" wordmark rises into the spot it vacated.
-  const collapseProgress = scrollY.interpolate({
-    inputRange: [0, HEADER_COLLAPSE_RANGE],
-    outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
-  const LOGO_BASE_SIZE = 42;
-  const LOGO_BASE_LEFT = 24; // matches pageLogoBase's fixed left
-  const LOGO_GROWTH = 1.25; // modest — "sakto lang", not a big jump
-  // pageLogoBase is positioned relative to the full-width header now (not
-  // the padded row), so its start/target centers are computed in that same
-  // full-width coordinate space.
-  const logoStartCenterX = LOGO_BASE_LEFT + LOGO_BASE_SIZE / 2;
-  const logoTargetCenterX = width / 2;
-  const logoTranslateX = collapseProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, logoTargetCenterX - logoStartCenterX],
-  });
-  // Pushes the logo down as it centers so it ends up sitting on the
-  // header's own bottom edge — half inside, half dipping into the content
-  // below — instead of staying centered inside the row the whole time.
-  // 57 = the fully collapsed header's total height (20 padTop + 50 row +
-  // 32 padBottom = 102) minus the logo's own start center-y (45).
-  const logoTranslateY = collapseProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 57],
-  });
-  const logoScale = collapseProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, LOGO_GROWTH],
-  });
-  const BULGE_PAD = 8; // small halo around the logo, not a big oversized circle
-  const brandLabelTranslateY = collapseProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [16, 0],
-  });
+  // Once fully faded, the (invisible) panel shouldn't still swallow touches
+  // meant for whatever's now scrolled up underneath it.
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
 
   useEffect(() => { fetchProducts(); }, []);
 
@@ -451,110 +414,47 @@ export default function HomeScreen({ navigation }) {
   const trendingProducts = products.slice(0, 6);
   const droppedProducts  = products.slice(0, 2);
 
-  if (loading) {
-    return (
-      <View style={s.loader}>
-        <ActivityIndicator size="large" color={colors.accentGold} />
-        <Text style={s.loaderText}>Loading drops…</Text>
-      </View>
-    );
-  }
-
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
 
-      {/* ── PAGE HEADER (logo + greeting + chat) ──
-          Sibling of the ScrollView, not inside it, so it stays fixed in
-          place while the hero and everything below it scrolls underneath.
-          The greeting/name collapses away on scroll, leaving just the logo
-          + chat icon in a slim, more transparent bar — and the logo itself
-          morphs from top-left to a centered, slightly bigger mark with a
-          small matching-color halo, while the "GOODSOLES" wordmark rises
-          into the spot it vacated. */}
-      <View style={s.pageHeaderShadowWrap}>
-        <View style={s.pageHeaderClip}>
-          <Animated.View
-            pointerEvents="none"
-            style={[StyleSheet.absoluteFill, s.pageHeaderBgLayer, { opacity: headerBgOpacity }]}
-          />
-          <View style={s.pageHeaderTopRow}>
-            <Animated.View
-              style={[
-                s.headerBrandLabelWrap,
-                { opacity: collapseProgress, transform: [{ translateY: brandLabelTranslateY }] },
-              ]}
-            >
-              <TouchableOpacity
-                style={s.headerAvatarBtn}
-                onPress={() => navigation.navigate("Profile")}
-                activeOpacity={0.8}
-              >
-                {avatarUri ? (
-                  <Image source={{ uri: avatarUri }} style={s.headerAvatarImg} />
-                ) : (
-                  <Ionicons name="person" size={16} color={colors.textPrimary} />
-                )}
-              </TouchableOpacity>
-            </Animated.View>
-            <TouchableOpacity
-              style={s.heroIconBtn}
-              onPress={openChatWidget}
-              activeOpacity={0.8}
-            >
+      {/* ── FLOATING HEADER (logo + chat + greeting) ──
+          Absolutely positioned above the ScrollView, not a flex sibling
+          taking layout space — so once the panel fades to fully
+          transparent, the content scrolling underneath just shows through.
+          Logo (top-left, where the profile icon used to be) and chat icon
+          (top-right) share one row, with the greeting text below — all one
+          group that fades together on scroll. Pill-shaped bottom edge. */}
+      <View style={s.floatingHeaderOverlay} pointerEvents="box-none">
+        <Animated.View
+          style={[s.headerPanel, { opacity: headerOpacity }]}
+          pointerEvents={headerCollapsed ? "none" : "auto"}
+        >
+          <View style={s.headerTopRow}>
+            <Image source={BRAND_LOGO} style={[s.pageLogo, { tintColor: colors.textPrimary }]} resizeMode="contain" />
+            <TouchableOpacity ref={chatBtnRef} style={s.chatBtn} onPress={handleOpenChat} activeOpacity={0.8}>
               <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
-          <Animated.View style={{ opacity: headerGreetingOpacity, height: headerGreetingHeight, overflow: "hidden" }}>
-            <Text style={s.headerEyebrow}>{getGreeting()}</Text>
-            <Text style={s.headerGreeting} numberOfLines={1}>Hello, {firstName}</Text>
-            <Text style={s.headerQuestion}>What's your next pair?</Text>
-          </Animated.View>
-        </View>
-
-        {/* Halo + logo render outside the clipped panel (as siblings of
-            it, not inside) so they can dip past the header's rounded
-            bottom edge into the content below without being clipped. Fixed
-            base left/top here, matching where they'd naturally sit inside
-            the row — transform (not animated left/top) does all the
-            movement, which is what actually renders reliably. */}
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            s.headerBulge,
-            {
-              transform: [
-                { translateX: logoTranslateX },
-                { translateY: logoTranslateY },
-                { scale: logoScale },
-              ],
-              opacity: collapseProgress,
-            },
-          ]}
-        />
-        <Animated.View
-          style={[
-            s.pageLogoBase,
-            {
-              transform: [
-                { translateX: logoTranslateX },
-                { translateY: logoTranslateY },
-                { scale: logoScale },
-              ],
-            },
-          ]}
-        >
-          <Image source={BRAND_LOGO} style={s.pageLogo} resizeMode="contain" />
+          <Text style={s.headerEyebrow}>{getGreeting()}</Text>
+          <Text style={s.headerGreeting} numberOfLines={1}>Hello, {firstName}</Text>
+          <Text style={s.headerQuestion}>What's your next pair?</Text>
         </Animated.View>
       </View>
 
       <Animated.ScrollView
         style={s.container}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE }}
+        contentContainerStyle={{ paddingTop: FLOATING_HEADER_CLEARANCE, paddingBottom: TAB_BAR_CLEARANCE }}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
+          {
+            useNativeDriver: false,
+            listener: (e) => {
+              const collapsed = e.nativeEvent.contentOffset.y >= HEADER_COLLAPSE_RANGE;
+              setHeaderCollapsed((prev) => (prev !== collapsed ? collapsed : prev));
+            },
+          }
         )}
         scrollEventThrottle={16}
         refreshControl={
@@ -564,6 +464,7 @@ export default function HomeScreen({ navigation }) {
 
         {/* ── HERO — pure swipeable image carousel, no text overlay ── */}
         <View style={s.heroCarouselWrap}>
+          <Text style={s.heroLabel}>BRANDS</Text>
           <FlatList
             ref={heroRef}
             data={HERO_SLIDES}
@@ -603,7 +504,7 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* ── TRENDING NOW ── */}
-        {trendingProducts.length > 0 && (
+        {(loading || trendingProducts.length > 0) && (
           <View style={s.trendingSection}>
             <SectionHeader
               eyebrow="MOST WANTED THIS WEEK"
@@ -615,18 +516,20 @@ export default function HomeScreen({ navigation }) {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
             >
-              {trendingProducts.map((item, index) => (
-                <FadeInItem key={item._id || index} index={index}>
-                  <ProductCard
-                    item={item}
-                    index={index}
-                    onPress={() => navigation.navigate("ProductDetail", { product: item })}
-                    onAddToCart={handleAddToCart}
-                    favorited={isFavorite(item.id)}
-                    onToggleFavorite={() => toggleFavorite(item.id)}
-                  />
-                </FadeInItem>
-              ))}
+              {loading
+                ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)
+                : trendingProducts.map((item, index) => (
+                    <FadeInItem key={item._id || index} index={index}>
+                      <ProductCard
+                        item={item}
+                        index={index}
+                        onPress={() => navigation.navigate("ProductDetail", { product: item })}
+                        onAddToCart={handleAddToCart}
+                        favorited={isFavorite(item.id)}
+                        onToggleFavorite={() => toggleFavorite(item.id)}
+                      />
+                    </FadeInItem>
+                  ))}
             </ScrollView>
           </View>
         )}
@@ -658,7 +561,7 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* ── JUST DROPPED ── */}
-        {droppedProducts.length > 0 && (
+        {(loading || droppedProducts.length > 0) && (
           <View>
             <SectionHeader
               eyebrow="FRESH ARRIVALS"
@@ -670,47 +573,26 @@ export default function HomeScreen({ navigation }) {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
             >
-              {droppedProducts.map((item, index) => (
-                <FadeInItem key={item._id || index} index={index}>
-                  <ProductCard
-                    item={item}
-                    index={index}
-                    onPress={() => navigation.navigate("ProductDetail", { product: item })}
-                    onAddToCart={handleAddToCart}
-                    favorited={isFavorite(item.id)}
-                    onToggleFavorite={() => toggleFavorite(item.id)}
-                  />
-                </FadeInItem>
-              ))}
+              {loading
+                ? Array.from({ length: 2 }).map((_, i) => <ProductCardSkeleton key={i} />)
+                : droppedProducts.map((item, index) => (
+                    <FadeInItem key={item._id || index} index={index}>
+                      <ProductCard
+                        item={item}
+                        index={index}
+                        onPress={() => navigation.navigate("ProductDetail", { product: item })}
+                        onAddToCart={handleAddToCart}
+                        favorited={isFavorite(item.id)}
+                        onToggleFavorite={() => toggleFavorite(item.id)}
+                      />
+                    </FadeInItem>
+                  ))}
             </ScrollView>
           </View>
         )}
 
         {/* ── STORE MAP SECTION (moved from ShopScreen.jsx) ── */}
         <StoreMapSection />
-
-        {/* ── BOTTOM STATS BAR ── */}
-        <View style={s.statsBar}>
-          {[
-            { num: "500+", label: "Products" },
-            { num: "4.9★", label: "Rating" },
-            { num: "24H",  label: "Delivery" },
-          ].map((stat, i) => (
-            <React.Fragment key={stat.label}>
-              <View style={s.statItem}>
-                <Text style={s.statNum}>{stat.num}</Text>
-                <Text style={s.statLabel}>{stat.label}</Text>
-              </View>
-              {i < 2 && <View style={s.statDivider} />}
-            </React.Fragment>
-          ))}
-        </View>
-
-        {/* ── BRAND FOOTER TAG ── */}
-        <View style={s.footerTag}>
-          <Text style={s.footerTagText}>GOODSOLES™</Text>
-          <Text style={s.footerTagSub}>Where your next pair begins.</Text>
-        </View>
 
       </Animated.ScrollView>
     </SafeAreaView>
@@ -721,80 +603,40 @@ export default function HomeScreen({ navigation }) {
 
 const s = StyleSheet.create({
   safe:       { flex: 1, backgroundColor: colors.bgPrimary },
-  loader:     { flex: 1, backgroundColor: colors.bgPrimary, justifyContent: "center", alignItems: "center" },
-  loaderText: { color: colors.textMuted, fontSize: 10, letterSpacing: 3, textTransform: "uppercase", marginTop: 14, fontFamily: fonts.bodyMedium },
   container:  { flex: 1, backgroundColor: colors.bgPrimary },
 
-  /* PAGE HEADER — logo + greeting + chat, fixed above the scrolling content.
-     Split into a shadow wrapper (no overflow:hidden, so the shadow isn't
-     clipped) and an inner clipped layer that holds the animated background
-     fade + rounded bottom corners. */
-  pageHeaderShadowWrap: {
-    borderBottomLeftRadius: radius.xl,
-    borderBottomRightRadius: radius.xl,
+  /* FLOATING HEADER — logo + chat + greeting, all one panel that fades
+     together on scroll. Absolutely positioned above the ScrollView, not a
+     flex sibling, so once it fades out the scrolling content behind it
+     just shows through. Pill-shaped bottom edge, generous padding. */
+  floatingHeaderOverlay: {
+    position: "absolute",
+    top: 0, left: 0, right: 0,
     zIndex: 20,
-    elevation: 20,
+  },
+  headerPanel: {
+    backgroundColor: colors.bgTertiary,
+    borderBottomLeftRadius: 48,
+    borderBottomRightRadius: 48,
+    paddingHorizontal: 30,
+    paddingTop: 48,
+    paddingBottom: 24,
     ...shadows.sm,
   },
-  pageHeaderClip: {
-    borderBottomLeftRadius: radius.xl,
-    borderBottomRightRadius: radius.xl,
-    overflow: "hidden",
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 32,
-  },
-  pageHeaderBgLayer: { backgroundColor: colors.bgCard },
-  // Fixed height so the profile icon/label's absolute positioning inside
-  // it is predictable. Only the chat button is a normal-flow child now (the
-  // logo/halo render outside this row entirely — see pageLogoBase/
-  // headerBulge below — so it's the only thing justifyContent needs to
-  // push to the row's end).
-  pageHeaderTopRow: {
+  headerTopRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     alignItems: "center",
-    height: 50,
   },
-  // Plain, fixed-size Image — its wrapping Animated.View (pageLogoBase)
-  // handles the travel-to-center + grow via transform, not by animating
-  // width/height directly (more reliable, and matches how the logo
-  // rendered correctly before this effect was added).
   pageLogo: { width: 42, height: 42 },
-  // Rendered outside pageHeaderClip (as a sibling of it, not inside), so
-  // it can dip past the header's rounded bottom edge without being
-  // clipped. left/top here match where the logo would sit inside the row
-  // (clip's paddingTop 20 + row's own vertical centering for a 42px icon
-  // in a 50px row) — transform does all the animated movement from there.
-  pageLogoBase: { position: "absolute", left: 24, top: 24, zIndex: 2 },
-  // Small halo behind the logo, same color as the header so it blends —
-  // same base spot and the exact same transform as the logo, so it can
-  // never drift out of sync with it.
-  headerBulge: {
-    position: "absolute",
-    left: 16,
-    top: 16,
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: colors.bgCard,
-    zIndex: 1,
-  },
-  headerBrandLabelWrap: { position: "absolute", left: 0, top: 0, height: 50, justifyContent: "center" },
-  headerAvatarBtn: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: colors.accentGold,
-    justifyContent: "center", alignItems: "center", overflow: "hidden",
-  },
-  headerAvatarImg: { width: "100%", height: "100%" },
-  heroIconBtn: {
+  chatBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 0.5, borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: colors.bgSurface, borderWidth: 0.5, borderColor: colors.borderLight,
     justifyContent: "center", alignItems: "center",
   },
-  headerEyebrow: { fontSize: 9, letterSpacing: 3, color: "rgba(255,255,255,0.5)", fontFamily: fonts.bodySemibold, marginTop: 16 },
-  headerGreeting: { fontSize: 26, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display, marginTop: 10 },
-  headerQuestion: { fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 4, fontFamily: fonts.bodyRegular, letterSpacing: 0.3 },
+  headerEyebrow: { fontSize: 9, letterSpacing: 3, color: colors.textTertiary, fontFamily: fonts.bodySemibold, marginTop: 24 },
+  headerGreeting: { fontSize: 26, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display, marginTop: 12 },
+  headerQuestion: { fontSize: 12, color: colors.textSecondary, marginTop: 6, fontFamily: fonts.bodyRegular, letterSpacing: 0.3 },
 
   /* HERO — pure swipeable image carousel below the header */
   heroCarouselWrap: { marginHorizontal: 16, marginTop: 16, marginBottom: 4 },
@@ -805,6 +647,12 @@ const s = StyleSheet.create({
     overflow: "hidden", height: 200,
   },
   heroBgImage: { width: "100%", height: "100%" },
+  // Same font treatment as "Trending Now" — a heading above the carousel,
+  // not overlaid on the photo.
+  heroLabel: {
+    fontSize: 24, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display,
+    marginBottom: 12,
+  },
   heroDots: { flexDirection: "row", gap: 4, marginTop: 12, justifyContent: "center", alignItems: "center" },
   dot:       { width: 5, height: 3, borderRadius: 2, backgroundColor: colors.bgTertiary },
   dotActive: { width: 22, backgroundColor: colors.accentGold },
@@ -881,24 +729,6 @@ const s = StyleSheet.create({
   /* EMPTY */
   emptyState: { paddingVertical: 40, alignItems: "center" },
   emptyText:  { fontSize: 12, color: colors.textMuted, letterSpacing: 2 },
-
-  /* STATS BAR */
-  statsBar: {
-    flexDirection: "row", justifyContent: "space-around", alignItems: "center",
-    marginHorizontal: 16, marginTop: 36,
-    backgroundColor: colors.bgCard, borderWidth: 0.5, borderColor: colors.borderLight,
-    borderRadius: radius.lg, paddingVertical: 18,
-    ...shadows.sm,
-  },
-  statDivider: { width: 0.5, height: 28, backgroundColor: colors.borderLight },
-  statItem:    { alignItems: "center", flex: 1 },
-  statNum:     { fontSize: 22, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display },
-  statLabel:   { fontSize: 8, color: colors.textTertiary, letterSpacing: 2.5, fontFamily: fonts.bodyBold, marginTop: 4 },
-
-  /* BRAND FOOTER TAG */
-  footerTag: { alignItems: "center", marginTop: 40, paddingBottom: 8 },
-  footerTagText: { fontSize: 13, color: colors.bgTertiary, letterSpacing: 5, fontFamily: fonts.display },
-  footerTagSub:  { fontSize: 9, color: colors.bgTertiary, letterSpacing: 1.5, marginTop: 4, fontFamily: fonts.bodyRegular },
 });
 
 /* ─────────────────── TILE STYLES (copied from ShopScreen.jsx) ─────────────────── */
@@ -1023,12 +853,15 @@ const mapStyles = StyleSheet.create({
   storeName:    { fontSize: 17, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display },
   divider:      { height: 1, backgroundColor: colors.bgTertiary, marginBottom: 12 },
   infoRow:      { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 10 },
-  infoIcon:     { fontSize: 13, marginTop: 1 },
+  infoIcon:     { marginTop: 2 },
   infoText:     { fontSize: 12, color: colors.textSecondary, flex: 1, lineHeight: 18, letterSpacing: 0.3, fontFamily: fonts.bodyRegular },
   infoTextLink: { color: colors.accentGold, textDecorationLine: "underline" },
+  // Same shape/size as Cart's checkout button — radius.lg, centered rather
+  // than full-width, no arrow — so buttons read as one consistent system.
   directionsBtn: {
-    backgroundColor: colors.textPrimary, borderRadius: radius.full,
-    paddingVertical: 14, alignItems: "center", justifyContent: "center", marginBottom: 8,
+    alignSelf: "center", width: "70%",
+    backgroundColor: colors.textPrimary, borderRadius: radius.lg,
+    paddingVertical: 17, alignItems: "center", justifyContent: "center", marginBottom: 8,
   },
-  directionsBtnText: { ...typography.button, fontSize: 11, color: colors.bgPrimary },
+  directionsBtnText: { ...typography.button, fontSize: 12, color: colors.textInverse },
 });

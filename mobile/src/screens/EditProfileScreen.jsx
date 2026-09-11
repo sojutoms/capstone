@@ -8,8 +8,8 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
-  Alert,
 } from "react-native";
+import { Alert } from "../utils/customAlert";
 import { useAuth } from "../context/AuthContext";
 import { colors, fonts, radius, typography } from "../theme";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";

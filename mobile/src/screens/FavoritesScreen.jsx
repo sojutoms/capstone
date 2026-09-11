@@ -89,7 +89,7 @@ export default function FavoritesScreen({ navigation }) {
   if (!favorites.length) {
     return (
       <SafeAreaView style={styles.safe}>
-        <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
+        <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
         <ScrollView
           contentContainerStyle={styles.emptyWrap}
           refreshControl={
@@ -112,7 +112,7 @@ export default function FavoritesScreen({ navigation }) {
   /* ── Main ── */
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#0A0A0A" />
+      <StatusBar barStyle="dark-content" backgroundColor="#0A0A0A" />
 
       {/* ── HEADER ── */}
       <View style={styles.header}>

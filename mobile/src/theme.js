@@ -5,37 +5,39 @@
 // consistent with web and with itself.
 //
 // Web uses CSS variables that can be re-themed (light/dark); mobile has no
-// theme switcher yet, so this ports the DARK palette only (web's default —
-// "the original look").
+// theme switcher yet, so this ports the LIGHT palette (web's --theme='light'
+// values), with the brand accent swapped from gold to black — gold read
+// well against the old dark background, but black reads as the stronger
+// accent against white.
 
 export const colors = {
   // Backgrounds
-  bgPrimary: "#0a0a0a",
-  bgSecondary: "#121212",
-  bgSurface: "#1a1a1a",
-  bgElevated: "#222222",
-  bgCard: "#151515",
-  bgTertiary: "#1e1e1e",
+  bgPrimary: "#ffffff",
+  bgSecondary: "#f8f8f8",
+  bgSurface: "#ffffff",
+  bgElevated: "#f4f4f4",
+  bgCard: "#ffffff",
+  bgTertiary: "#eeeeee",
 
   // Text
-  textPrimary: "#ffffff",
-  textSecondary: "#a0a0a0",
-  textTertiary: "#808080",
+  textPrimary: "#111111",
+  textSecondary: "#444444",
+  textTertiary: "#777777",
   textMuted: "#666666",
-  textInverse: "#000000",
+  textInverse: "#ffffff",
 
-  // Accent (brand gold)
-  accentGold: "#c5a059",
-  accentGoldLight: "#e2c28d",
-  accentGoldWash: "rgba(197, 160, 89, 0.15)",
+  // Accent (brand — black, replacing gold now that the background is white)
+  accentGold: "#000000",
+  accentGoldLight: "#333333",
+  accentGoldWash: "rgba(0, 0, 0, 0.08)",
 
   // Borders / glass
-  borderSubtle: "rgba(255, 255, 255, 0.08)",
-  borderLight: "rgba(255, 255, 255, 0.15)",
-  glassBg: "rgba(255, 255, 255, 0.03)",
-  glassBorder: "rgba(255, 255, 255, 0.08)",
-  glassBgHover: "rgba(255, 255, 255, 0.06)",
-  glassBorderHover: "rgba(255, 255, 255, 0.2)",
+  borderSubtle: "rgba(0, 0, 0, 0.08)",
+  borderLight: "rgba(0, 0, 0, 0.15)",
+  glassBg: "rgba(0, 0, 0, 0.03)",
+  glassBorder: "rgba(0, 0, 0, 0.08)",
+  glassBgHover: "rgba(0, 0, 0, 0.06)",
+  glassBorderHover: "rgba(0, 0, 0, 0.2)",
 
   // Status
   danger: "#e5484d",

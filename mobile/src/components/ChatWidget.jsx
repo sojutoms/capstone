@@ -10,6 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Animated,
+  Dimensions,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../api/config";
@@ -21,6 +23,20 @@ import { getActiveRouteName, subscribeActiveRoute } from "../navigation/activeRo
 const STORAGE_KEY = "gs_chat_sessions";
 const MAX_SESSIONS = 20;
 const TITLE_MAX = 28;
+
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+// Fallback pop-out origin (bottom-right, roughly where the FAB sits) for
+// the one path that has no FAB to measure — Home's own header chat icon,
+// which calls openChatWidget() directly instead of pressing this FAB.
+const FALLBACK_ORIGIN = { x: SCREEN_W - 18 - 27, y: SCREEN_H - (TAB_BAR_CLEARANCE + 8) - 27 };
+
+// Screens that already have their own chat entry point (Home) or where the
+// FAB just crowds a fixed action row at the bottom (ProductDetail's Add to
+// Bag/Pay, Cart's checkout button) — the FAB stays hidden on these.
+const HIDE_FAB_ROUTES = new Set([
+  "HomeScreen", "ProductDetail", "CartScreen", "PlaceOrder",
+  "ShopScreen", "ProfileScreen", "Camera",
+]);
 
 const WELCOME_MESSAGE = {
   role: "assistant",
@@ -36,6 +52,39 @@ const makeSession = () => ({
 const titleFromMessage = (text) =>
   text.length > TITLE_MAX ? `${text.slice(0, TITLE_MAX).trim()}…` : text;
 
+// Decodes just the JWT payload to pull out the account's stable user id, so
+// chat history can be scoped per-account (STORAGE_KEY used to be a single
+// fixed string shared by every login on the device). Hand-rolled instead of
+// atob/Buffer since neither is guaranteed to exist in every RN/Hermes setup.
+const BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+function base64UrlDecode(input) {
+  const cleaned = input.replace(/-/g, "+").replace(/_/g, "/");
+  let output = "";
+  let buffer = 0;
+  let bits = 0;
+  for (const char of cleaned) {
+    const idx = BASE64_CHARS.indexOf(char);
+    if (idx === -1) continue;
+    buffer = (buffer << 6) | idx;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      output += String.fromCharCode((buffer >> bits) & 0xff);
+    }
+  }
+  return output;
+}
+function decodeUserId(token) {
+  try {
+    const payload = token?.split(".")[1];
+    if (!payload) return null;
+    const json = JSON.parse(base64UrlDecode(payload));
+    return json?.user?.id || json?.id || null;
+  } catch {
+    return null;
+  }
+}
+
 export default function ChatWidget() {
   const { userToken } = useAuth();
   const [open, setOpen] = useState(false);
@@ -47,11 +96,49 @@ export default function ChatWidget() {
   const [loaded, setLoaded] = useState(false);
   const [visible, setVisible] = useState(false);
   const [routeName, setRouteName] = useState(getActiveRouteName());
+  const [modalMounted, setModalMounted] = useState(false);
+  const [origin, setOrigin] = useState(FALLBACK_ORIGIN);
+  const progress = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef(null);
+  const fabRef = useRef(null);
+  // Tracks which storageKey's data is actually loaded into `sessions` right
+  // now, so the persist effect (below) can't fire mid-account-switch and
+  // write the outgoing account's messages into the incoming account's slot.
+  const loadedKeyRef = useRef(null);
+  const storageKey = `${STORAGE_KEY}_${decodeUserId(userToken) || "guest"}`;
+
+  // Measures the FAB's actual on-screen position right before opening, so
+  // the pop-out animation originates exactly at the icon instead of an
+  // estimated spot — same technique as the fly-to-cart animation elsewhere.
+  const openFromFab = () => {
+    fabRef.current?.measureInWindow((x, y, width, height) => {
+      setOrigin({ x: x + width / 2, y: y + height / 2 });
+      setOpen(true);
+    });
+  };
+
+  // Drives the "pop out from the FAB" open/close transition — the Modal
+  // itself does no animating (animationType is unset); everything is this
+  // one Animated.Value interpolated into scale/translate/opacity below.
+  // Closing plays the animation first and only unmounts the Modal once it
+  // finishes, instead of the panel just vanishing.
+  useEffect(() => {
+    if (open) {
+      setModalMounted(true);
+      Animated.spring(progress, { toValue: 1, useNativeDriver: true, speed: 16, bounciness: 8 }).start();
+    } else {
+      Animated.timing(progress, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
+        setModalMounted(false);
+      });
+    }
+  }, [open]);
 
   // The Home hero has its own chat icon (next to the profile avatar) that
   // publishes here instead of rendering a second entry point on that screen.
-  useEffect(() => subscribeChatWidget(() => setOpen(true)), []);
+  useEffect(() => subscribeChatWidget((publishedOrigin) => {
+    if (publishedOrigin) setOrigin(publishedOrigin);
+    setOpen(true);
+  }), []);
   useEffect(() => subscribeActiveRoute(setRouteName), []);
 
   // Wait a couple seconds after login before showing the FAB, so it doesn't
@@ -65,11 +152,18 @@ export default function ChatWidget() {
     return () => clearTimeout(timer);
   }, [userToken]);
 
+  // Re-runs whenever storageKey changes — i.e. on first mount, and again on
+  // every login/logout/account switch — so each account only ever sees its
+  // own chat history instead of whatever was last saved under the old
+  // single shared key.
   useEffect(() => {
+    let cancelled = false;
+    setLoaded(false);
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        const raw = await AsyncStorage.getItem(storageKey);
         const parsed = raw ? JSON.parse(raw) : null;
+        if (cancelled) return;
         if (Array.isArray(parsed) && parsed.length > 0) {
           setSessions(parsed);
           setActiveId(parsed[0].id);
@@ -79,19 +173,24 @@ export default function ChatWidget() {
           setActiveId(s.id);
         }
       } catch {
+        if (cancelled) return;
         const s = makeSession();
         setSessions([s]);
         setActiveId(s.id);
       } finally {
-        setLoaded(true);
+        if (!cancelled) {
+          loadedKeyRef.current = storageKey;
+          setLoaded(true);
+        }
       }
     })();
-  }, []);
+    return () => { cancelled = true; };
+  }, [storageKey]);
 
   useEffect(() => {
-    if (!loaded) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.slice(-MAX_SESSIONS)));
-  }, [sessions, loaded]);
+    if (!loaded || loadedKeyRef.current !== storageKey) return;
+    AsyncStorage.setItem(storageKey, JSON.stringify(sessions.slice(-MAX_SESSIONS)));
+  }, [sessions, loaded, storageKey]);
 
   const activeSession = sessions.find((s) => s.id === activeId) || sessions[0];
 
@@ -162,19 +261,36 @@ export default function ChatWidget() {
 
   return (
     <>
-      {routeName !== "HomeScreen" && (
-        <TouchableOpacity style={styles.fab} onPress={() => setOpen(true)} activeOpacity={0.85}>
+      {!HIDE_FAB_ROUTES.has(routeName) && (
+        <TouchableOpacity ref={fabRef} style={styles.fab} onPress={openFromFab} activeOpacity={0.85}>
           <View style={styles.fabBubble}>
             <View style={styles.fabBubbleTail} />
           </View>
         </TouchableOpacity>
       )}
 
-      <Modal visible={open} animationType="slide" transparent onRequestClose={() => setOpen(false)}>
-        <View style={styles.overlay}>
+      <Modal visible={modalMounted} transparent onRequestClose={() => setOpen(false)}>
+        <Animated.View style={[styles.overlay, { opacity: progress }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setOpen(false)}
+          />
+          <Animated.View
+            style={[
+              styles.panel,
+              {
+                transform: [
+                  { translateX: progress.interpolate({ inputRange: [0, 1], outputRange: [origin.x - SCREEN_W / 2, 0] }) },
+                  { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [origin.y - SCREEN_H / 2, 0] }) },
+                  { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.1, 1] }) },
+                ],
+              },
+            ]}
+          >
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : undefined}
-            style={styles.panel}
+            style={styles.panelInner}
           >
             <View style={styles.header}>
               <View>
@@ -251,7 +367,8 @@ export default function ChatWidget() {
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
     </>
   );
@@ -267,7 +384,7 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: "#c5a059",
+    backgroundColor: "#e0e0e0",
     alignItems: "center",
     justifyContent: "center",
     elevation: 6,
@@ -292,8 +409,22 @@ const styles = StyleSheet.create({
     borderTopColor: "#0a0a0a",
   },
 
-  overlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },
-  panel: { height: "82%", backgroundColor: "#151515", borderTopLeftRadius: 20, borderTopRightRadius: 20, overflow: "hidden" },
+  overlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  // Floating card — rounded on every corner, not a bottom sheet — sized
+  // to "pop out" from wherever the FAB was measured (see `origin` state).
+  panel: {
+    width: "88%",
+    height: "72%",
+    backgroundColor: "#151515",
+    borderRadius: 24,
+    overflow: "hidden",
+  },
+  panelInner: { flex: 1 },
 
   header: {
     flexDirection: "row",
@@ -320,9 +451,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.05)",
     maxWidth: 140,
   },
-  tabActive: { backgroundColor: "rgba(197,160,89,0.18)" },
+  tabActive: { backgroundColor: "rgba(224,224,224,0.18)" },
   tabLabel: { color: "#888", fontSize: 12 },
-  tabLabelActive: { color: "#e2c28d" },
+  tabLabelActive: { color: "#e0e0e0" },
   tabClose: { color: "#666", fontSize: 11 },
   tabNew: {
     width: 28,
@@ -337,7 +468,7 @@ const styles = StyleSheet.create({
   body: { flex: 1 },
   bodyContent: { padding: 14, gap: 10 },
   bubble: { maxWidth: "82%", borderRadius: 14, paddingHorizontal: 13, paddingVertical: 9 },
-  bubbleUser: { alignSelf: "flex-end", backgroundColor: "#c5a059" },
+  bubbleUser: { alignSelf: "flex-end", backgroundColor: "#e0e0e0" },
   bubbleAssistant: { alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.06)" },
   bubbleTextUser: { color: "#0a0a0a", fontSize: 14, lineHeight: 20 },
   bubbleTextAssistant: { color: "#eee", fontSize: 14, lineHeight: 20 },
@@ -365,7 +496,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#c5a059",
+    backgroundColor: "#e0e0e0",
     alignItems: "center",
     justifyContent: "center",
   },

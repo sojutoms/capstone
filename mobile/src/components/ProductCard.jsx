@@ -5,6 +5,7 @@ import { colors, fonts, radius, typography } from "../theme";
 import { toNumber, getLowestPrice, getBadge } from "../utils/productHelpers";
 import PressScale from "./PressScale";
 import { triggerFlyToCart } from "../utils/flyToCartBus";
+import { hapticTap, hapticSuccess } from "../utils/haptics";
 
 const { width } = Dimensions.get("window");
 export const PRODUCT_CARD_WIDTH = (width - 48) / 2;
@@ -32,7 +33,10 @@ export default function ProductCard({ item, index = 0, onPress, onAddToCart, fav
         )}
         <TouchableOpacity
           style={styles.heartBtn}
-          onPress={() => onToggleFavorite(item)}
+          onPress={() => {
+            hapticTap();
+            onToggleFavorite(item);
+          }}
           hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
         >
           <Text style={[styles.heartIcon, favorited && styles.heartIconActive]}>
@@ -65,6 +69,7 @@ export default function ProductCard({ item, index = 0, onPress, onAddToCart, fav
             <TouchableOpacity
               style={styles.addBtn}
               onPress={(e) => {
+                hapticSuccess();
                 triggerFlyToCart({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY, width: 0, height: 0 });
                 onAddToCart(item);
               }}
@@ -101,6 +106,7 @@ const styles = StyleSheet.create({
   heartBtn: {
     position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: 13,
     backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center",
+    zIndex: 2, elevation: 2,
   },
   heartIcon: { color: colors.textPrimary, fontSize: 12 },
   heartIconActive: { color: colors.danger },

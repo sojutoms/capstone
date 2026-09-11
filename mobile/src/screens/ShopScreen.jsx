@@ -183,7 +183,7 @@ export default function ShopScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}

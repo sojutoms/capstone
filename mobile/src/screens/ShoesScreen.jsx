@@ -187,7 +187,7 @@ export default function ShoesScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
 
       {/* ── TOP NAV ── */}
       <View style={styles.topNav}>

@@ -6,16 +6,17 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
-  Alert,
   StatusBar,
   Image,
   RefreshControl,
   Platform,
   ActivityIndicator,
   Modal,
+  Alert,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
@@ -35,7 +36,7 @@ function MenuItem({ icon, label, sublabel, onPress, rightElement, danger }) {
       activeOpacity={0.6}
     >
       <View style={[styles.menuIcon, danger && styles.menuIconDanger]}>
-        <Text style={styles.menuIconText}>{icon}</Text>
+        <Ionicons name={icon} size={17} color={danger ? colors.danger : colors.textPrimary} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.menuLabel, danger && styles.menuLabelDanger]}>
@@ -209,7 +210,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -285,16 +286,16 @@ export default function ProfileScreen({ navigation }) {
           
          
           <View style={styles.itemDivider} />
-          <MenuItem icon="🏠" label="Delivery Addresses" sublabel="Manage saved addresses" onPress={() => navigation.navigate("Addresses")} />
+          <MenuItem icon="home-outline" label="Delivery Addresses" sublabel="Manage saved addresses" onPress={() => navigation.navigate("Addresses")} />
           <View style={styles.itemDivider} />
-          <MenuItem icon="💳" label="Payment Methods" sublabel="Cards & wallets" onPress={() => navigation.navigate("PaymentMethods")} />
+          <MenuItem icon="card-outline" label="Payment Methods" sublabel="Cards & wallets" onPress={() => navigation.navigate("PaymentMethods")} />
           <View style={styles.itemDivider} />
-          <MenuItem icon="🎟️" label="Vouchers & Promos" sublabel="Apply discount codes" onPress={() => navigation.navigate("Vouchers")} />
+          <MenuItem icon="pricetag-outline" label="Vouchers & Promos" sublabel="Apply discount codes" onPress={() => navigation.navigate("Vouchers")} />
         </Section>
 
         <Section title="PREFERENCES">
           <MenuItem
-            icon="🔔"
+            icon="notifications-outline"
             label="Notifications"
             sublabel={notificationsEnabled ? "Enabled" : "Disabled"}
             onPress={() => {}}
@@ -309,23 +310,23 @@ export default function ProfileScreen({ navigation }) {
             }
           />
           <View style={styles.itemDivider} />
-          <MenuItem icon="📏" label="Size Preferences" sublabel="Set your default shoe size" onPress={() => navigation.navigate("SizePreferences")} />
+          <MenuItem icon="footsteps-outline" label="Size Preferences" sublabel="Set your default shoe size" onPress={() => navigation.navigate("SizePreferences")} />
           <View style={styles.itemDivider} />
-          <MenuItem icon="🌐" label="Language & Region" sublabel="English · Philippines" onPress={() => navigation.navigate("Language")} />
+          <MenuItem icon="globe-outline" label="Language & Region" sublabel="English · Philippines" onPress={() => navigation.navigate("Language")} />
         </Section>
 
         <Section title="SUPPORT">
-          <MenuItem icon="💬" label="Help Center" onPress={() => navigation.navigate("HelpCenter")} />
+          <MenuItem icon="help-circle-outline" label="Help Center" onPress={() => navigation.navigate("HelpCenter")} />
           <View style={styles.itemDivider} />
-          <MenuItem icon="⭐" label="Rate the App" onPress={() => Alert.alert("Thanks!", "Redirecting to app store…")} />
+          <MenuItem icon="star-outline" label="Rate the App" onPress={() => Alert.alert("Thanks!", "Redirecting to app store…")} />
           <View style={styles.itemDivider} />
-          <MenuItem icon="🔒" label="Privacy Policy" onPress={() => navigation.navigate("Privacy")} />
+          <MenuItem icon="lock-closed-outline" label="Privacy Policy" onPress={() => navigation.navigate("Privacy")} />
           <View style={styles.itemDivider} />
-          <MenuItem icon="📄" label="Terms of Service" onPress={() => navigation.navigate("Terms")} />
+          <MenuItem icon="document-text-outline" label="Terms of Service" onPress={() => navigation.navigate("Terms")} />
         </Section>
 
         <Section>
-          <MenuItem icon="🚪" label="Log Out" onPress={handleLogout} danger />
+          <MenuItem icon="log-out-outline" label="Log Out" onPress={handleLogout} danger />
         </Section>
 
         <Text style={styles.version}>Version 1.0.0 · Built for Sneakerheads</Text>
@@ -401,8 +402,7 @@ const styles = StyleSheet.create({
   sectionCard: { backgroundColor: colors.bgCard, borderRadius: radius.md, overflow: "hidden" },
   menuItem: { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16, gap: 14 },
   menuIcon: { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.bgTertiary, justifyContent: "center", alignItems: "center" },
-  menuIconDanger: { backgroundColor: "#1a0a0a" },
-  menuIconText: { fontSize: 16 },
+  menuIconDanger: { backgroundColor: "rgba(229, 72, 77, 0.1)" },
   menuLabel: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.bodyBold, letterSpacing: 0.3 },
   menuLabelDanger: { color: colors.danger },
   menuSublabel: { color: colors.textMuted, fontSize: 11, marginTop: 2 },

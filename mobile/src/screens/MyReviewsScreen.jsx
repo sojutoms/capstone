@@ -86,7 +86,7 @@ export default function MyReviewsScreen({ navigation }) {
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
 
       <View style={s.header}>
         <TouchableOpacity

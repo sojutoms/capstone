@@ -142,7 +142,13 @@ function ElegantTabBar({ state, navigation }) {
   return (
     <View style={styles.bar}>
       <View style={styles.pillShadowWrap}>
-        <BlurView intensity={45} tint="dark" style={styles.pill}>
+        {/* BlurView misbehaves (visible seams/hard edges at rounded
+            corners) when overflow:hidden + borderRadius are applied to it
+            directly, especially on Android — so the clipping and border
+            live on this plain wrapping View instead, with BlurView just
+            filling it edge-to-edge underneath. */}
+        <View style={styles.pillClip}>
+          <BlurView intensity={45} tint="light" style={styles.pill}>
           {TABS.map((tab, i) => {
             const count = counts[tab.name] || 0;
 
@@ -174,7 +180,8 @@ function ElegantTabBar({ state, navigation }) {
               </TouchableOpacity>
             );
           })}
-        </BlurView>
+          </BlurView>
+        </View>
       </View>
     </View>
   );
@@ -237,26 +244,33 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: Platform.OS === "ios" ? 30 : 14,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
   },
 
+  // Fully rounded capsule on every corner — the actual floating-pill shape.
   pillShadowWrap: {
     borderRadius: radius.full,
-    ...shadows.md,
+    // shadows.md was tuned for the old dark theme, where a black shadow
+    // barely shows against a dark background. On the new light theme it
+    // read as a visible grey smudge below the pill — shadows.sm is subtle
+    // enough to give depth without that.
+    ...shadows.sm,
+  },
+  // Clipping + border live here (not on the BlurView itself) so the pill's
+  // rounded ends stay clean instead of showing a hard blur seam.
+  pillClip: {
+    borderRadius: radius.full,
+    overflow: "hidden",
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
     height: 60,
     paddingHorizontal: 6,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    // Tuned close to the app's actual background color (bgPrimary) instead
-    // of a lighter/greyer translucent tint, so the pill reads as "the same
-    // dark surface, slightly elevated" rather than a mismatched grey patch.
-    backgroundColor: "rgba(10,10,10,0.85)",
-    overflow: "hidden",
+    // Tuned close to the app's actual light-grey surface color so the pill
+    // reads as "the same surface, slightly elevated" rather than a
+    // mismatched patch.
+    backgroundColor: "rgba(238,238,238,0.92)",
   },
 
   tab: { flex: 1, height: "100%", alignItems: "center", justifyContent: "center" },

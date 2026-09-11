@@ -52,7 +52,7 @@ export default function CartScreen({ navigation }) {
   if (!cart.length) {
     return (
       <SafeAreaView style={styles.root}>
-        <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
+        <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
         <ScrollView
           contentContainerStyle={styles.emptyContainer}
           refreshControl={
@@ -77,7 +77,7 @@ export default function CartScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.root}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
 
       {/* ── HEADER ── */}
       <View style={styles.header}>
@@ -220,8 +220,7 @@ export default function CartScreen({ navigation }) {
           style={styles.checkoutBtn}
           onPress={() => navigation.navigate("PlaceOrder")}
         >
-          <Text style={styles.checkoutText}>PROCEED TO CHECKOUT</Text>
-          <Text style={styles.checkoutArrow}>→</Text>
+          <Text style={styles.checkoutText}>CHECKOUT</Text>
         </PressScale>
       </View>
     </SafeAreaView>
@@ -452,7 +451,8 @@ const styles = StyleSheet.create({
   // between the last item and this panel.
   summaryContainer: {
     backgroundColor: colors.bgCard,
-    padding: 20,
+    padding: 24,
+    paddingTop: 26,
     paddingBottom: TAB_BAR_CLEARANCE,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
@@ -465,13 +465,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: fonts.bodyBold,
     letterSpacing: 2.5,
-    marginBottom: 14,
+    marginBottom: 20,
   },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 14,
   },
   summaryLabel: {
     color: colors.textSecondary,
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: colors.borderSubtle,
-    marginVertical: 12,
+    marginVertical: 18,
   },
   totalLabel: {
     color: colors.textPrimary,
@@ -515,12 +515,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // ── CHECKOUT ──
+  // ── CHECKOUT — same shape/size as ProductDetail's Add to Bag/Pay buttons
+  // (radius.lg, same height), centered rather than stretched edge-to-edge,
+  // so it reads as the same kind of button as the rest of the app.
   checkoutBtn: {
+    alignSelf: "center",
+    width: "70%",
     backgroundColor: colors.textPrimary,
-    paddingVertical: 16,
-    borderRadius: radius.full,
-    marginTop: 16,
+    paddingVertical: 17,
+    borderRadius: radius.lg,
+    marginTop: 22,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
@@ -530,10 +534,5 @@ const styles = StyleSheet.create({
     ...typography.button,
     color: colors.textInverse,
     fontSize: 13,
-  },
-  checkoutArrow: {
-    color: colors.textInverse,
-    fontWeight: "900",
-    fontSize: 15,
   },
 });

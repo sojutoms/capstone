@@ -25,6 +25,26 @@ const colorwaySchema = new mongoose.Schema(
   { _id: false }
 );
 
+// ── model3d: Tripo3D-generated 3D asset for this product, derived from its
+//    own image + subImages. Powers the 360 spin viewer and the AR try-on
+//    overlay on mobile. status walks none -> processing -> rendering -> ready
+//    (or -> failed, with `error` set).
+const model3dSchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: ["none", "processing", "rendering", "ready", "failed"],
+      default: "none",
+    },
+    taskId:          { type: String, default: null },
+    glbUrl:          { type: String, default: "" },
+    turntableFrames: { type: [String], default: [] }, // ordered, 24 frames @ 15° steps
+    error:           { type: String, default: "" },
+    generatedAt:     { type: Date, default: null },
+  },
+  { _id: false }
+);
+
 const productSchema = new mongoose.Schema(
   {
     id: { type: Number, required: true, unique: true, index: true },
@@ -66,6 +86,8 @@ const productSchema = new mongoose.Schema(
     isDeleted:   { type: Boolean, default: false },
     isTopSellerInBrand: { type: Boolean, default: false },
     tags:        { type: [String], default: [] },
+
+    model3d: { type: model3dSchema, default: () => ({}) },
   },
   {
     timestamps: { createdAt: "date", updatedAt: "updatedAt" },

@@ -17,9 +17,28 @@ const makeSession = () => ({
   messages: [WELCOME_MESSAGE],
 });
 
+// Pulls the account's stable user id out of the JWT so chat history is
+// scoped per-account instead of one fixed key shared by every login on the
+// browser. Login/logout both force a full page reload (see LoginSignup.jsx
+// / Settings.jsx), so it's safe to resolve this once per page load rather
+// than watching for auth-token changes mid-session.
+const decodeUserId = () => {
+  try {
+    const token = localStorage.getItem("auth-token");
+    if (!token) return null;
+    const payload = token.split(".")[1];
+    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    return json?.user?.id || json?.id || null;
+  } catch {
+    return null;
+  }
+};
+
+const getStorageKey = () => `${STORAGE_KEY}_${decodeUserId() || "guest"}`;
+
 const loadSessions = () => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getStorageKey());
     const parsed = raw ? JSON.parse(raw) : null;
     if (Array.isArray(parsed) && parsed.length > 0) return parsed;
   } catch {
@@ -83,7 +102,7 @@ const ChatWidget = () => {
   }, [open, activeId, activeSession?.messages]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions.slice(-MAX_SESSIONS)));
+    localStorage.setItem(getStorageKey(), JSON.stringify(sessions.slice(-MAX_SESSIONS)));
   }, [sessions]);
 
   const updateActiveMessages = (updater) => {

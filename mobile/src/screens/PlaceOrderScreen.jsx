@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Platform,
   Dimensions,
   ActivityIndicator,
@@ -14,12 +13,14 @@ import {
   Linking,
   AppState,
 } from "react-native";
+import { Alert } from "../utils/customAlert";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import axios from "axios";
 import { Picker } from "@react-native-picker/picker";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { getShippingFee, getShippingTier } from "../services/shippingFee";
-import { colors, fonts, radius, typography } from "../theme";
+import { colors, fonts, radius, shadows, typography } from "../theme";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const NCR_REGION_CODE = "1300000000";
@@ -418,16 +419,6 @@ export default function PlaceOrderScreen({ navigation }) {
       keyboardShouldPersistTaps="handled"
     >
 
-      {/* ── TOP NAV ── */}
-      <TouchableOpacity
-        onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate("Home")}
-        style={s.backBtn}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      >
-        <Text style={s.backArrow}>←</Text>
-        <Text style={s.backLabel}>Back</Text>
-      </TouchableOpacity>
-
       <Text style={s.pageTitle}>Place Order</Text>
 
       {/* ════════════════════════════════
@@ -435,7 +426,7 @@ export default function PlaceOrderScreen({ navigation }) {
       ════════════════════════════════ */}
       <View style={s.sectionCard}>
         <View style={s.sectionHeadRow}>
-          <Text style={s.sectionIcon}>📍</Text>
+          <Ionicons name="location-outline" size={16} color={colors.textMuted} />
           <Text style={s.sectionTitle}>Delivery Information</Text>
         </View>
 
@@ -634,7 +625,7 @@ export default function PlaceOrderScreen({ navigation }) {
       ════════════════════════════════ */}
       <View style={s.sectionCard}>
         <View style={s.sectionHeadRow}>
-          <Text style={s.sectionIcon}>💳</Text>
+          <Ionicons name="card-outline" size={16} color={colors.textMuted} />
           <Text style={s.sectionTitle}>Payment</Text>
         </View>
 
@@ -673,7 +664,7 @@ export default function PlaceOrderScreen({ navigation }) {
       ════════════════════════════════ */}
       <View style={s.sectionCard}>
         <View style={s.sectionHeadRow}>
-          <Text style={s.sectionIcon}>🛍</Text>
+          <Ionicons name="receipt-outline" size={16} color={colors.textMuted} />
           <Text style={s.sectionTitle}>Order Summary</Text>
         </View>
 
@@ -733,6 +724,15 @@ export default function PlaceOrderScreen({ navigation }) {
         )}
       </TouchableOpacity>
 
+      {/* ── BACK — same shape/style as the Place Order CTA above it ── */}
+      <TouchableOpacity
+        style={s.backBtn}
+        onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate("Home")}
+        activeOpacity={0.88}
+      >
+        <Text style={s.backText}>BACK</Text>
+      </TouchableOpacity>
+
       <View style={{ height: 48 }} />
 
       {/* ── WAITING ON EXTERNAL BROWSER PAYMENT ── */}
@@ -760,18 +760,26 @@ export default function PlaceOrderScreen({ navigation }) {
 
 const s = StyleSheet.create({
   root:    { flex: 1, backgroundColor: colors.bgPrimary },
-  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: TAB_BAR_CLEARANCE },
+  // No SafeAreaView on this screen — paddingTop covers the status bar/notch
+  // clearance that used to come "for free" from the Back button sitting
+  // above the title (now moved to the bottom of the page).
+  content: { paddingHorizontal: 16, paddingTop: 60, paddingBottom: TAB_BAR_CLEARANCE },
 
   /* ── nav ── */
+  // Same shape and fill as ctaBtn (radius.lg, same padding, solid black)
+  // so it reads as the exact same button style, not a lesser variant.
   backBtn: {
-    flexDirection: "row",
+    backgroundColor: colors.textPrimary,
+    borderRadius: radius.lg,
+    paddingVertical: 18,
     alignItems: "center",
-    gap: 6,
-    marginBottom: 20,
-    alignSelf: "flex-start",
+    marginTop: 10,
   },
-  backArrow: { color: colors.textPrimary, fontSize: 20, fontWeight: "300" },
-  backLabel: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.bodyMedium },
+  backText: {
+    ...typography.button,
+    color: colors.textInverse,
+    fontSize: 14,
+  },
 
   pageTitle: {
     fontSize: 30,
@@ -782,21 +790,22 @@ const s = StyleSheet.create({
   },
 
   /* ── section card ── */
+  // No border — just a soft shadow for a "risen card" premium feel,
+  // matching AlertHost/About This Item's card treatment instead of an
+  // outlined box.
   sectionCard: {
     backgroundColor: colors.bgCard,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    padding: 18,
-    marginBottom: 14,
+    padding: 20,
+    marginBottom: 16,
+    ...shadows.sm,
   },
   sectionHeadRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     marginBottom: 18,
   },
-  sectionIcon:  { fontSize: 16 },
   sectionTitle: {
     fontSize: 13,
     fontFamily: fonts.bodyBold,
@@ -809,8 +818,6 @@ const s = StyleSheet.create({
   savedBlock: { marginBottom: 16 },
   savedToggleBtn: {
     alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: colors.accentGold,
     borderRadius: radius.sm,
     paddingVertical: 9,
     paddingHorizontal: 14,
@@ -820,16 +827,13 @@ const s = StyleSheet.create({
   savedList: {
     marginTop: 10,
     borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
     overflow: "hidden",
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.bgTertiary,
   },
   savedItem: {
     padding: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
-    backgroundColor: colors.bgCard,
     gap: 2,
   },
   savedName:  { fontSize: 14, fontFamily: fonts.bodyBold, color: colors.textPrimary },
@@ -849,29 +853,28 @@ const s = StyleSheet.create({
     textTransform: "uppercase",
   },
 
+  // Filled, no border — a tinted background distinguishes the field from
+  // the card behind it instead of an outline, matching the borderless
+  // "premium card" look used elsewhere (AlertHost, About This Item).
   input: {
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    backgroundColor: colors.bgTertiary,
     borderRadius: radius.md,
     paddingHorizontal: 14,
     paddingVertical: isSmall ? 12 : 14,
     fontSize: 14,
     color: colors.textPrimary,
   },
-  inputError: { borderColor: colors.danger },
+  inputError: { borderWidth: 1.5, borderColor: colors.danger },
   errorText:  { fontSize: 11, color: colors.danger, marginTop: 5, letterSpacing: 0.3 },
 
   /* ── pickers ── */
   pickerWrapper: {
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    backgroundColor: colors.bgTertiary,
     borderRadius: radius.md,
     overflow: "hidden",
   },
   pickerDisabled: { backgroundColor: colors.bgPrimary, opacity: 0.5 },
-  picker:         { height: 50, width: "100%", color: colors.textPrimary, backgroundColor: colors.bgCard },
+  picker:         { height: 50, width: "100%", color: colors.textPrimary, backgroundColor: colors.bgTertiary },
   pickerLoading: {
     flexDirection: "row",
     alignItems: "center",
@@ -909,14 +912,12 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   methodChip: {
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     borderRadius: radius.sm,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: colors.bgCard,
+    backgroundColor: colors.bgTertiary,
   },
-  methodChipActive:     { borderColor: colors.accentGold, backgroundColor: colors.accentGoldWash },
+  methodChipActive:     { borderWidth: 1, borderColor: colors.accentGold, backgroundColor: colors.accentGoldWash },
   methodChipText:       { fontSize: 12, fontFamily: fonts.bodyBold, color: colors.textMuted, letterSpacing: 0.5 },
   methodChipTextActive: { color: colors.accentGoldLight },
   methodNote:           { fontSize: 12, color: colors.textMuted, fontFamily: fonts.bodyRegular, marginTop: 12, lineHeight: 18 },

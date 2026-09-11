@@ -6,6 +6,7 @@ import star_dull_icon from "../Assets/star_dull_icon.png";
 import { ShopContext } from "../../Context/ShopContext";
 import { FavoritesContext } from "../../Context/FavoritesContext";
 import API_BASE_URL from "../../services/api";
+import Shoe360Viewer from "../Shoe360Viewer/Shoe360Viewer";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 const ProductSkeleton = () => (
@@ -174,6 +175,8 @@ const ProductDisplay = ({ product, loading = false }) => {
   const imageRef = useRef(null);
   const [addingToCart, setAddingToCart] = useState(false);
   const [lifestyleMode, setLifestyleMode] = useState(false);
+  const [show360, setShow360] = useState(false);
+  const has3D = product?.model3d?.status === "ready" && (product.model3d.turntableFrames || []).length > 0;
 
   // Touch zoom refs and state for mobile
   const touchZoomedRef = useRef(false);
@@ -339,6 +342,7 @@ const ProductDisplay = ({ product, loading = false }) => {
       
       setSelectedColorway(null);
       setSizeDropdownOpen(false);
+      setShow360(false);
       
       const basePrice = (() => {
         if (initialSize) {
@@ -615,44 +619,60 @@ const ProductDisplay = ({ product, loading = false }) => {
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}>
           
-          {/* Lifestyle Toggle */}
-          {product.subImages && product.subImages.length > 0 && (
+          {/* Lifestyle / 360° Toggle */}
+          {(product.subImages && product.subImages.length > 0) || has3D ? (
             <div className="lifestyle-toggle">
-              <button 
-                className={`lifestyle-btn ${!lifestyleMode ? 'active' : ''}`}
-                onClick={() => { setLifestyleMode(false); setMainImage(product.image); }}
+              <button
+                className={`lifestyle-btn ${!lifestyleMode && !show360 ? 'active' : ''}`}
+                onClick={() => { setShow360(false); setLifestyleMode(false); setMainImage(product.image); }}
               >
                 STUDIO
               </button>
-              <button 
-                className={`lifestyle-btn ${lifestyleMode ? 'active' : ''}`}
-                onClick={() => { setLifestyleMode(true); setMainImage(product.subImages[0]); }}
-              >
-                LIFESTYLE
-              </button>
+              {product.subImages && product.subImages.length > 0 && (
+                <button
+                  className={`lifestyle-btn ${lifestyleMode && !show360 ? 'active' : ''}`}
+                  onClick={() => { setShow360(false); setLifestyleMode(true); setMainImage(product.subImages[0]); }}
+                >
+                  LIFESTYLE
+                </button>
+              )}
+              {has3D && (
+                <button
+                  className={`lifestyle-btn ${show360 ? 'active' : ''}`}
+                  onClick={() => setShow360(true)}
+                >
+                  360°
+                </button>
+              )}
             </div>
-          )}
+          ) : null}
 
-          <img
-            ref={imageRef}
-            className={`productdisplay-main-img ${lifestyleMode ? 'lifestyle-view' : ''}`}
-            src={mainImage || product.image || "https://via.placeholder.com/400x400"}
-            alt="Main product view"
-            style={{
-              transform: (isZooming || touchZoomed) ? "scale(1.5)" : "scale(1)",
-              transformOrigin: touchZoomed
-                ? `${touchOrigin.x}% ${touchOrigin.y}%`
-                : `${zoomPosition.x}% ${zoomPosition.y}%`,
-              transition: (isZooming || touchZoomed) ? "none" : "transform 0.3s ease",
-            }}
-          />
-          {(isZooming || touchZoomed) && (
-            <div className="zoom-indicator">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M12.5 12.5L17 17M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12z" stroke="white" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              {touchZoomed ? "Tap to zoom out • Drag to pan" : "Hover to zoom"}
-            </div>
+          {show360 ? (
+            <Shoe360Viewer frames={product.model3d.turntableFrames} />
+          ) : (
+            <>
+              <img
+                ref={imageRef}
+                className={`productdisplay-main-img ${lifestyleMode ? 'lifestyle-view' : ''}`}
+                src={mainImage || product.image || "https://via.placeholder.com/400x400"}
+                alt="Main product view"
+                style={{
+                  transform: (isZooming || touchZoomed) ? "scale(1.5)" : "scale(1)",
+                  transformOrigin: touchZoomed
+                    ? `${touchOrigin.x}% ${touchOrigin.y}%`
+                    : `${zoomPosition.x}% ${zoomPosition.y}%`,
+                  transition: (isZooming || touchZoomed) ? "none" : "transform 0.3s ease",
+                }}
+              />
+              {(isZooming || touchZoomed) && (
+                <div className="zoom-indicator">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <path d="M12.5 12.5L17 17M8 14A6 6 0 1 0 8 2a6 6 0 0 0 0 12z" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  {touchZoomed ? "Tap to zoom out • Drag to pan" : "Hover to zoom"}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

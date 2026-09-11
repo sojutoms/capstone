@@ -10,6 +10,7 @@ import { Toasts, useToastManager } from "../Shared/ToastManager";
 import StockIndicator from "../Shared/StockIndicator";
 import ColorwayTab from "./ColorwayTab";
 import StockTab from "./StockTab";
+import Model3DPanel from "../Model3D/Model3DPanel";
 
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -837,6 +838,12 @@ const ProductManagement = () => {
                     <div className="meta-item"><span className="meta-key">Brand:</span> <span className="meta-val">{(editedDetails.brand || "—").toUpperCase()}</span></div>
                   </div>
                 </div>
+
+                <Model3DPanel
+                  productId={editingProduct.id}
+                  images={[editedDetails.image, ...(editedDetails.subImages || [])]}
+                  disabled={!editedDetails.image}
+                />
               </div>
             </div>
 

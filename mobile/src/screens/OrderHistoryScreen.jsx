@@ -9,7 +9,6 @@ import {
   Modal,
   ScrollView,
   ActivityIndicator,
-  Alert,
   Platform,
   Dimensions,
   Animated,
@@ -18,6 +17,7 @@ import {
   AppState,
   RefreshControl,
 } from "react-native";
+import { Alert } from "../utils/customAlert";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";

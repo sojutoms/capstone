@@ -19,6 +19,15 @@ const { width, height } = Dimensions.get('window');
 
 const ARTryOnScreen = ({ route, navigation }) => {
   const product = route?.params?.product;
+
+  // Prefer a 3/4-angle rendered turntable frame (from the same Tripo3D asset
+  // used by the 360° viewer) over the flat hero shot — reads far more
+  // dimensional floating over the camera feed. Falls back to product.image
+  // for products that don't have a generated 3D model yet.
+  // TODO: once a per-shoe .deepar effect is exported from DeepAR Studio
+  // (the `deepar` package is already a mobile dependency, just unused), swap
+  // this static overlay for real foot-tracked AR here.
+  const arFrame = product?.model3d?.turntableFrames?.[2] || product?.image;
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing]             = useState('back');
   const [scanning, setScanning]         = useState(true);
@@ -171,7 +180,7 @@ const ARTryOnScreen = ({ route, navigation }) => {
       </Animated.View>
 
       {/* ── SHOE OVERLAY (appears after scan) ── */}
-      {product.image && (
+      {arFrame && (
         <Animated.View
           style={[
             s.shoeOverlay,
@@ -186,7 +195,7 @@ const ARTryOnScreen = ({ route, navigation }) => {
           pointerEvents="none"
         >
           <Image
-            source={{ uri: product.image }}
+            source={{ uri: arFrame }}
             style={s.shoeImage}
             resizeMode="contain"
           />

@@ -23,6 +23,7 @@ const PressScale = forwardRef(function PressScale(
   return (
     <TouchableOpacity
       ref={ref}
+      style={style}
       activeOpacity={1}
       onPressIn={disabled ? undefined : pressIn}
       onPressOut={disabled ? undefined : pressOut}
@@ -30,7 +31,7 @@ const PressScale = forwardRef(function PressScale(
       disabled={disabled}
       {...touchableProps}
     >
-      <Animated.View style={[style, { transform: [{ scale }] }]}>
+      <Animated.View style={{ transform: [{ scale }] }}>
         {children}
       </Animated.View>
     </TouchableOpacity>

@@ -18,6 +18,8 @@ import { FavoritesProvider } from "./src/context/FavoritesContext";
 import Toast from "react-native-toast-message";
 import ChatWidget from "./src/components/ChatWidget";
 import FlyToCartOverlay from "./src/components/FlyToCartOverlay";
+import AlertHost from "./src/components/AlertHost";
+import { toastConfig } from "./src/components/toastConfig";
 import { colors } from "./src/theme";
 
 export default function App() {
@@ -73,11 +75,12 @@ export default function App() {
             </NavigationContainer>
             <ChatWidget />
             <FlyToCartOverlay />
+            <AlertHost />
           </CartProvider>
         </FavoritesProvider>
       </AuthProvider>
 
-      <Toast />
+      <Toast config={toastConfig} />
     </>
   );
 }

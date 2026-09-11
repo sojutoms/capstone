@@ -19,6 +19,7 @@ const reviewRoutes  = require("./routes/reviewRoutes");
 const categoryBrandRoutes = require("./routes/categoryBrandRoutes")
 const paymentRoutes = require("./routes/paymentRoutes");
 const chatbotRoutes = require("./routes/chatbotRoutes");
+const modelRoutes    = require("./routes/modelRoutes");
 const { handlePaymongoWebhook } = require("./controllers/paymentController");
 const { seedCategoryBrand } = require("./utils/seedCategoryBrand");
 const seedSizesSubcategories = require("./utils/seedSizesSubcategories");
@@ -81,6 +82,7 @@ app.use("/", reviewRoutes);
 app.use("/", categoryBrandRoutes);
 app.use("/", paymentRoutes);
 app.use("/", chatbotRoutes);
+app.use("/", modelRoutes);
 // ─── Init & background jobs ───────────────────────────────────────────────────
 initializeSequenceCounter();
 seedCategoryBrand();

@@ -23,10 +23,15 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCart }      from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import Toast            from "react-native-toast-message";
-import { colors, fonts, radius, typography } from "../theme";
+import { colors, fonts, radius, shadows, typography } from "../theme";
 import PressScale from "../components/PressScale";
+import Shoe360Viewer from "../components/Shoe360Viewer";
+import ProductCard from "../components/ProductCard";
+import FadeInItem from "../components/FadeInItem";
 import { triggerFlyToCart } from "../utils/flyToCartBus";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
+import { hapticTap, hapticSuccess } from "../utils/haptics";
+import { isOutOfStock } from "../utils/productHelpers";
 
 const { width } = Dimensions.get("window");
 
@@ -105,13 +110,15 @@ export default function ProductDetailScreen({ route }) {
 
   const [selectedSize,     setSelectedSize]     = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [showDescription,  setShowDescription]  = useState(true);
-  const [showReviews,      setShowReviews]      = useState(false);
   const [reviews,          setReviews]          = useState([]);
   const [loadingReviews,   setLoadingReviews]   = useState(true);
   const [sizeGuideVisible, setSizeGuideVisible] = useState(false);
+  const [aboutVisible,     setAboutVisible]     = useState(false);
+  const [reviewsVisible,   setReviewsVisible]   = useState(false);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
-  
+  const [relatedProducts,  setRelatedProducts]  = useState([]);
+  const [loadingRelated,   setLoadingRelated]   = useState(true);
+
 
   const heartScale     = useRef(new Animated.Value(1)).current;
   const imageSliderRef = useRef(null);
@@ -129,6 +136,8 @@ export default function ProductDetailScreen({ route }) {
   }
 
   const images = [product.image, ...(product.subImages || [])].filter(Boolean);
+  const has3D =
+    product.model3d?.status === "ready" && (product.model3d.turntableFrames || []).length > 0;
 
   /* ── fetch reviews ── */
   useEffect(() => { fetchReviews(); }, [product?.id]);
@@ -142,10 +151,53 @@ export default function ProductDetailScreen({ route }) {
     finally  { setLoadingReviews(false); }
   };
 
+  /* ── fetch related products — same category first, current product
+     excluded, capped to a handful for a horizontal row ── */
+  useEffect(() => { fetchRelated(); }, [product?.id]);
+
+  const fetchRelated = async () => {
+    try {
+      const res  = await fetch(`${BASE_URL}/allproducts`);
+      const data = await res.json();
+      const all  = Array.isArray(data) ? data : [];
+      const others = all.filter((p) => p.id !== product.id);
+      const sameCategory = others.filter(
+        (p) => (p.category || "").toLowerCase() === (product.category || "").toLowerCase()
+      );
+      const rest = others.filter((p) => !sameCategory.includes(p));
+      setRelatedProducts([...sameCategory, ...rest].slice(0, 10));
+    } catch { setRelatedProducts([]); }
+    finally  { setLoadingRelated(false); }
+  };
+
+  const handleRelatedAddToCart = (item) => {
+    if (isOutOfStock(item)) {
+      Toast.show({ type: "error", text1: "Out of stock" });
+      return;
+    }
+    const sizes = item.sizes ? Object.keys(item.sizes) : [];
+    const available = sizes.filter((sz) => {
+      const d = item.sizes[sz];
+      return Number((typeof d === "object" ? d.quantity : d) || 0) > 0;
+    });
+    if (available.length === 1) {
+      hapticSuccess();
+      addToCart(item, available[0]);
+      Toast.show({ type: "success", text1: "Added to cart", text2: item.name });
+    } else if (available.length > 1) {
+      Toast.show({ type: "info", text1: "Select a size first" });
+      navigation.push("ProductDetail", { product: item });
+    } else {
+      hapticSuccess();
+      addToCart(item, null);
+      Toast.show({ type: "success", text1: "Added to cart", text2: item.name });
+    }
+  };
+
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchReviews(), refreshCart(), refreshFavorites()]);
+    await Promise.all([fetchReviews(), fetchRelated(), refreshCart(), refreshFavorites()]);
     setRefreshing(false);
   };
 
@@ -186,6 +238,7 @@ export default function ProductDetailScreen({ route }) {
       Toast.show({ type: "error", text1: "Select a size first" });
       return;
     }
+    hapticSuccess();
     addBtnRef.current?.measureInWindow((x, y, width, height) => {
       triggerFlyToCart({ x, y, width, height });
     });
@@ -195,6 +248,7 @@ export default function ProductDetailScreen({ route }) {
 
   /* ── heart press ── */
   const handleHeart = () => {
+    hapticTap();
     Animated.sequence([
       Animated.spring(heartScale, { toValue: 1.4, useNativeDriver: true, speed: 40, bounciness: 10 }),
       Animated.spring(heartScale, { toValue: 1,   useNativeDriver: true, speed: 20, bounciness: 0  }),
@@ -213,7 +267,7 @@ export default function ProductDetailScreen({ route }) {
   ═══════════════════════════════════════════════ */
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
 
       {/* ══ TOP NAV BAR ══ */}
       <View style={s.topBar}>
@@ -226,10 +280,6 @@ export default function ProductDetailScreen({ route }) {
         </Text>
 
         <View style={s.navRight}>
-          {/* share icon */}
-          <TouchableOpacity style={s.navBtn}>
-            <Text style={s.navIcon}>⎙</Text>
-          </TouchableOpacity>
           {/* heart */}
           <TouchableOpacity style={s.navBtn} onPress={handleHeart}>
             <Animated.Text
@@ -243,49 +293,55 @@ export default function ProductDetailScreen({ route }) {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 130 + TAB_BAR_CLEARANCE }}
+        contentContainerStyle={{ paddingBottom: TAB_BAR_CLEARANCE }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
         }
       >
 
-        {/* ══ IMAGE HERO WITH SLIDER ══ */}
+        {/* ══ IMAGE HERO — 360° spin viewer when a 3D model exists, static slider otherwise ══ */}
         <View style={s.heroWrapper}>
-          <FlatList
-            ref={imageSliderRef}
-            data={images}
-            keyExtractor={(_, i) => String(i)}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={onSliderScroll}
-            scrollEventThrottle={16}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={s.slideItem}
-                activeOpacity={0.9}
-                onPress={() => setImageViewerVisible(true)}
-              >
-                <Image source={{ uri: item }} style={s.slideImage} resizeMode="contain" />
-              </TouchableOpacity>
-            )}
-          />
+          {has3D ? (
+            <Shoe360Viewer frames={product.model3d.turntableFrames} height={HERO_H} />
+          ) : (
+            <>
+              <FlatList
+                ref={imageSliderRef}
+                data={images}
+                keyExtractor={(_, i) => String(i)}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onScroll={onSliderScroll}
+                scrollEventThrottle={16}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={s.slideItem}
+                    activeOpacity={0.9}
+                    onPress={() => setImageViewerVisible(true)}
+                  >
+                    <Image source={{ uri: item }} style={s.slideImage} resizeMode="contain" />
+                  </TouchableOpacity>
+                )}
+              />
 
-          {/* dot indicators — bottom center */}
-          {images.length > 1 && (
-            <View style={s.dotsRow}>
-              {images.map((_, i) => (
-                <TouchableOpacity
-                  key={i}
-                  onPress={() => {
-                    imageSliderRef.current?.scrollToIndex({ index: i, animated: true });
-                    setActiveImageIndex(i);
-                  }}
-                >
-                  <View style={[s.dot, i === activeImageIndex && s.dotActive]} />
-                </TouchableOpacity>
-              ))}
-            </View>
+              {/* dot indicators — bottom center */}
+              {images.length > 1 && (
+                <View style={s.dotsRow}>
+                  {images.map((_, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      onPress={() => {
+                        imageSliderRef.current?.scrollToIndex({ index: i, animated: true });
+                        setActiveImageIndex(i);
+                      }}
+                    >
+                      <View style={[s.dot, i === activeImageIndex && s.dotActive]} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </>
           )}
         </View>
 
@@ -300,31 +356,11 @@ export default function ProductDetailScreen({ route }) {
             <Text style={s.categoryLabel}>{product.category}</Text>
           ) : null}
 
-          {/* Rating row */}
-          <View style={s.ratingRow}>
-            <StarRow rating={averageRating} size={14} />
-            <Text style={s.ratingCount}>
-              {reviews.length > 0
-                ? `${reviews.length >= 1000 ? (reviews.length / 1000).toFixed(1) + "k" : reviews.length} reviews`
-                : "No reviews yet"}
-            </Text>
-          </View>
-
           {/* Price row */}
           <View style={s.priceRow}>
-            <View style={s.priceLeft}>
-              <Text style={s.priceValue}>
-                ₱{formatPrice(displayPrice)}
-              </Text>
-              <Text style={s.taxLabel}> (Tax incl.)</Text>
-            </View>
-            {product.category && (
-              <View style={s.brandBadge}>
-                <Text style={s.brandBadgeText}>
-                  {(product.brand || product.category).toUpperCase()}
-                </Text>
-              </View>
-            )}
+            <Text style={s.priceValue}>
+              ₱{formatPrice(displayPrice)}
+            </Text>
           </View>
 
           {product.old_price && (
@@ -373,6 +409,25 @@ export default function ProductDetailScreen({ route }) {
           </View>
         )}
 
+        {/* ══ ADD TO BAG / PAY — inline with the rest of the content now,
+            not a floating bar (which duplicated the price already shown
+            above and cramped the chat FAB against it). ══ */}
+        <View style={s.actionsRow}>
+          <PressScale
+            ref={addBtnRef}
+            style={[s.addBtn, !selectedSize && product.sizes && s.addBtnDim]}
+            onPress={handleAddToCart}
+          >
+            <Text style={[s.addBtnText, !selectedSize && product.sizes && s.addBtnTextDim]}>
+              {selectedSize || !product.sizes ? "ADD TO BAG" : "SELECT SIZE"}
+            </Text>
+          </PressScale>
+
+          <PressScale style={s.payBtn} onPress={handleAddToCart}>
+            <Text style={s.payText}>PAY</Text>
+          </PressScale>
+        </View>
+
         {/* ══ AR TRY ON BUTTON ══ */}
         {isShoe && (
           <View style={s.arWrapper}>
@@ -389,108 +444,77 @@ export default function ProductDetailScreen({ route }) {
         )}
 
         {/* ══ THIN DIVIDER ══ */}
-        <View style={s.divider} />
+        <View style={[s.divider, s.dividerSpaced]} />
 
-        {/* ══ ABOUT THIS SHOE (description) ══ */}
+        {/* ══ ABOUT THIS ITEM — opens a bottom-sheet, same pattern as Size Guide ══ */}
         {product.description ? (
-          <View style={s.section}>
-            <TouchableOpacity
-              style={s.sectionHeader}
-              onPress={() => setShowDescription(!showDescription)}
-              activeOpacity={0.8}
-            >
-              <Text style={s.sectionTitle}>ABOUT THIS SHOE</Text>
-              <Text style={s.sectionChev}>{showDescription ? "∧" : "∨"}</Text>
-            </TouchableOpacity>
-            {showDescription && (
-              <Text style={s.descText}>{product.description}</Text>
-            )}
-          </View>
+          <TouchableOpacity
+            style={s.section}
+            onPress={() => setAboutVisible(true)}
+            activeOpacity={0.7}
+          >
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionTitle}>ABOUT THIS ITEM</Text>
+              <Text style={s.sectionChev}>›</Text>
+            </View>
+          </TouchableOpacity>
         ) : null}
 
         {/* ══ THIN DIVIDER ══ */}
-        <View style={s.divider} />
+        <View style={[s.divider, s.dividerSpacedTight]} />
 
-        {/* ══ REVIEWS ══ */}
-        <View style={s.section}>
-          <TouchableOpacity
-            style={s.sectionHeader}
-            onPress={() => setShowReviews(!showReviews)}
-            activeOpacity={0.8}
-          >
+        {/* ══ REVIEWS — opens a bottom-sheet, same pattern as Size Guide ══ */}
+        <TouchableOpacity
+          style={s.section}
+          onPress={() => setReviewsVisible(true)}
+          activeOpacity={0.7}
+        >
+          <View style={s.sectionHeader}>
             <View>
               <Text style={s.sectionTitle}>CUSTOMER REVIEWS</Text>
-              <View style={s.reviewsSubRow}>
-                {averageRating > 0 && <StarRow rating={averageRating} size={11} />}
-                <Text style={s.reviewsSubText}>
-                  {averageRating > 0
-                    ? `${averageRating.toFixed(1)} · ${reviews.length} reviews`
-                    : `${reviews.length} reviews`}
-                </Text>
-              </View>
+              <Text style={s.reviewsSubText}>
+                {averageRating > 0
+                  ? `${averageRating.toFixed(1)} · ${reviews.length} reviews`
+                  : `${reviews.length} reviews`}
+              </Text>
             </View>
-            <Text style={s.sectionChev}>{showReviews ? "∧" : "∨"}</Text>
-          </TouchableOpacity>
+            <Text style={s.sectionChev}>›</Text>
+          </View>
+        </TouchableOpacity>
 
-          {showReviews && (
-            <View style={s.reviewsList}>
-              {loadingReviews ? (
-                <ActivityIndicator color={colors.accentGold} style={{ marginVertical: 24 }} />
-              ) : reviews.length === 0 ? (
-                <Text style={s.noReviews}>No reviews yet. Be the first!</Text>
-              ) : (
-                reviews.map((r, i) => (
-                  <View key={i} style={s.reviewCard}>
-                    <View style={s.reviewHeader}>
-                      <View style={s.reviewAvatarWrap}>
-                        {r.userPhoto ? (
-                          <Image source={{ uri: r.userPhoto }} style={s.reviewAvatarImg} />
-                        ) : (
-                          <Ionicons name="person" size={14} color={colors.textMuted} />
-                        )}
-                      </View>
-                      <Text style={s.reviewAuthor} numberOfLines={1}>
-                        {r.userName && r.userName !== "Anonymous" ? r.userName : "Anonymous"}
-                      </Text>
-                      {r.date && <Text style={s.reviewDate}>{formatReviewDate(r.date)}</Text>}
-                    </View>
-                    <StarRow rating={r.rating || 0} size={11} />
-                    <Text style={s.reviewText}>{r.review}</Text>
-                  </View>
-                ))
-              )}
-
-              
+        {/* ══ YOU MAY ALSO LIKE ══ */}
+        {(loadingRelated || relatedProducts.length > 0) && (
+          <>
+            <View style={s.divider} />
+            <View style={s.relatedSection}>
+              <Text style={s.relatedTitle}>YOU MAY ALSO LIKE</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.relatedScroll}
+              >
+                {loadingRelated ? (
+                  <ActivityIndicator color={colors.accentGold} style={{ marginVertical: 24 }} />
+                ) : (
+                  relatedProducts.map((item, index) => (
+                    <FadeInItem key={item._id || item.id || index} index={index}>
+                      <ProductCard
+                        item={item}
+                        index={index}
+                        onPress={() => navigation.push("ProductDetail", { product: item })}
+                        onAddToCart={handleRelatedAddToCart}
+                        favorited={isFavorite(item.id)}
+                        onToggleFavorite={() => toggleFavorite(item.id)}
+                      />
+                    </FadeInItem>
+                  ))
+                )}
+              </ScrollView>
             </View>
-          )}
-        </View>
+          </>
+        )}
 
       </ScrollView>
-
-      {/* ══ STICKY BOTTOM BAR ══ */}
-      <View style={s.stickyBar}>
-        <View style={s.stickyLeft}>
-          <Text style={s.stickyLabel}>TOTAL</Text>
-          <Text style={s.stickyPrice}>₱{formatPrice(displayPrice)}</Text>
-        </View>
-
-        {/* ADD TO BAG */}
-        <PressScale
-          ref={addBtnRef}
-          style={[s.addBtn, !selectedSize && product.sizes && s.addBtnDim]}
-          onPress={handleAddToCart}
-        >
-          <Text style={[s.addBtnText, !selectedSize && product.sizes && s.addBtnTextDim]}>
-            {selectedSize || !product.sizes ? "ADD TO BAG" : "SELECT SIZE"}
-          </Text>
-        </PressScale>
-
-        {/* PAY button */}
-        <PressScale style={s.payBtn} onPress={handleAddToCart}>
-          <Text style={s.payIcon}>⊟</Text>
-          <Text style={s.payText}>PAY</Text>
-        </PressScale>
-      </View>
 
       {/* ══ SIZE GUIDE MODAL — same charts as the web app's /size-guide page ══ */}
       <Modal
@@ -598,6 +622,92 @@ export default function ProductDetailScreen({ route }) {
         </View>
       </Modal>
 
+      {/* ══ ABOUT THIS ITEM MODAL — centered card, same language as the
+          custom Alert (AlertHost.jsx), not a bottom sheet ══ */}
+      <Modal
+        visible={aboutVisible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setAboutVisible(false)}
+      >
+        <View style={s.aboutOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setAboutVisible(false)}
+          />
+          <View style={s.aboutCard}>
+            <View style={s.aboutHeader}>
+              <Text style={s.aboutTitle}>ABOUT THIS ITEM</Text>
+              <TouchableOpacity onPress={() => setAboutVisible(false)} style={s.sgCloseBtn}>
+                <Text style={s.sgCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.aboutScroll}>
+              <Text style={s.descText}>{product.description}</Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ══ CUSTOMER REVIEWS MODAL — same bottom-sheet pattern as Size Guide ══ */}
+      <Modal
+        visible={reviewsVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setReviewsVisible(false)}
+      >
+        <View style={s.sgOverlay}>
+          <View style={s.sgPanel}>
+            <View style={s.sgHeader}>
+              <View>
+                <Text style={s.sgTitle}>CUSTOMER REVIEWS</Text>
+                <View style={s.reviewsSubRow}>
+                  {averageRating > 0 && <StarRow rating={averageRating} size={12} />}
+                  <Text style={s.sgSubtitle}>
+                    {averageRating > 0
+                      ? `${averageRating.toFixed(1)} · ${reviews.length} reviews`
+                      : `${reviews.length} reviews`}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setReviewsVisible(false)} style={s.sgCloseBtn}>
+                <Text style={s.sgCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.sgBody}>
+              <View style={s.reviewsList}>
+                {loadingReviews ? (
+                  <ActivityIndicator color={colors.accentGold} style={{ marginVertical: 24 }} />
+                ) : reviews.length === 0 ? (
+                  <Text style={s.noReviews}>No reviews yet. Be the first!</Text>
+                ) : (
+                  reviews.map((r, i) => (
+                    <View key={i} style={s.reviewCard}>
+                      <View style={s.reviewHeader}>
+                        <View style={s.reviewAvatarWrap}>
+                          {r.userPhoto ? (
+                            <Image source={{ uri: r.userPhoto }} style={s.reviewAvatarImg} />
+                          ) : (
+                            <Ionicons name="person" size={14} color={colors.textMuted} />
+                          )}
+                        </View>
+                        <Text style={s.reviewAuthor} numberOfLines={1}>
+                          {r.userName && r.userName !== "Anonymous" ? r.userName : "Anonymous"}
+                        </Text>
+                        {r.date && <Text style={s.reviewDate}>{formatReviewDate(r.date)}</Text>}
+                      </View>
+                      <StarRow rating={r.rating || 0} size={11} />
+                      <Text style={s.reviewText}>{r.review}</Text>
+                    </View>
+                  ))
+                )}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* ══ FULL-SCREEN IMAGE VIEWER — pinch to zoom, swipe between shots ══ */}
       <ImageViewing
         images={images.map((uri) => ({ uri }))}
@@ -614,7 +724,7 @@ export default function ProductDetailScreen({ route }) {
    STYLES
 ═══════════════════════════════════════════════ */
 
-const HERO_H = width * 0.88;
+const HERO_H = width * 1.0;
 
 const s = StyleSheet.create({
   safe:   { flex: 1, backgroundColor: colors.bgPrimary },
@@ -676,8 +786,8 @@ const s = StyleSheet.create({
     backgroundColor: colors.bgCard,
   },
   slideImage: {
-    width: "80%",
-    height: "75%",
+    width: "86%",
+    height: "82%",
   },
 
   /* ── dots ── */
@@ -706,70 +816,36 @@ const s = StyleSheet.create({
 
   /* ── info block ── */
   infoBlock: {
-    paddingHorizontal: 20,
-    paddingTop: 22,
-    paddingBottom: 20,
-    gap: 8,
+    paddingHorizontal: 24,
+    paddingTop: 30,
+    paddingBottom: 30,
+    gap: 14,
     backgroundColor: colors.bgPrimary,
   },
   productName: {
-    fontSize: 28,
-    fontFamily: fonts.display,
+    fontSize: 26,
+    fontFamily: fonts.bodyBold,
     color: colors.textPrimary,
-    letterSpacing: 0.8,
+    letterSpacing: 0.2,
     lineHeight: 32,
   },
   categoryLabel: {
-    fontSize: 14,
+    fontSize: 17,
     color: colors.textSecondary,
     fontFamily: fonts.bodyRegular,
-    marginTop: -2,
-  },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 2,
-  },
-  ratingCount: {
-    fontSize: 12,
-    color: colors.textMuted,
-    fontFamily: fonts.bodyMedium,
+    marginTop: -10,
   },
   priceRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 6,
-  },
-  priceLeft: {
-    flexDirection: "row",
     alignItems: "baseline",
-    gap: 0,
+    gap: 8,
+    marginTop: -6,
   },
   priceValue: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: colors.accentGold,
-    letterSpacing: 0.3,
-  },
-  taxLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
-    fontFamily: fonts.bodyRegular,
-  },
-  brandBadge: {
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderRadius: radius.sm,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  brandBadgeText: {
-    fontSize: 10,
-    color: colors.textMuted,
+    fontSize: 19,
     fontFamily: fonts.bodyBold,
-    letterSpacing: 1.5,
+    color: colors.textPrimary,
+    letterSpacing: 0.2,
   },
   oldPrice: {
     fontSize: 13,
@@ -781,14 +857,25 @@ const s = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: colors.borderSubtle,
-    marginHorizontal: 20,
+    marginHorizontal: 24,
+  },
+  // Extra space BEFORE the divider (not after it) so it stays paired with
+  // the section it introduces below, instead of floating stranded in the
+  // middle of a big empty gap.
+  dividerSpaced: {
+    marginTop: 26,
+  },
+  // Same idea, but for the divider between About This Shoe and Customer
+  // Reviews specifically — that gap read as too far from About This Shoe.
+  dividerSpacedTight: {
+    marginTop: 8,
   },
 
   /* ── size selector ── */
   sizeBlock: {
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    gap: 14,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
+    gap: 18,
   },
   sizeHeader: {
     flexDirection: "row",
@@ -830,7 +917,7 @@ const s = StyleSheet.create({
     borderColor: colors.accentGold,
   },
   sizeChipOos: {
-    opacity: 0.3,
+    opacity: 0.55,
   },
   sizeChipText: {
     fontSize: 13,
@@ -842,7 +929,7 @@ const s = StyleSheet.create({
     fontFamily: fonts.bodyBold,
   },
   sizeChipTextOos: {
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
   oosLine: {
     position: "absolute",
@@ -854,8 +941,8 @@ const s = StyleSheet.create({
 
   /* ── AR try on ── */
   arWrapper: {
-    paddingHorizontal: 20,
-    paddingBottom: 18,
+    paddingHorizontal: 24,
+    paddingBottom: 22,
   },
   arBtn: {
     flexDirection: "row",
@@ -864,8 +951,8 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.accentGold,
     borderRadius: radius.lg,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     gap: 10,
   },
   arBtnEmoji: {
@@ -887,8 +974,8 @@ const s = StyleSheet.create({
 
   /* ── sections (description / reviews) ── */
   section: {
-    paddingHorizontal: 20,
-    paddingVertical: 18,
+    paddingHorizontal: 24,
+    paddingVertical: 38,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -896,22 +983,21 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 15,
     fontFamily: fonts.bodyBold,
-    letterSpacing: 2,
-    color: colors.textSecondary,
+    letterSpacing: 1,
+    color: colors.textPrimary,
   },
   sectionChev: {
-    fontSize: 12,
+    fontSize: 20,
     color: colors.textMuted,
-    fontWeight: "600",
+    fontWeight: "300",
   },
   descText: {
-    marginTop: 12,
     fontSize: 14,
     color: colors.textSecondary,
     fontFamily: fonts.bodyRegular,
-    lineHeight: 22,
+    lineHeight: 23,
   },
 
   /* ── reviews ── */
@@ -925,10 +1011,32 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
     fontFamily: fonts.bodyMedium,
+    marginTop: 4,
   },
   reviewsList: {
     marginTop: 16,
     gap: 10,
+  },
+
+  /* ── you may also like ── */
+  relatedSection: {
+    paddingTop: 64,
+    paddingBottom: 12,
+  },
+  // Matches Home's "Trending Now" section title exactly (fonts.display,
+  // 24px) instead of the small all-caps label style used elsewhere on
+  // this screen, so it reads as the same kind of section as on Home.
+  relatedTitle: {
+    fontSize: 24,
+    color: colors.textPrimary,
+    letterSpacing: 0.5,
+    fontFamily: fonts.display,
+    paddingHorizontal: 24,
+    marginBottom: 18,
+  },
+  relatedScroll: {
+    paddingHorizontal: 24,
+    gap: 12,
   },
   reviewCard: {
     backgroundColor: colors.bgCard,
@@ -1026,83 +1134,90 @@ const s = StyleSheet.create({
     letterSpacing: 2,
   },
 
-  /* ── sticky bottom bar ── */
-  stickyBar: {
-    position: "absolute",
-    // Lifted above the floating pill nav instead of sitting flush at the
-    // screen edge — this screen stays reachable behind the pill's tab bar.
-    bottom: TAB_BAR_CLEARANCE,
-    left: 0,
-    right: 0,
+  /* ── Add to Bag / Pay — inline with the rest of the content, right below
+     the size selector, instead of a floating bar duplicating the price
+     already shown above. */
+  actionsRow: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.bgPrimary,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
     gap: 10,
-  },
-  stickyLeft: {
-    gap: 1,
-    minWidth: 90,
-  },
-  stickyLabel: {
-    fontSize: 9,
-    letterSpacing: 2,
-    color: colors.textMuted,
-    fontFamily: fonts.bodyBold,
-  },
-  stickyPrice: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: colors.accentGold,
-    letterSpacing: 0.3,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 22,
   },
   addBtn: {
     flex: 1,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    paddingVertical: 16,
+    backgroundColor: colors.textPrimary,
+    paddingVertical: 17,
     borderRadius: radius.lg,
     alignItems: "center",
   },
   addBtnDim: {
-    backgroundColor: colors.bgCard,
-    borderColor: colors.borderSubtle,
+    backgroundColor: colors.bgTertiary,
   },
   addBtnText: {
     ...typography.button,
-    color: colors.textPrimary,
+    color: colors.textInverse,
     fontSize: 12,
   },
   addBtnTextDim: {
     color: colors.textMuted,
   },
   payBtn: {
+    flex: 1,
     backgroundColor: colors.textPrimary,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
+    paddingVertical: 17,
     borderRadius: radius.lg,
-    flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-  },
-  payIcon: {
-    fontSize: 14,
-    color: colors.textInverse,
-    lineHeight: 18,
   },
   payText: {
     ...typography.button,
     color: colors.textInverse,
-    fontSize: 13,
+    fontSize: 12,
+  },
+
+  /* ══ ABOUT THIS ITEM MODAL — centered card, same language as AlertHost ══ */
+  aboutOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 28,
+  },
+  aboutCard: {
+    width: "100%",
+    maxWidth: 360,
+    maxHeight: "70%",
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    ...shadows.lg,
+  },
+  aboutHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 14,
+  },
+  aboutTitle: {
+    fontSize: 15,
+    color: colors.textPrimary,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 0.5,
+  },
+  aboutScroll: {
+    paddingHorizontal: 22,
+    paddingBottom: 22,
   },
 
   /* ══ SIZE GUIDE MODAL ══ */
   sgOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.6)" },
   sgPanel: {
+    // A minHeight (not just maxHeight) so a modal with short content — like
+    // "About This Shoe" — still fills a substantial, settled-looking sheet
+    // instead of shrink-wrapping to the text and looking cut off short.
+    minHeight: "55%",
     maxHeight: "85%",
     backgroundColor: colors.bgPrimary,
     borderTopLeftRadius: radius.xl,
@@ -1113,7 +1228,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    padding: 20,
+    padding: 24,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
@@ -1122,7 +1237,7 @@ const s = StyleSheet.create({
   sgCloseBtn: { width: 30, height: 30, alignItems: "center", justifyContent: "center" },
   sgCloseText: { color: colors.textSecondary, fontSize: 16 },
 
-  sgBody: { padding: 20, paddingBottom: 40 },
+  sgBody: { padding: 24, paddingBottom: 48 },
   sgSectionTitle: {
     fontSize: 15,
     color: colors.textPrimary,
