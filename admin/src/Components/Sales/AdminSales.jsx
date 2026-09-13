@@ -273,15 +273,15 @@ const AdminSales = () => {
             <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700 }}>
                 <span style={{ color: "#007DFC" }}>GCash</span>
-                <span style={{ color: "#ffffff" }}>{fmtFull(gcashRevenue)}</span>
+                <span style={{ color: "var(--text-primary)" }}>{fmtFull(gcashRevenue)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700 }}>
                 <span style={{ color: "#f59e0b" }}>COD</span>
-                <span style={{ color: "#ffffff" }}>{fmtFull(codRevenue)}</span>
+                <span style={{ color: "var(--text-primary)" }}>{fmtFull(codRevenue)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 700 }}>
                 <span style={{ color: "#a78bfa" }}>Card</span>
-                <span style={{ color: "#ffffff" }}>{fmtFull(cardRevenue)}</span>
+                <span style={{ color: "var(--text-primary)" }}>{fmtFull(cardRevenue)}</span>
               </div>
             </div>
           </div>
@@ -364,7 +364,7 @@ const AdminSales = () => {
                 <select
                   value={filterPayment}
                   onChange={(e) => { setFilterPayment(e.target.value); setPage(1); }}
-                  style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer" }}
+                  style={{ background: "var(--bg-dark)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer" }}
                 >
                   <option value="all">All Payments</option>
                   <option value="gcash">GCash</option>
@@ -454,9 +454,9 @@ const AdminSales = () => {
                               const isGCash = pm === "gcash";
                               const isCod = pm === "cash on delivery" || pm === "cod";
                               const isCard = pm === "card";
-                              const color = isGCash ? "#007DFC" : isCod ? "#f59e0b" : isCard ? "#a78bfa" : "#aaa";
-                              const bg = isGCash ? "rgba(0,125,252,0.12)" : isCod ? "rgba(245,158,11,0.10)" : isCard ? "rgba(167,139,250,0.10)" : "rgba(255,255,255,0.05)";
-                              const border = isGCash ? "rgba(0,125,252,0.35)" : isCod ? "rgba(245,158,11,0.35)" : isCard ? "rgba(167,139,250,0.35)" : "rgba(255,255,255,0.2)";
+                              const color = isGCash ? "#007DFC" : isCod ? "#f59e0b" : isCard ? "#a78bfa" : "var(--text-secondary)";
+                              const bg = isGCash ? "rgba(0,125,252,0.12)" : isCod ? "rgba(245,158,11,0.10)" : isCard ? "rgba(167,139,250,0.10)" : "var(--glass-bg)";
+                              const border = isGCash ? "rgba(0,125,252,0.35)" : isCod ? "rgba(245,158,11,0.35)" : isCard ? "rgba(167,139,250,0.35)" : "var(--border-light)";
                               const label = isGCash ? "GCash" : isCod ? "COD" : isCard ? "Card" : (row.payment || "—");
                               return (
                                 <span style={{ display: "inline-block", background: bg, border: `1px solid ${border}`, color, borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 800, letterSpacing: "0.05em", textTransform: "uppercase" }}>
@@ -495,7 +495,7 @@ const AdminSales = () => {
               <h2>Performance</h2>
             </div>
             <div className="table-wrapper">
-              <table style={{ background: "rgba(0,0,0,0.1)", borderRadius: 12 }}>
+              <table style={{ background: "var(--glass-bg)", borderRadius: 12 }}>
                 <thead>
                   <tr>
                     <th>{period === "day" ? "Hour" : period === "week" ? "Day" : "Period"}</th>
@@ -526,12 +526,12 @@ const AdminSales = () => {
             </div>
             <div className="brand-performance-list" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {brandPerformance.slice(0, 5).map((b, idx) => (
-                <div key={idx} className="brand-share-item" style={{ background: "rgba(255,255,255,0.02)", padding: 12, borderRadius: 12, border: "1px solid var(--border-subtle)" }}>
+                <div key={idx} className="brand-share-item" style={{ background: "var(--glass-bg)", padding: 12, borderRadius: 12, border: "1px solid var(--border-subtle)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                     <span style={{ fontWeight: 800, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>{b.brand}</span>
                     <span style={{ fontWeight: 800, color: "#4ade80" }}>{fmt(b.salesTotal)}</span>
                   </div>
-                  <div className="progress-bg" style={{ height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 2 }}>
+                  <div className="progress-bg" style={{ height: 4, background: "var(--glass-hover)", borderRadius: 2 }}>
                     <div className="progress-fill" style={{ height: "100%", background: "var(--text-primary)", width: `${Math.min(100, (b.salesTotal / (netRevenue || 1)) * 100)}%`, borderRadius: 2 }}></div>
                   </div>
                 </div>

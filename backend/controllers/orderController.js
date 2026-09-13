@@ -780,7 +780,13 @@ const placeOrder = async (req, res) => {
     const lastName    = sanitize(deliveryInfo.lastName  || "");
     const email       = sanitize(deliveryInfo.email     || "").toLowerCase();
     const phoneRaw    = sanitize(deliveryInfo.phone     || "");
-    const phoneDigits = phoneRaw.replace(/\D/g, "");
+    let phoneDigits = phoneRaw.replace(/\D/g, "");
+    // The checkout form now submits PH numbers in +63 international format
+    // (e.g. "+639171234567"), so normalize that back to the local 0-prefixed
+    // form the rest of the app (order history, admin views) already expects.
+    if (phoneDigits.length === 12 && phoneDigits.startsWith("63")) {
+      phoneDigits = "0" + phoneDigits.slice(2);
+    }
 
     if (!firstName) return res.status(400).json({ success: false, error: "First name is required" });
     if (!/^[A-Za-z\s'-]+$/.test(firstName)) return res.status(400).json({ success: false, error: "First name cannot contain numbers or special characters" });

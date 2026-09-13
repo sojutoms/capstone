@@ -8,6 +8,10 @@ const STORE = {
   address: "Robinsons Galleria, EDSA, Quezon City",
   hours: "Mon–Sun: 10:00 AM – 9:00 PM",
   phone: "+63 917 123 4567",
+  // Matches the store's actual Google Maps listing name/address so "Get
+  // directions" opens that listing (with its photos, reviews, hours) instead
+  // of a bare coordinate pin.
+  mapsQuery: "Good Soles PH, Robinsons Galleria EDSA, Ortigas Ave, Ortigas Center, Quezon City",
 };
 
 const PinIcon = () => (
@@ -130,7 +134,7 @@ const StoreMap = () => {
 
   const openInMaps = () => {
     window.open(
-      `https://www.google.com/maps/search/?api=1&query=${STORE.lat},${STORE.lng}`,
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(STORE.mapsQuery)}`,
       "_blank",
       "noopener,noreferrer"
     );

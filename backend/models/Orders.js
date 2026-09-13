@@ -84,9 +84,23 @@ const orderSchema = new mongoose.Schema(
     voucherCode:  { type: String, default: null },
     voucherTitle: { type: String, default: null },
 
-    deliveryInfo:  { type: deliveryInfoSchema, required: true },
+    // Only online (website) orders ship to a customer address — in-store POS
+    // sales have no delivery info at all, so this isn't required at the
+    // schema level; validated as required for online orders in placeOrder.
+    deliveryInfo:  { type: deliveryInfoSchema, required: false },
     paymentMethod: { type: String, required: true },
+    // GCash/Maya/Card reference number the cashier typed in after confirming
+    // payment on the customer's own app/terminal (POS sales only — those
+    // methods aren't processed by this app, just recorded for reconciliation).
+    paymentReference: { type: String, default: null },
     orderNumber:   { type: String, required: true, unique: true, index: true },
+
+    // "online" = placed through the website/app checkout. "store" = rung up
+    // in person through the admin Point of Sale.
+    channel: { type: String, enum: ["online", "store"], default: "online" },
+    // Staff name who processed a "store" sale (set from their JWT at POS
+    // checkout time). Null for online orders.
+    soldBy:  { type: String, default: null },
 
     // ── PayMongo payment tracking ─────────────────────────────────────────────
     paymentStatus: {

@@ -343,7 +343,7 @@
 }
 
 .sku-modal {
-  background: #0a0a0a;
+  background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   max-width: 1000px;
@@ -606,7 +606,7 @@
 
 /* ── Sizes Modal (Full Breakdown) ── */
 .sizes-modal {
-  background: #0a0a0a;
+  background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
   width: 100%;
@@ -819,11 +819,11 @@
 }
 
 .luxe-select-trigger {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg);
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   padding: 12px 20px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 11px;
   font-weight: 800;
   cursor: pointer;
@@ -844,13 +844,13 @@
 }
 
 .luxe-select-trigger:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--glass-hover);
   border-color: var(--border-light);
 }
 
 .luxe-select-root.open .luxe-select-trigger {
   border-color: var(--accent-white);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--glass-hover);
 }
 
 .luxe-select-dropdown {
@@ -858,7 +858,7 @@
   top: calc(100% + 8px);
   left: 0;
   right: 0;
-  background: #111111;
+  background: var(--bg-dark);
   border: 1px solid var(--border-light);
   border-radius: 12px;
   overflow: hidden;
@@ -892,8 +892,8 @@
 }
 
 .luxe-select-option:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--glass-hover);
+  color: var(--text-primary);
 }
 
 .luxe-select-option.selected {

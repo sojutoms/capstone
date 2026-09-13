@@ -99,6 +99,18 @@ const uploadAndCheckMultiple = async (files) => {
   return res.json(); // { success, duplicate, image_urls }
 };
 
+const uploadArEffectFile = async (file) => {
+  const fd = new FormData();
+  fd.append("arEffect", file);
+  const res = await authorizedFetch("/admin/upload-ar-effect", {
+    method: "POST",
+    body: fd,
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.error || "AR effect upload failed");
+  return data.filename;
+};
+
 // Name duplicate check — scans /allproducts, no extra backend route needed
 const checkNameDuplicate = async (name) => {
   const normalized = name.trim().toLowerCase();
@@ -131,6 +143,14 @@ const AddProduct = ({ onAdded }) => {
   // These are what get saved to the product — NOT re-uploaded at submit time.
   const [committedMainUrl, setCommittedMainUrl] = useState("");
   const [committedSubUrls, setCommittedSubUrls] = useState([]);
+
+  // Optional per-product DeepAR .deepar file (shoe category only). Uploaded
+  // immediately on file-select — same pattern as the images above — so
+  // submit just references the already-saved filename.
+  const [arEffectFile, setArEffectFile] = useState(null);
+  const [arEffectFilename, setArEffectFilename] = useState("");
+  const [arEffectUploading, setArEffectUploading] = useState(false);
+  const [arEffectError, setArEffectError] = useState("");
 
   const [productDetails, setProductDetails] = useState({
     name: "", category: "", brand: "", description: "",
@@ -263,6 +283,33 @@ const AddProduct = ({ onAdded }) => {
       console.error("Main image check error:", err);
       setMainImageCheckStatus("idle");
       setErrors((prev) => ({ ...prev, mainImage: "Image upload failed. Please try again." }));
+    }
+  };
+
+  // ── AR effect (.deepar): upload immediately on file select, shoes only ────
+  const handleArEffectFile = async (e) => {
+    const file = e.target.files?.[0] || null;
+    setArEffectFile(file);
+    setArEffectFilename("");
+    setArEffectError("");
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".deepar")) {
+      setArEffectError("Must be a .deepar file.");
+      setArEffectFile(null);
+      return;
+    }
+
+    setArEffectUploading(true);
+    try {
+      const filename = await uploadArEffectFile(file);
+      setArEffectFilename(filename);
+    } catch (err) {
+      console.error("AR effect upload error:", err);
+      setArEffectError(err.message || "Upload failed. Please try again.");
+      setArEffectFile(null);
+    } finally {
+      setArEffectUploading(false);
     }
   };
 
@@ -425,6 +472,7 @@ const AddProduct = ({ onAdded }) => {
         image: committedMainUrl,
         subImages: committedSubUrls,
         subCategories: isShoeCategory ? selectedSubCategories : [],
+        ...(isShoeCategory && arEffectFilename ? { deeparEffect: arEffectFilename } : {}),
         ...(isSimpleCategory
           ? { stock: Number(singleStock || 0), price: (() => { const c = priceStringToCents(singlePrice || ""); return Number.isFinite(c) ? c / 100 : 0; })() }
           : { sizes: activeSizes.map((s) => { const obj = sizes[s] || {}; const c = priceStringToCents(obj.price || ""); return { size: String(s), quantity: Number(obj.quantity || 0), price: Number.isFinite(c) ? c / 100 : 0 }; }) }
@@ -446,6 +494,9 @@ const AddProduct = ({ onAdded }) => {
         setSubImageFiles([]);
         setCommittedMainUrl("");
         setCommittedSubUrls([]);
+        setArEffectFile(null);
+        setArEffectFilename("");
+        setArEffectError("");
         setSizes(resetSrcSizes.reduce((acc, s) => ({ ...acc, [s]: { quantity: 0, price: "" } }), {}));
         setSingleStock(0);
         setSinglePrice("");
@@ -584,6 +635,32 @@ const AddProduct = ({ onAdded }) => {
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {isShoeCategory && (
+            <div className="form-section">
+              <label className="form-label">AR TRY-ON EFFECT <span className="label-hint">(OPTIONAL)</span></label>
+              <div className="ar-effect-upload-row">
+                <label htmlFor="ar-effect-input" className="footer-btn-secondary ar-effect-btn">
+                  {arEffectUploading ? "UPLOADING…" : arEffectFile ? "REPLACE .DEEPAR FILE" : "UPLOAD .DEEPAR FILE"}
+                </label>
+                <input
+                  onChange={handleArEffectFile}
+                  type="file"
+                  id="ar-effect-input"
+                  accept=".deepar"
+                  hidden
+                  disabled={arEffectUploading}
+                />
+                {arEffectFile && !arEffectUploading && (
+                  <span className={`ar-effect-filename ${arEffectFilename ? "ok" : ""}`}>{arEffectFile.name}</span>
+                )}
+              </div>
+              <p className="model3d-hint">
+                A DeepAR effect exported for this shoe specifically. Leave empty to use the shared demo effect on mobile.
+              </p>
+              {arEffectError && <div className="field-error">{arEffectError}</div>}
             </div>
           )}
 

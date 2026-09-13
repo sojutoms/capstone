@@ -194,6 +194,14 @@ const addProduct = async (req, res) => {
       featured: incoming.featured || false,
     });
 
+    // Optional per-product AR try-on effect (shoe category only) — filename
+    // from POST /admin/upload-ar-effect, already sitting in
+    // backend/public/artryon/effects/. Falls back to the shared demo effect
+    // on mobile when not set.
+    if (incoming.deeparEffect) {
+      product.model3d.deeparEffect = String(incoming.deeparEffect).trim();
+    }
+
     await product.save();
     await createSkusForProduct(product.id, { sizesOverride: sizesArray, consignedBy: adminEmail });
 
@@ -222,6 +230,13 @@ const editProduct = async (req, res) => {
 
     if (req.body.brand !== undefined) product.brand = normalizeBrandSlug(req.body.brand);
     if (req.body.colorways !== undefined) product.colorways = sanitizeColorways(req.body.colorways);
+
+    // Optional per-product AR try-on effect — filename from
+    // POST /admin/upload-ar-effect, or "" to clear back to the shared demo
+    // effect (see addProduct / ARTryOnScreen.jsx for the read side).
+    if (req.body.deeparEffect !== undefined) {
+      product.model3d.deeparEffect = req.body.deeparEffect ? String(req.body.deeparEffect).trim() : null;
+    }
 
     // Size handling
     if (req.body.sizes) {

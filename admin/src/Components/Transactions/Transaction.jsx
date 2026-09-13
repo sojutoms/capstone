@@ -93,7 +93,7 @@ const ConfirmModal = ({ open, title, message, onConfirm, onCancel, confirmLabel 
         {title && <h3 className="confirm-modal-title chrome-text" style={{ fontSize: '24px', marginBottom: 16 }}>{title}</h3>}
         <p className="confirm-modal-message" style={{ color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: 14 }}>{message}</p>
         <div className="confirm-modal-actions" style={{ marginTop: 32, gap: 12 }}>
-          <button className="confirm-modal-btn secondary" style={{ flex: 1, background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid var(--border-subtle)' }} onClick={onCancel}>BACK</button>
+          <button className="confirm-modal-btn secondary" style={{ flex: 1, background: 'var(--glass-bg)', color: 'var(--text-primary)', border: '1px solid var(--border-subtle)' }} onClick={onCancel}>BACK</button>
           <button className={`confirm-modal-btn ${confirmClass}`} style={{ flex: 2, height: '48px', fontWeight: 800 }} onClick={onConfirm}>{confirmLabel.toUpperCase()}</button>
         </div>
       </div>
@@ -112,7 +112,7 @@ const PAYMENT_CONFIG = {
 const PaymentMethodBadge = ({ method }) => {
   if (!method) return <span style={{ color: "var(--text-tertiary)" }}>—</span>;
   const key = String(method).toLowerCase();
-  const cfg = PAYMENT_CONFIG[key] || { label: method.toUpperCase(), color: "#aaa", bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.2)", icon: "?" };
+  const cfg = PAYMENT_CONFIG[key] || { label: method.toUpperCase(), color: "var(--text-secondary)", bg: "var(--glass-bg)", border: "var(--border-light)", icon: "?" };
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 6,
@@ -826,7 +826,7 @@ const Transactions = () => {
                   value={adminNote} 
                   onChange={(e) => setAdminNote(e.target.value)}
                   placeholder="Investigation notes..."
-                  style={{ width: '100%', height: '100px', marginBottom: '24px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '12px', color: '#fff', fontFamily: 'inherit' }}
+                  style={{ width: '100%', height: '100px', marginBottom: '24px', background: 'var(--glass-bg)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '12px', color: 'var(--text-primary)', fontFamily: 'inherit' }}
                 />
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button className="luxe-btn primary flex-1" onClick={() => handleRefundAction(selectedRefund._id, "approved")} disabled={actionLoading}>APPROVE</button>

@@ -105,6 +105,15 @@ const priceStringToCents = (s) => {
   return Number.isFinite(n) ? Math.round(n * 100) : NaN;
 };
 
+const uploadArEffectFile = async (file) => {
+  const fd = new FormData();
+  fd.append("arEffect", file);
+  const res = await authorizedFetch("/admin/upload-ar-effect", { method: "POST", body: fd });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.error || "AR effect upload failed");
+  return data.filename;
+};
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── Main ProductManagement ───────────────────────────────────────════════════
@@ -132,6 +141,23 @@ const ProductManagement = () => {
   const [brands, setBrands] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
   const [editedDetails, setEditedDetails] = useState(null);
+
+  // Optional per-product DeepAR .deepar file (shoe category only, edit modal).
+  // Local to "which file is queued to replace the current one this session" —
+  // reset whenever a different product is opened for editing.
+  const [arEffectFile, setArEffectFile] = useState(null);
+  const [arEffectFilename, setArEffectFilename] = useState("");
+  const [arEffectUploading, setArEffectUploading] = useState(false);
+  const [arEffectError, setArEffectError] = useState("");
+  const [arEffectCleared, setArEffectCleared] = useState(false);
+
+  useEffect(() => {
+    setArEffectFile(null);
+    setArEffectFilename("");
+    setArEffectUploading(false);
+    setArEffectError("");
+    setArEffectCleared(false);
+  }, [editingProduct?.id]);
 
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedBrand, setSelectedBrand] = useState("all");
@@ -275,6 +301,40 @@ const ProductManagement = () => {
     setEditedDetails((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleEditArEffectFile = async (e) => {
+    const file = e.target.files?.[0] || null;
+    setArEffectFile(file);
+    setArEffectFilename("");
+    setArEffectError("");
+    setArEffectCleared(false);
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".deepar")) {
+      setArEffectError("Must be a .deepar file.");
+      setArEffectFile(null);
+      return;
+    }
+
+    setArEffectUploading(true);
+    try {
+      const filename = await uploadArEffectFile(file);
+      setArEffectFilename(filename);
+    } catch (err) {
+      console.error("AR effect upload error:", err);
+      setArEffectError(err.message || "Upload failed. Please try again.");
+      setArEffectFile(null);
+    } finally {
+      setArEffectUploading(false);
+    }
+  };
+
+  const clearEditArEffect = () => {
+    setArEffectFile(null);
+    setArEffectFilename("");
+    setArEffectError("");
+    setArEffectCleared(true);
+  };
+
   const handleSubCategoryToggle = (sc) => {
     setEditedDetails((prev) => {
       const current = Array.isArray(prev.subCategories) ? prev.subCategories : [];
@@ -395,7 +455,8 @@ const ProductManagement = () => {
       } else {
         const liveSizes = getEffectiveSizes(editingProduct);
         const sizesPayloadArray = shoeSizes.map((s) => ({ size: String(s), quantity: Number(liveSizes[s]?.quantity || 0), price: Number(liveSizes[s]?.price || 0) }));
-        const epRes = await authorizedFetch("/editproduct", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingProduct.id, name: editedDetails.name, category: editedDetails.category, brand: editedDetails.brand || "", description: editedDetails.description, image: editedDetails.image, subImages: finalSubImages, subCategories: editedDetails.subCategories || [], colorways: finalColorways, sizes: sizesPayloadArray }) });
+        const deeparEffectPatch = arEffectFilename ? { deeparEffect: arEffectFilename } : arEffectCleared ? { deeparEffect: "" } : {};
+        const epRes = await authorizedFetch("/editproduct", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editingProduct.id, name: editedDetails.name, category: editedDetails.category, brand: editedDetails.brand || "", description: editedDetails.description, image: editedDetails.image, subImages: finalSubImages, subCategories: editedDetails.subCategories || [], colorways: finalColorways, sizes: sizesPayloadArray, ...deeparEffectPatch }) });
         const epBody = await epRes.json().catch(() => ({}));
         if (!epRes.ok) { showToast({ message: epBody.error || "Failed to save product", type: "error" }); return; }
       }
@@ -754,6 +815,44 @@ const ProductManagement = () => {
                           );
                         })}
                       </div>
+                    </div>
+                  )}
+
+                  {!SIMPLE_CATEGORIES.includes((editedDetails.category || "").toLowerCase()) && (
+                    <div className="form-section">
+                      <label className="form-label">AR TRY-ON EFFECT <span className="form-label-hint">(OPTIONAL)</span></label>
+                      {editedDetails.model3d?.deeparEffect && !arEffectFilename && !arEffectCleared && (
+                        <p className="ar-effect-filename ok" style={{ marginBottom: 8 }}>
+                          Current: {editedDetails.model3d.deeparEffect}
+                        </p>
+                      )}
+                      {arEffectCleared && (
+                        <p className="ar-effect-filename" style={{ marginBottom: 8 }}>
+                          Will revert to the shared demo effect on save.
+                        </p>
+                      )}
+                      <div className="ar-effect-upload-row">
+                        <label htmlFor="edit-ar-effect-input" className="footer-btn-secondary ar-effect-btn">
+                          {arEffectUploading ? "UPLOADING…" : "UPLOAD .DEEPAR FILE"}
+                        </label>
+                        <input
+                          onChange={handleEditArEffectFile}
+                          type="file"
+                          id="edit-ar-effect-input"
+                          accept=".deepar"
+                          hidden
+                          disabled={arEffectUploading}
+                        />
+                        {arEffectFile && !arEffectUploading && (
+                          <span className={`ar-effect-filename ${arEffectFilename ? "ok" : ""}`}>{arEffectFile.name}</span>
+                        )}
+                        {editedDetails.model3d?.deeparEffect && !arEffectCleared && (
+                          <button type="button" className="footer-btn-secondary" onClick={clearEditArEffect}>
+                            REMOVE
+                          </button>
+                        )}
+                      </div>
+                      {arEffectError && <div className="field-error">{arEffectError}</div>}
                     </div>
                   )}
 

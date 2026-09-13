@@ -128,6 +128,7 @@ const SizePickerModal = ({ product, cart, onConfirm, onClose }) => {
 const PaymentModal = ({ cart, subtotal, onClose, onComplete }) => {
   const [method, setMethod] = useState("cash");
   const [cashInput, setCashInput] = useState("");
+  const [refInput, setRefInput] = useState("");
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
 
@@ -139,7 +140,7 @@ const PaymentModal = ({ cart, subtotal, onClose, onComplete }) => {
     setProcessing(true);
     setError(null);
     try {
-      await onComplete({ method, cashAmount, change, subtotal });
+      await onComplete({ method, cashAmount, change, subtotal, paymentReference: refInput.trim() });
     } catch (err) {
       setError(err.message || "Sale failed. Please try again.");
       setProcessing(false);
@@ -169,7 +170,6 @@ const PaymentModal = ({ cart, subtotal, onClose, onComplete }) => {
             >
               <span className="pos-method-icon">{m.icon}</span>
               <span>{m.label}</span>
-              {m.id !== "cash" && <span className="pos-placeholder-badge">Placeholder</span>}
             </button>
           ))}
         </div>
@@ -209,11 +209,21 @@ const PaymentModal = ({ cart, subtotal, onClose, onComplete }) => {
         )}
 
         {method !== "cash" && (
-          <div className="pos-placeholder-notice">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            {PAYMENT_METHODS.find((m) => m.id === method)?.label} payment is a placeholder. No real transaction will occur.
+          <div className="pos-manual-payment-section">
+            <div className="pos-placeholder-notice">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              Confirm the customer's {PAYMENT_METHODS.find((m) => m.id === method)?.label} payment (terminal or app) before completing this sale.
+            </div>
+            <label className="pos-cash-label">Reference / Transaction No. (optional)</label>
+            <input
+              type="text"
+              className="pos-ref-input"
+              placeholder="e.g. terminal approval code or GCash ref #"
+              value={refInput}
+              onChange={(e) => setRefInput(e.target.value)}
+            />
           </div>
         )}
 
@@ -279,13 +289,15 @@ const ReceiptModal = ({ receipt, onClose }) => {
           {receipt.method === "cash" && receipt.change > 0 && (
             <div className="pos-receipt-row change"><span>Change</span><span>{fmt(receipt.change)}</span></div>
           )}
+          {receipt.method !== "cash" && receipt.paymentReference && (
+            <div className="pos-receipt-row"><span>Reference No.</span><span>{receipt.paymentReference}</span></div>
+          )}
         </div>
 
         <div className="pos-receipt-divider">- - - - - - - - - - - - - - - - - - - -</div>
 
         <div className="pos-receipt-footer">
           <div className="pos-receipt-thanks">Thank you for your purchase!</div>
-          <div className="pos-receipt-note">This is a POS placeholder receipt.</div>
         </div>
 
         <div className="pos-receipt-actions">
@@ -391,6 +403,7 @@ const POS = () => {
       body: JSON.stringify({
         items: saleItems,
         paymentMethod: paymentInfo.method,
+        paymentReference: paymentInfo.paymentReference || null,
         total: paymentInfo.subtotal,
       }),
     });

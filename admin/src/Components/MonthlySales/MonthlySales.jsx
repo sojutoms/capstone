@@ -1,10 +1,18 @@
 import React, { useMemo } from "react";
 import { Line } from "react-chartjs-2";
 import { Chart, LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Filler } from "chart.js";
+import { useTheme } from "../../Context/ThemeContext";
 
 Chart.register(LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Filler);
 
 const MonthlySales = React.memo(({ data }) => {
+  const { theme } = useTheme();
+  const isLight = theme === "light";
+  // Chart.js draws to <canvas>, which can't read CSS variables — these have
+  // to be resolved to concrete colors in JS so axis text stays legible
+  // against the card background in both themes.
+  const tickColor = isLight ? "rgba(0, 0, 0, 0.55)" : "rgba(255, 255, 255, 0.4)";
+  const gridColor = isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.03)";
   const { labels, totals } = useMemo(() => {
     let l = [], t = [];
     if (Array.isArray(data)) {
@@ -47,17 +55,17 @@ const MonthlySales = React.memo(({ data }) => {
     scales: {
       y: {
         beginAtZero: true,
-        grid: { color: "rgba(255,255,255,0.03)", borderDash: [5, 5] },
+        grid: { color: gridColor, borderDash: [5, 5] },
         border: { display: false },
-        ticks: { color: "rgba(255,255,255,0.4)", font: { size: 10, weight: "600" }, callback: v => `₱${Number(v).toLocaleString()}` }
+        ticks: { color: tickColor, font: { size: 10, weight: "600" }, callback: v => `₱${Number(v).toLocaleString()}` }
       },
       x: {
         grid: { display: false },
         border: { display: false },
-        ticks: { color: "rgba(255,255,255,0.4)", font: { size: 10, weight: "600" } }
+        ticks: { color: tickColor, font: { size: 10, weight: "600" } }
       }
     }
-  }), []);
+  }), [tickColor, gridColor]);
 
   if (!labels.length) return null;
 

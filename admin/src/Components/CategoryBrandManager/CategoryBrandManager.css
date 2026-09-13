@@ -17,7 +17,7 @@
   grid-column: 1/-1;
   padding: 100px;
   text-align: center;
-  color: var(--accent-gold);
+  color: var(--accent-primary);
   font-family: var(--font-display);
   font-size: 20px;
   letter-spacing: 4px;

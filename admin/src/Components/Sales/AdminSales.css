@@ -124,11 +124,11 @@
 
 .sales-control-bar select,
 .sales-control-bar input {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--bg-dark);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 8px 12px;
-  color: #fff;
+  color: var(--text-primary);
   font-size: 13px;
   font-weight: 500;
   outline: none;
@@ -139,14 +139,14 @@
 .sales-control-bar select:focus,
 .sales-control-bar input:focus {
   border-color: var(--accent-primary);
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--bg-hover);
 }
 
 .refresh-btn {
   height: 42px;
   padding: 0 24px;
   background: var(--text-primary);
-  color: #000;
+  color: var(--bg-deep);
   border: none;
   border-radius: var(--radius-md);
   font-weight: 800;
@@ -375,12 +375,12 @@ tr:last-child td {
 .sl-search-wrapper input {
   width: 100%;
   padding-left: 36px !important;
-  background: rgba(0, 0, 0, 0.3) !important;
+  background: var(--bg-dark) !important;
   border: 1px solid var(--border-subtle) !important;
   border-radius: var(--radius-md) !important;
   padding: 8px 12px !important;
   padding-left: 36px !important;
-  color: #fff !important;
+  color: var(--text-primary) !important;
   font-size: 13px !important;
 }
 
