@@ -26,6 +26,7 @@ const {
   writeAuditLog,
   getAuditLog,
   getActiveSessions,
+  adminLogout,
   forceLogout,
   getLoginAlerts,
 } = require("../controllers/securityController");
@@ -64,6 +65,7 @@ router.get("/admin/audit-log", ownerAuth, getAuditLog);
 
 // ─── Security — Sessions ──────────────────────────────────────────────────────
 router.get("/admin/sessions", ownerAuth, getActiveSessions);
+router.post("/admin/logout", adminAuth, adminLogout);
 router.post("/admin/force-logout", ownerAuth, forceLogout);
 
 // ─── Security — Login Alerts ──────────────────────────────────────────────────

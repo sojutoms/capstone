@@ -5,7 +5,7 @@ const AdminSession = require("../models/AdminSession");
 const LoginAttempt = require("../models/LoginAttempt");
 const Users = require("../models/Users");
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret_ecom";
+const JWT_SECRET = require("../config/jwt");
 
 // ─── Helper: extract caller info from request ─────────────────────────────────
 const getCallerInfo = (req) => {
@@ -165,6 +165,24 @@ const getActiveSessions = async (req, res) => {
   }
 };
 
+// ─── POST /admin/logout ───────────────────────────────────────────────────────
+// Deactivates the caller's own current session. Without this, "logging out"
+// only ever cleared client-side storage — the AdminSession row stayed
+// isActive:true until its natural ~12h expiry, so /admin/sessions and
+// isTokenActive() had no way to tell a real logout apart from an idle tab.
+const adminLogout = async (req, res) => {
+  try {
+    const tokenHeader = req.header("auth-token") || req.header("Authorization") || "";
+    const token = tokenHeader.startsWith("Bearer ") ? tokenHeader.slice(7) : tokenHeader;
+    if (!token) return res.status(400).json({ success: false, error: "No token provided" });
+    await AdminSession.updateOne({ token, isActive: true }, { $set: { isActive: false } });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("[Sessions] logout error:", err.message);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 const forceLogout = async (req, res) => {
   try {
     const { sessionId } = req.body;
@@ -305,40 +323,22 @@ const touchSession = async (token) => {
 
 /**
  * isTokenActive(token) → boolean
- * First checks by exact token string.
- * Falls back to checking by adminId in case the token string doesn't match
- * exactly (e.g. whitespace/encoding difference between login and request).
+ * Exact-token match against AdminSession only. There used to be a fallback
+ * here that treated ANY other active session for the same admin as proof
+ * this token was still fine — which meant force-logging-out one session
+ * never actually worked whenever the admin had more than one session row
+ * (the common case, since nothing previously marked sessions inactive on a
+ * normal logout). That fallback also rewrote the other session's stored
+ * token to the just-revoked one. Removed — a revoked token must not validate
+ * just because some other session happens to still be active.
  */
 const isTokenActive = async (token) => {
   try {
     const session = await AdminSession.findOne({ token, isActive: true }).lean();
-    console.log("[isTokenActive] exact match:", !!session);
-    if (session) return true;
-
-    const payload = jwt.verify(token, JWT_SECRET);
-    const adminId = payload.userId || payload.id || payload._id || "";
-    console.log("[isTokenActive] payload adminId:", adminId);
-    if (!adminId) return false;
-
-    const { Types } = require("mongoose");
-    const objectId = Types.ObjectId.isValid(adminId) ? new Types.ObjectId(adminId) : null;
-    console.log("[isTokenActive] objectId:", objectId);
-    if (!objectId) return false;
-
-    const fallback = await AdminSession.findOne({ adminId: objectId, isActive: true }).lean();
-    console.log("[isTokenActive] fallback session:", fallback ? fallback._id : null);
-    if (fallback) {
-      AdminSession.updateOne({ _id: fallback._id }, { token, lastActive: new Date() }).catch(() => { });
-      return true;
-    }
-
-    const anySession = await AdminSession.countDocuments({ isActive: true });
-    console.log("[isTokenActive] anySession count:", anySession);
-
-    return false;
+    return !!session;
   } catch (err) {
-    console.log("[isTokenActive] caught error:", err.message);
-    return true;
+    console.warn("[isTokenActive] error, failing closed:", err.message);
+    return false;
   }
 };
 
@@ -346,6 +346,7 @@ module.exports = {
   writeAuditLog,
   getAuditLog,
   getActiveSessions,
+  adminLogout,
   forceLogout,
   getLoginAlerts,
   recordLoginAttempt,

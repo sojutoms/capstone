@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./CSS/Profile.css";
 import API_BASE_URL from "../services/api";
@@ -100,9 +100,7 @@ const Profile = () => {
   const [user, setUser] = useState(null);
   const [orderCount, setOrderCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
-  const [uploading, setUploading] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState(false);
-  const fileInputRef = useRef(null);
 
   const token = localStorage.getItem("auth-token");
 
@@ -132,33 +130,6 @@ const Profile = () => {
     fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
-
-  const handleAvatarPick = () => fileInputRef.current?.click();
-
-  const handleAvatarFile = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("product", file);
-      const uploadRes = await fetch(`${API_BASE_URL}/upload`, { method: "POST", body: formData });
-      const uploadData = await uploadRes.json();
-      if (!uploadData.success || !uploadData.image_url) return;
-
-      const saveRes = await fetch(`${API_BASE_URL}/user/profile`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "auth-token": token },
-        body: JSON.stringify({ photo: uploadData.image_url }),
-      });
-      const saveData = await saveRes.json();
-      if (saveData.success) setUser(saveData.user);
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to log out?")) {
@@ -193,21 +164,13 @@ const Profile = () => {
 
         <div className="profile-overview glass-strong">
           <div className="profile-overview-identity">
-            <div className="profile-avatar" onClick={handleAvatarPick}>
-              {uploading ? (
-                <span className="profile-avatar-spinner" />
-              ) : user.photo ? (
-                <img
-                  src={user.photo}
-                  alt="Profile"
-                  onClick={(e) => { e.stopPropagation(); setViewingPhoto(true); }}
-                />
+            <div className={`profile-avatar${user.photo ? " profile-avatar--viewable" : ""}`} onClick={() => user.photo && setViewingPhoto(true)}>
+              {user.photo ? (
+                <img src={user.photo} alt="Profile" />
               ) : (
                 <span className="profile-avatar-initial">{(displayName || "U")[0].toUpperCase()}</span>
               )}
-              <span className="profile-avatar-badge">✎</span>
             </div>
-            <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleAvatarFile} />
             <div className="profile-identity-text">
               <h2>{displayName}</h2>
               <p>{user.email}</p>

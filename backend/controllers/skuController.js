@@ -5,7 +5,7 @@ const { ShoeSequence } = require("../models/index");
 const { getNextSequences, getNextProductItemIds, createSkusForProduct, migrateSkuIds } = require("../utils/sku");
 const AuditLog = require("../models/AuditLog");
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret_ecom";
+const JWT_SECRET = require("../config/jwt");
 const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 
 // ─── Helper: extract admin email from request token ───────────────────────────

@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret_ecom";
+const JWT_SECRET = require("../config/jwt");
+const { isTokenActive } = require("../controllers/securityController");
 
 /**
  * Generic helper to extract token from headers.
@@ -23,7 +24,7 @@ const getTokenFromRequest = (req) => {
  * Middleware that verifies the JWT and checks the caller has at least one
  * of the allowed roles.
  */
-const requireRole = (...allowedRoles) => (req, res, next) => {
+const requireRole = (...allowedRoles) => async (req, res, next) => {
     try {
         const token = getTokenFromRequest(req);
         if (!token) {
@@ -47,6 +48,15 @@ const requireRole = (...allowedRoles) => (req, res, next) => {
 
             if (!hasRole) {
                 return res.status(403).json({ success: false, error: "Insufficient permissions" });
+            }
+
+            // Admin-role-gated routes must also re-check against the live
+            // AdminSession record, so a force-logout or revoked session
+            // actually cuts the admin off instead of the token staying valid
+            // until it naturally expires.
+            const sessionStillActive = await isTokenActive(token);
+            if (!sessionStillActive) {
+                return res.status(401).json({ success: false, error: "Session has been revoked. Please log in again." });
             }
         }
 

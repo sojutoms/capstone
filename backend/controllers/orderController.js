@@ -115,6 +115,11 @@ const getOrderHistory = async (req, res) => {
           statusMatch = { status: { $in: ["confirmed", "processing"] } };
         } else if (status === "shipping") {
           statusMatch = { status: { $in: ["shipping", "shipped"] } };
+        } else if (status === "delivered") {
+          // "completed" is just a delivered order the auto-complete cron aged
+          // past 3 days (see autoCompleteDeliveredOrders) — there's no
+          // separate "Completed" tab, so it still belongs under Delivered.
+          statusMatch = { status: { $in: ["delivered", "completed"] } };
         } else {
           statusMatch = { status };
         }

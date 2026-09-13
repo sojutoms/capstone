@@ -8,6 +8,7 @@ import "./Navbar.css";
 import navlogo from "../../assets/logo.png";
 import NotificationCenter from "../NotificationCenter/NotificationCenter";
 import { useTheme } from "../../Context/ThemeContext";
+import { authorizedFetch } from "../../services/api";
 
 const SunIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -54,7 +55,11 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Tell the backend to deactivate this session (so /admin/sessions and
+    // force-logout stay accurate) before clearing local storage. Best-effort —
+    // a network hiccup here should never block the user from logging out.
+    try { await authorizedFetch("/admin/logout", { method: "POST" }); } catch { /* non-fatal */ }
     sessionStorage.removeItem("admin-token");
     sessionStorage.removeItem("admin-roles");
     sessionStorage.removeItem("admin-name");
