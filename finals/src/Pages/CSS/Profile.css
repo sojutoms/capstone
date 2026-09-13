@@ -86,8 +86,11 @@
   justify-content: center;
   position: relative;
   flex-shrink: 0;
-  cursor: pointer;
   overflow: visible;
+}
+
+.profile-avatar--viewable {
+  cursor: pointer;
 }
 
 .profile-avatar img {
@@ -101,35 +104,6 @@
   color: var(--text-primary);
   font-size: 26px;
   font-family: var(--font-display, 'Bebas Neue', sans-serif);
-}
-
-.profile-avatar-spinner {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid var(--border-light);
-  border-top-color: var(--accent-gold);
-  animation: profile-spin 0.7s linear infinite;
-}
-
-@keyframes profile-spin {
-  to { transform: rotate(360deg); }
-}
-
-.profile-avatar-badge {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--accent-gold);
-  border: 2px solid var(--bg-primary);
-  color: var(--bg-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
 }
 
 .profile-identity-text {

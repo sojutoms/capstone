@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { fetchUser, authenticate } = require("../middleware/auth");
+const { fetchUser, authenticate, requireRole } = require("../middleware/auth");
 const { SavedAddress } = require("../models/index");
 const {
   login,
@@ -40,9 +40,10 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 
 // User management (admin)
-router.get("/allusers", getAllUsers);
-router.post("/removeuser", removeUser);
-router.post("/blockuser", blockUser);
+const userAdminAuth = requireRole("owner", "admin");
+router.get("/allusers", userAdminAuth, getAllUsers);
+router.post("/removeuser", userAdminAuth, removeUser);
+router.post("/blockuser", userAdminAuth, blockUser);
 
 // Profile
 router.get("/user/profile", fetchUser, getUserProfile);

@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const Orders = require("../models/Orders");
 const Users = require("../models/Users");
@@ -12,7 +13,7 @@ const {
 } = require("./securityController");
 const AuditLog = require("../models/AuditLog");
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret_ecom";
+const JWT_SECRET = require("../config/jwt");
 const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 
 // ─── Helper: write audit log (non-blocking) ───────────────────────────────────
@@ -938,7 +939,6 @@ const adminLogin = async (req, res) => {
 
     let isMatch = false;
     if (user.password.startsWith("$2b$") || user.password.startsWith("$2a$")) {
-      const bcrypt = require("bcrypt");
       isMatch = await bcrypt.compare(password, user.password);
     } else {
       isMatch = user.password === password;
@@ -1017,8 +1017,9 @@ const createStaff = async (req, res) => {
     const normalizedEmail = String(email).toLowerCase().trim();
     const existing = await Users.findOne({ email: normalizedEmail });
     if (existing) return res.status(409).json({ success: false, error: "An account with this email already exists" });
+    const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new Users({
-      name: name.trim(), email: normalizedEmail, password,
+      name: name.trim(), email: normalizedEmail, password: hashedPassword,
       phone: phone ? phone.trim() : "", roles: [role], status: "active", cartData: {},
     });
     await newUser.save();

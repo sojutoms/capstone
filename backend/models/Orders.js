@@ -37,7 +37,10 @@ const deliveryInfoSchema = new mongoose.Schema(
     street:             { type: String, required: true, trim: true },
     phone: {
       type: String, required: true, trim: true,
-      validate: { validator: (v) => /^\d{11}$/.test((v || "").replace(/\D/g, "")), message: "Phone number must be exactly 11 digits" },
+      // Accepts both the legacy 09XXXXXXXXX format (still used by the checkout
+      // form and existing saved addresses) and the newer +63XXXXXXXXXX format
+      // (used by registration going forward).
+      validate: { validator: (v) => /^(?:\+63\d{10}|\d{11})$/.test(v || ""), message: "Enter a valid Philippine phone number (09XXXXXXXXX or +63XXXXXXXXXX)" },
     },
     region:             { type: locationPartSchema, required: true },
     province:           { type: locationPartSchema, required: false },

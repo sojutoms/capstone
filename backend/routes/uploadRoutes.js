@@ -1,7 +1,16 @@
 const express = require("express");
 const router = express.Router();
 const upload = require("../config/multer");
+const { cloudinary } = upload;
 const Product = require("../models/Product");
+const { requireRole, fetchUser } = require("../middleware/auth");
+
+// Catalog-image uploads (multi-file, duplicate-checking) are an admin/staff
+// action, not a public one.
+const uploadAuth = requireRole("owner", "admin", "staff", "inventory_staff");
+// Single-file /upload is shared with customer profile-picture uploads
+// (Settings.jsx), so it only needs "logged in", not an admin role.
+const anyAuthUser = fetchUser;
 
 const extractPublicId = (url) => {
   try {
@@ -23,7 +32,7 @@ const getAllStoredUrls = async () => {
   return urls;
 };
 
-router.post("/upload", (req, res) => {
+router.post("/upload", anyAuthUser, (req, res) => {
   upload.single("product")(req, res, (err) => {
     if (err) {
       console.error(">>> Multer/Cloudinary error:", err);
@@ -36,7 +45,7 @@ router.post("/upload", (req, res) => {
   });
 });
 
-router.post("/upload-multiple", (req, res) => {
+router.post("/upload-multiple", uploadAuth, (req, res) => {
   upload.array("product", 5)(req, res, (err) => {
     if (err) {
       console.error("Upload-multiple error:", err);
@@ -49,7 +58,7 @@ router.post("/upload-multiple", (req, res) => {
   });
 });
 
-router.post("/check-duplicate-image", (req, res) => {
+router.post("/check-duplicate-image", uploadAuth, (req, res) => {
   upload.single("product")(req, res, async (err) => {
     if (err) return res.status(500).json({ success: false, error: err.message });
     if (!req.file) return res.status(400).json({ success: false, error: "No file received" });
@@ -73,7 +82,7 @@ router.post("/check-duplicate-image", (req, res) => {
 });
 
 // POST /check-duplicate-images-multiple  (up to 4 files)
-router.post("/check-duplicate-images-multiple", (req, res) => {
+router.post("/check-duplicate-images-multiple", uploadAuth, (req, res) => {
   upload.array("product", 4)(req, res, async (err) => {
     if (err) return res.status(500).json({ success: false, error: err.message });
     if (!req.files?.length) return res.status(400).json({ success: false, error: "No files received" });

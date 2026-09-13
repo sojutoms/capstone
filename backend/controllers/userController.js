@@ -2,16 +2,62 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const Users = require("../models/Users");
 const { OtpModel } = require("../models/index");
+const LoginAttempt = require("../models/LoginAttempt");
 const sendEmail = require("../config/mailer");
+const { recordLoginAttempt, getCallerInfo } = require("./securityController");
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret_ecom";
+const JWT_SECRET = require("../config/jwt");
+
+// ─── Login lockout tiers ───────────────────────────────────────────────────────
+// First 5 failed attempts behave normally. From the 6th onward, each failure
+// escalates the cooldown: 5 min → 10 min → 15 min (flat from the 3rd lockout on).
+// Entirely DB-backed (keyed by email + attempt timestamps in LoginAttempt), so
+// a page refresh or closed browser never resets it — only time and a fresh
+// successful login do.
+const LOGIN_LOCKOUT_THRESHOLD = 5;
+const lockoutDurationMs = (failCount) => {
+  if (failCount <= LOGIN_LOCKOUT_THRESHOLD) return 5 * 60 * 1000;
+  if (failCount === LOGIN_LOCKOUT_THRESHOLD + 1) return 10 * 60 * 1000;
+  return 15 * 60 * 1000;
+};
+
+const getActiveLockout = async (email) => {
+  const lastSuccess = await LoginAttempt.findOne({ email, success: true }).sort({ timestamp: -1 });
+  const since = lastSuccess ? lastSuccess.timestamp : new Date(0);
+
+  const failCount = await LoginAttempt.countDocuments({ email, success: false, timestamp: { $gt: since } });
+  if (failCount < LOGIN_LOCKOUT_THRESHOLD) return null;
+
+  const lastFail = await LoginAttempt.findOne({ email, success: false, timestamp: { $gt: since } }).sort({ timestamp: -1 });
+  if (!lastFail) return null;
+
+  const unlockAt = new Date(lastFail.timestamp.getTime() + lockoutDurationMs(failCount));
+  if (Date.now() >= unlockAt.getTime()) return null;
+
+  return { unlockAt, remainingMinutes: Math.ceil((unlockAt.getTime() - Date.now()) / 60000) };
+};
 
 // ─── POST /login ──────────────────────────────────────────────────────────────
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { password } = req.body;
+  const email = String(req.body.email || "").trim();
+  const { ip, userAgent } = getCallerInfo(req);
   try {
+    const lockout = await getActiveLockout(email);
+    if (lockout) {
+      return res.status(429).json({
+        success: false,
+        errors: `Too many attempts. Try again in ${lockout.remainingMinutes} minute${lockout.remainingMinutes === 1 ? "" : "s"}.`,
+        cooldown: true,
+        unlockAt: lockout.unlockAt,
+      });
+    }
+
     const user = await Users.findOne({ email });
-    if (!user) return res.status(401).json({ success: false, errors: "Invalid credentials" });
+    if (!user) {
+      await recordLoginAttempt({ email, ip, userAgent, success: false, reason: "not_found" });
+      return res.status(401).json({ success: false, errors: "Invalid credentials" });
+    }
 
     let isMatch = false;
     if (user.password.startsWith("$2b$") || user.password.startsWith("$2a$")) {
@@ -19,7 +65,12 @@ const login = async (req, res) => {
     } else {
       isMatch = user.password === password;
     }
-    if (!isMatch) return res.status(401).json({ success: false, errors: "Invalid credentials" });
+    if (!isMatch) {
+      await recordLoginAttempt({ email, ip, userAgent, success: false, reason: "wrong_password" });
+      return res.status(401).json({ success: false, errors: "Invalid credentials" });
+    }
+
+    await recordLoginAttempt({ email, ip, userAgent, success: true, reason: "" });
 
     const token = jwt.sign({ user: { id: String(user._id) } }, JWT_SECRET);
     res.json({ success: true, token });
@@ -50,6 +101,7 @@ const signup = async (req, res) => {
       return res.status(400).json({ success: false, field: "phone", errors: "Phone number is already in use." });
 
     const otp = Math.floor(100000 + Math.random() * 900000);
+    const hashedPassword = await bcrypt.hash(password, 10);
     // Clear legacy OTPs
     await OtpModel.deleteMany({ email });
     await OtpModel.create({
@@ -57,7 +109,7 @@ const signup = async (req, res) => {
       otp,
       username: `${firstName} ${lastName}`,
       phone,
-      password,
+      password: hashedPassword,
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
       resendCount: 0,
       lastResendAt: new Date(),
@@ -259,7 +311,18 @@ const resetPassword = async (req, res) => {
     if (!record) return res.json({ success: false, errors: "Invalid OTP" });
     if (record.expiresAt < Date.now()) return res.json({ success: false, errors: "Expired OTP" });
 
-    await Users.updateOne({ email }, { $set: { password: newPassword } });
+    const user = await Users.findOne({ email });
+    if (!user) return res.json({ success: false, errors: "Account not found" });
+
+    const isSameAsOld = user.password.startsWith("$2b$") || user.password.startsWith("$2a$")
+      ? await bcrypt.compare(newPassword, user.password)
+      : user.password === newPassword;
+    if (isSameAsOld) {
+      return res.json({ success: false, errors: "New password must be different from your current password." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await Users.updateOne({ email }, { $set: { password: hashedPassword } });
     await OtpModel.deleteOne({ _id: record._id });
     res.json({ success: true, message: "Password reset successful" });
   } catch (err) {
@@ -366,8 +429,11 @@ const updateUserProfile = async (req, res) => {
     const { firstName, lastName, newsletter, currency, phone, place, bio, photo } = req.body;
 
     if (phone !== undefined && phone !== "") {
-      if (!/^\d{11}$/.test(phone))
-        return res.status(400).json({ success: false, error: "Phone number must be exactly 11 digits." });
+      // Accepts both the legacy 09XXXXXXXXX format (still used by mobile /
+      // checkout) and the newer +63XXXXXXXXXX format (used by the web
+      // register form and this Settings page going forward).
+      if (!/^(?:\+63\d{10}|\d{11})$/.test(phone))
+        return res.status(400).json({ success: false, error: "Enter a valid Philippine phone number (09XXXXXXXXX or +63XXXXXXXXXX)." });
       const existing = await Users.findOne({ phone, _id: { $ne: req.user.id } });
       if (existing)
         return res.status(400).json({ success: false, error: "Phone number is already in use." });
@@ -495,6 +561,10 @@ const changeUserPassword = async (req, res) => {
       isMatch = user.password === currentPassword;
     }
     if (!isMatch) return res.json({ success: false, message: "Incorrect current password." });
+
+    if (newPassword === currentPassword) {
+      return res.json({ success: false, message: "New password must be different from your current password." });
+    }
 
     const record = await OtpModel.findOne({ email: user.email, otp: Number(otp) });
     if (!record) return res.json({ success: false, message: "Invalid OTP." });

@@ -701,6 +701,7 @@ const LoginSignup = () => {
   const ResetForm = (
     <div className="ls-form-section--tight">
       <div>
+        <button className="ls-link-btn ls-link-btn--back" onClick={() => switchMode("login")}>← Back to login</button>
         <p className="ls-form-eyebrow">Account Recovery</p>
         <h2 className="ls-form-heading">Reset Password</h2>
         <p className="ls-form-subheading">Enter the code sent to your email and your new password</p>

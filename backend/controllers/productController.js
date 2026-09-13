@@ -53,7 +53,7 @@ const autoGenerate3DModel = (product) => {
     .catch((err) => console.error(`Auto 3D generation kickoff failed for product ${product.id}:`, err.message));
 };
 
-const JWT_SECRET = process.env.JWT_SECRET || "secret_ecom";
+const JWT_SECRET = require("../config/jwt");
 
 // ─── Internal Helper: Audit Log ──────────────────────────────────────────────
 async function writeAudit(action, req, details = {}) {

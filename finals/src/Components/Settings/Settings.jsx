@@ -2,6 +2,19 @@
 import "./Settings.css";
 import API_BASE_URL from "../../services/api";
 
+// Converts a legacy 09XXXXXXXXX number (still the format most existing
+// accounts/checkout have saved) into the +63XXXXXXXXXX format the register
+// form now produces, so this field always matches it. Leaves an
+// already-+63 value alone, defaults an empty one to the bare prefix.
+const normalizePhone = (raw) => {
+  const value = (raw || "").trim();
+  if (value.startsWith("+63")) return value;
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("0")) return "+63" + digits.slice(1);
+  if (!digits) return "+63";
+  return value;
+};
+
 const passwordRules = [
   { key: "length", label: "At least 8 characters", test: (p) => p.length >= 8 },
   { key: "upper", label: "One uppercase letter (A-Z)", test: (p) => /[A-Z]/.test(p) },
@@ -105,9 +118,12 @@ const OtpInput = ({ value, length = 6, onChange, error }) => {
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("profile");
 
-  const [profile, setProfile] = useState({ firstName: "", lastName: "", email: "", phone: "" });
-  const [originalProfile, setOriginalProfile] = useState({ firstName: "", lastName: "", email: "", phone: "" });
+  const [profile, setProfile] = useState({ firstName: "", lastName: "", email: "", phone: "", photo: "" });
+  const [originalProfile, setOriginalProfile] = useState({ firstName: "", lastName: "", email: "", phone: "", photo: "" });
   const [editing, setEditing] = useState(false);
+
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef(null);
 
   const [emailEditing, setEmailEditing] = useState(false);
   const [newEmailValue, setNewEmailValue] = useState("");
@@ -157,7 +173,7 @@ const Settings = () => {
           firstName = parts[0] || "";
           lastName = parts.slice(1).join(" ") || "";
         }
-        const prof = { firstName, lastName, email: user.email || "", phone: user.phone || "" };
+        const prof = { firstName, lastName, email: user.email || "", phone: normalizePhone(user.phone || ""), photo: user.photo || "" };
         setProfile(prof);
         setOriginalProfile(prof);
       }
@@ -170,6 +186,45 @@ const Settings = () => {
     fetchProfile();
     return () => { if (closeMsgRef.current) clearTimeout(closeMsgRef.current); };
   }, [fetchProfile]);
+
+  const handleAvatarPick = () => photoInputRef.current?.click();
+
+  const handleAvatarFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    const token = localStorage.getItem("auth-token");
+    setPhotoUploading(true);
+    try {
+      const uploadForm = new FormData();
+      uploadForm.append("product", file);
+      const uploadRes = await fetch(`${API_BASE_URL}/upload`, { method: "POST", headers: { "auth-token": token }, body: uploadForm });
+      const uploadData = await uploadRes.json();
+      if (!uploadData.success || !uploadData.image_url) {
+        showMessage("error", uploadData.error || "Upload failed");
+        return;
+      }
+
+      const saveRes = await fetch(`${API_BASE_URL}/user/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "auth-token": token },
+        body: JSON.stringify({ photo: uploadData.image_url }),
+      });
+      const saveData = await saveRes.json();
+      if (saveData.success) {
+        setProfile((p) => ({ ...p, photo: uploadData.image_url }));
+        setOriginalProfile((p) => ({ ...p, photo: uploadData.image_url }));
+        showMessage("success", "Profile picture updated");
+      } else {
+        showMessage("error", saveData.error || "Failed to save photo");
+      }
+    } catch {
+      showMessage("error", "Upload failed");
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
 
   const handleCancel = () => {
     setProfile(originalProfile);
@@ -281,6 +336,7 @@ const Settings = () => {
     const checks = getPwdChecks(passwords.newPass);
     if (checks.some((c) => !c.passed)) errs.newPass = "Password does not meet all requirements.";
     if (!passwords.newPass) errs.newPass = "New password is required.";
+    else if (passwords.newPass === passwords.current) errs.newPass = "New password must be different from your current password.";
     if (passwords.newPass !== passwords.confirm) errs.confirm = "Passwords do not match.";
     if (!passwords.confirm) errs.confirm = "Please confirm your new password.";
 
@@ -424,6 +480,23 @@ const Settings = () => {
                 }
               </header>
 
+              <div className="settings-avatar-row">
+                <div className="settings-avatar" onClick={handleAvatarPick} title="Change profile picture">
+                  {photoUploading ? (
+                    <span className="settings-avatar-spinner" />
+                  ) : profile.photo ? (
+                    <img src={profile.photo} alt="Profile" />
+                  ) : (
+                    <span className="settings-avatar-initial">{(profile.firstName || profile.email || "U")[0].toUpperCase()}</span>
+                  )}
+                  <span className="settings-avatar-badge">✎</span>
+                </div>
+                <input ref={photoInputRef} type="file" accept="image/*" hidden onChange={handleAvatarFile} />
+                <div className="settings-avatar-info">
+                  <p>Click to update your profile picture</p>
+                </div>
+              </div>
+
               <form className="innovative-form" onSubmit={handleUpdate}>
                 <div className="row-flex" style={{ display: "flex", gap: 20 }}>
                   <div className="input-group" style={{ flex: 1 }}>
@@ -528,15 +601,17 @@ const Settings = () => {
                     disabled={!editing}
                     value={profile.phone}
                     inputMode="numeric"
-                    maxLength={11}
-                    placeholder="09XXXXXXXXX"
+                    maxLength={13}
+                    placeholder="+639XXXXXXXXX"
                     onChange={(e) => {
-                      const v = e.target.value.replace(/\D/g, "").slice(0, 11);
-                      setProfile((p) => ({ ...p, phone: v }));
+                      let digits = e.target.value.replace(/\D/g, "");
+                      if (!digits.startsWith("63")) digits = "63" + digits.replace(/^6?3?/, "");
+                      digits = digits.slice(0, 12);
+                      setProfile((p) => ({ ...p, phone: "+" + digits }));
                     }}
                   />
-                  {editing && profile.phone && !/^\d{11}$/.test(profile.phone) && (
-                    <span className="field-error">Phone number must be exactly 11 digits.</span>
+                  {editing && profile.phone && !/^\+63\d{10}$/.test(profile.phone) && (
+                    <span className="field-error">Phone number must start with +63 and be followed by exactly 10 digits.</span>
                   )}
                 </div>
 
@@ -544,7 +619,7 @@ const Settings = () => {
                   <button
                     type="submit"
                     className="save-btn"
-                    disabled={!!(profile.phone && !/^\d{11}$/.test(profile.phone))}
+                    disabled={!!(profile.phone && !/^\+63\d{10}$/.test(profile.phone))}
                   >
                     Submit
                   </button>
