@@ -30,6 +30,11 @@ const Shoe360Viewer = ({ frames }) => {
 
   const handlePointerUp = () => { dragState.current = null; };
 
+  const handleSliderChange = (e) => {
+    setIndex(Number(e.target.value));
+    if (!interacted) setInteracted(true);
+  };
+
   if (!frameCount) return null;
 
   return (
@@ -50,6 +55,19 @@ const Shoe360Viewer = ({ frames }) => {
           DRAG TO SPIN
         </div>
       )}
+
+      <div className="shoe360-slider-row" onPointerDown={(e) => e.stopPropagation()}>
+        <input
+          type="range"
+          className="shoe360-slider"
+          min={0}
+          max={frameCount - 1}
+          step={1}
+          value={index}
+          onChange={handleSliderChange}
+          aria-label="Rotate 360° view"
+        />
+      </div>
     </div>
   );
 };

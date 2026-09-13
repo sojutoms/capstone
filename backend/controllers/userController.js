@@ -35,11 +35,11 @@ const signup = async (req, res) => {
   try {
     if (!firstName || !lastName)
       return res.status(400).json({ success: false, errors: "First and last name are required" });
-    if (/\d/.test(firstName) || /\d/.test(lastName))
-      return res.status(400).json({ success: false, errors: "Names cannot contain numbers" });
+    if (!/^[A-Za-z\s'-]+$/.test(firstName) || !/^[A-Za-z\s'-]+$/.test(lastName))
+      return res.status(400).json({ success: false, errors: "Names cannot contain numbers or special characters" });
 
-    if (!phone || !/^\d{11}$/.test(phone))
-      return res.status(400).json({ success: false, field: "phone", errors: "Phone number must be exactly 11 digits." });
+    if (!phone || !/^\+63\d{10}$/.test(phone))
+      return res.status(400).json({ success: false, field: "phone", errors: "Phone number must start with +63 and be followed by exactly 10 digits." });
 
     const existingUser = await Users.findOne({ email });
     if (existingUser)
@@ -363,7 +363,7 @@ const getUserProfile = async (req, res) => {
 // ─── PUT /user/profile ────────────────────────────────────────────────────────
 const updateUserProfile = async (req, res) => {
   try {
-    const { firstName, lastName, email, newsletter, currency, phone, place, bio, photo } = req.body;
+    const { firstName, lastName, newsletter, currency, phone, place, bio, photo } = req.body;
 
     if (phone !== undefined && phone !== "") {
       if (!/^\d{11}$/.test(phone))
@@ -388,13 +388,14 @@ const updateUserProfile = async (req, res) => {
     // avatar upload — sends only `photo`). Only touch fields that were
     // actually provided, so a photo-only call can never blank out the name
     // by resolving firstName/lastName as "undefined undefined".
+    // Email is intentionally not settable here — changing it goes through
+    // the OTP-verified send-email-change-otp / confirm-email-change flow.
     const setFields = {};
     if (firstName !== undefined || lastName !== undefined) {
       setFields.firstName = firstName;
       setFields.lastName  = lastName;
       setFields.name      = `${firstName || ""} ${lastName || ""}`.trim();
     }
-    if (email !== undefined)      setFields.email      = email;
     if (newsletter !== undefined) setFields.newsletter = newsletter;
     if (currency !== undefined)   setFields.currency   = currency;
     if (phone !== undefined)      setFields.phone      = phone || "";
@@ -508,6 +509,85 @@ const changeUserPassword = async (req, res) => {
     res.json({ success: true, message: "Password updated successfully." });
   } catch (err) {
     console.error("PUT /user/changepassword error:", err);
+    res.status(500).json({ success: false, message: "Server error." });
+  }
+};
+
+// ─── POST /user/send-email-change-otp ────────────────────────────────────────
+const sendChangeEmailOtp = async (req, res) => {
+  const { newEmail } = req.body;
+  if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail))
+    return res.status(400).json({ success: false, message: "Enter a valid email address." });
+
+  try {
+    const user = await Users.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: "User not found." });
+
+    if (newEmail.toLowerCase() === user.email.toLowerCase())
+      return res.json({ success: false, message: "This is already your current email." });
+
+    const existing = await Users.findOne({ email: newEmail });
+    if (existing) return res.json({ success: false, message: "Email is already in use." });
+
+    const existingOtp = await OtpModel.findOne({ email: user.email });
+    if (existingOtp) await OtpModel.deleteOne({ email: user.email });
+
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    await OtpModel.create({
+      email: user.email,
+      otp,
+      username: user.name,
+      password: user.password,
+      newEmail,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    });
+
+    await sendEmail(
+      user.email,
+      "Email Change Verification Code — GoodSoles PH",
+      `<p>Hi ${user.name},</p>
+       <p>We received a request to change the email on your account to <strong>${newEmail}</strong>.</p>
+       <p>Your verification code is: <strong style="font-size:20px;">${otp}</strong></p>
+       <p>This code expires in <strong>5 minutes</strong>.</p>
+       <p>If you did not request this, please secure your account immediately.</p>
+       <br/><p>— GoodSoles PH</p>`
+    );
+
+    res.json({ success: true, message: "OTP sent to your current email." });
+  } catch (err) {
+    console.error("POST /user/send-email-change-otp error:", err);
+    res.status(500).json({ success: false, message: "Server error." });
+  }
+};
+
+// ─── PUT /user/confirm-email-change ──────────────────────────────────────────
+const confirmEmailChange = async (req, res) => {
+  const { newEmail, otp } = req.body;
+  if (!newEmail || !otp)
+    return res.status(400).json({ success: false, message: "New email and OTP are required." });
+
+  try {
+    const user = await Users.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: "User not found." });
+
+    const record = await OtpModel.findOne({ email: user.email, otp: Number(otp), newEmail });
+    if (!record) return res.json({ success: false, message: "Invalid OTP." });
+    if (record.expiresAt < Date.now()) {
+      await OtpModel.deleteOne({ _id: record._id });
+      return res.json({ success: false, message: "OTP has expired. Please try again." });
+    }
+
+    const existing = await Users.findOne({ email: newEmail, _id: { $ne: user._id } });
+    if (existing) {
+      await OtpModel.deleteOne({ _id: record._id });
+      return res.json({ success: false, message: "Email is already in use." });
+    }
+
+    await OtpModel.deleteOne({ _id: record._id });
+    await Users.findByIdAndUpdate(req.user.id, { $set: { email: newEmail } });
+    res.json({ success: true, message: "Email updated successfully.", email: newEmail });
+  } catch (err) {
+    console.error("PUT /user/confirm-email-change error:", err);
     res.status(500).json({ success: false, message: "Server error." });
   }
 };
@@ -743,5 +823,7 @@ module.exports = {
   updateAddress,
   verifyCurrentPassword,
   sendChangePasswordOtp,
+  sendChangeEmailOtp,
+  confirmEmailChange,
   redeemPoints,
 };

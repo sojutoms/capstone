@@ -109,6 +109,15 @@ const Settings = () => {
   const [originalProfile, setOriginalProfile] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [editing, setEditing] = useState(false);
 
+  const [emailEditing, setEmailEditing] = useState(false);
+  const [newEmailValue, setNewEmailValue] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [emailStep, setEmailStep] = useState("form");
+  const [emailOtp, setEmailOtp] = useState("");
+  const [emailOtpError, setEmailOtpError] = useState("");
+  const [emailOtpSending, setEmailOtpSending] = useState(false);
+  const pendingEmailRef = useRef("");
+
   const [passwords, setPasswords] = useState({ current: "", newPass: "", confirm: "" });
   const [pwdErrors, setPwdErrors] = useState({});
   const [showNewPwd, setShowNewPwd] = useState(false);
@@ -162,7 +171,85 @@ const Settings = () => {
     return () => { if (closeMsgRef.current) clearTimeout(closeMsgRef.current); };
   }, [fetchProfile]);
 
-  const handleCancel = () => { setProfile(originalProfile); setEditing(false); };
+  const handleCancel = () => {
+    setProfile(originalProfile);
+    setEditing(false);
+    setEmailEditing(false);
+    setNewEmailValue("");
+    setEmailError("");
+    setEmailStep("form");
+    setEmailOtp("");
+    setEmailOtpError("");
+  };
+
+  const handleRequestEmailOtp = async () => {
+    setEmailError("");
+    const trimmed = (newEmailValue || "").trim();
+    if (!trimmed) { setEmailError("Email is required."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setEmailError("Enter a valid email address."); return; }
+    if (trimmed.toLowerCase() === profile.email.toLowerCase()) { setEmailError("This is already your current email."); return; }
+
+    setEmailOtpSending(true);
+    const token = localStorage.getItem("auth-token");
+    try {
+      const res = await fetch(`${API_BASE_URL}/user/send-email-change-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "auth-token": token },
+        body: JSON.stringify({ newEmail: trimmed }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        pendingEmailRef.current = trimmed;
+        setEmailStep("otp");
+        setEmailOtp("");
+        setEmailOtpError("");
+        showMessage("success", "OTP sent to your current email");
+      } else {
+        setEmailError(data.message || "Failed to send OTP");
+      }
+    } catch {
+      setEmailError("Request failed. Please try again.");
+    } finally {
+      setEmailOtpSending(false);
+    }
+  };
+
+  const handleVerifyEmailOtp = async () => {
+    setEmailOtpError("");
+    if (!/^\d{6}$/.test(emailOtp)) { setEmailOtpError("Enter all 6 digits."); return; }
+
+    const token = localStorage.getItem("auth-token");
+    try {
+      const res = await fetch(`${API_BASE_URL}/user/confirm-email-change`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "auth-token": token },
+        body: JSON.stringify({ newEmail: pendingEmailRef.current, otp: emailOtp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updated = { ...profile, email: data.email || pendingEmailRef.current };
+        setProfile(updated);
+        setOriginalProfile(updated);
+        setEmailEditing(false);
+        setEmailStep("form");
+        setNewEmailValue("");
+        setEmailOtp("");
+        showMessage("success", "Email updated");
+      } else {
+        setEmailOtpError(data.message || "Invalid OTP. Please try again.");
+      }
+    } catch {
+      setEmailOtpError("Verification failed. Please try again.");
+    }
+  };
+
+  const handleCancelEmailOtp = () => {
+    setEmailStep("form");
+    setEmailOtp("");
+    setEmailOtpError("");
+    setEmailEditing(false);
+    setNewEmailValue("");
+  };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -370,15 +457,67 @@ const Settings = () => {
                 <div className="input-group">
                   <label>
                     Contact Email
-                    <span className="field-locked-badge">Locked</span>
+                    {!emailEditing && <span className="field-locked-badge">Locked</span>}
                   </label>
-                  <input
-                    value={profile.email}
-                    disabled
-                    readOnly
-                    placeholder="EMAIL ADDRESS"
-                    title="Email cannot be changed"
-                  />
+
+                  {emailStep === "form" ? (
+                    <>
+                      <div style={{ display: "flex", gap: 10 }}>
+                        <input
+                          value={emailEditing ? newEmailValue : profile.email}
+                          disabled={!emailEditing}
+                          readOnly={!emailEditing}
+                          onChange={(e) => { setNewEmailValue(e.target.value); setEmailError(""); }}
+                          placeholder="EMAIL ADDRESS"
+                          style={{ flex: 1 }}
+                        />
+                        {editing && !emailEditing && (
+                          <button
+                            type="button"
+                            className="edit-toggle"
+                            onClick={() => { setEmailEditing(true); setNewEmailValue(profile.email); setEmailError(""); }}
+                          >
+                            Change
+                          </button>
+                        )}
+                        {editing && emailEditing && (
+                          <>
+                            <button
+                              type="button"
+                              className="edit-toggle"
+                              disabled={emailOtpSending}
+                              style={emailOtpSending ? { opacity: 0.6, cursor: "not-allowed" } : undefined}
+                              onClick={handleRequestEmailOtp}
+                            >
+                              {emailOtpSending ? "Sending…" : "Send Code"}
+                            </button>
+                            <button
+                              type="button"
+                              className="edit-toggle cancel-btn"
+                              onClick={() => { setEmailEditing(false); setNewEmailValue(""); setEmailError(""); }}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      {emailError && <span className="field-error">{emailError}</span>}
+                    </>
+                  ) : (
+                    <div className="otp-verify-block">
+                      <p className="otp-verify-hint">
+                        A 6-digit verification code was sent to <strong>{profile.email}</strong> (your current email)
+                        to confirm changing it to <strong>{pendingEmailRef.current}</strong>.
+                      </p>
+                      <OtpInput value={emailOtp} onChange={setEmailOtp} error={emailOtpError} />
+                      <div className="otp-verify-actions">
+                        <button className="save-btn" type="button" onClick={handleVerifyEmailOtp}>Verify &amp; Update Email</button>
+                        <button className="edit-toggle cancel-btn" type="button" onClick={handleCancelEmailOtp} style={{ marginTop: 10 }}>
+                          ← Back
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="input-group">
