@@ -19,6 +19,13 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascApiKeyPath": "C:\\Users\\Cristian\\Downloads\\AuthKey_43K599WTYD.p8",
+        "ascApiKeyId": "43K599WTYD",
+        "ascApiKeyIssuerId": "60ef7e6e-b571-4273-997e-20881c324e89",
+        "ascAppId": "6811670488"
+      }
+    }
   }
 }

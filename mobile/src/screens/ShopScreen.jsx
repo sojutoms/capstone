@@ -216,7 +216,7 @@ export default function ShopScreen({ navigation }) {
         </View>
 
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Ionicons name="search-outline" size={16} color={colors.textMuted} />
           <TextInput
             style={styles.searchInput}
             placeholder="What are you looking for?"
@@ -340,7 +340,6 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.borderLight,
     borderRadius: radius.full,
   },
-  searchIcon:        { fontSize: 13 },
   searchInput:       { flex: 1, fontSize: 13, color: colors.textPrimary, fontFamily: fonts.bodyRegular, padding: 0 },
   searchClear:       { fontSize: 13, color: colors.textMuted },
   searchResults:     { paddingTop: 4 },

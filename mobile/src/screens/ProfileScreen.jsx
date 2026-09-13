@@ -69,7 +69,6 @@ export default function ProfileScreen({ navigation }) {
   const { colors, isDark, toggleTheme } = useTheme();
   const { showEverywhere, setShowEverywhere } = useChatSettings();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState(false);
@@ -309,24 +308,6 @@ export default function ProfileScreen({ navigation }) {
                 onValueChange={toggleTheme}
                 trackColor={{ false: colors.borderLight, true: colors.accentGold }}
                 thumbColor={isDark ? colors.textPrimary : colors.textSecondary}
-                ios_backgroundColor={colors.borderLight}
-              />
-            }
-          />
-          <View style={styles.itemDivider} />
-          <MenuItem
-            styles={styles}
-            colors={colors}
-            icon="notifications-outline"
-            label="Notifications"
-            sublabel={notificationsEnabled ? "Enabled" : "Disabled"}
-            onPress={() => {}}
-            rightElement={
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
-                trackColor={{ false: colors.borderLight, true: colors.accentGold }}
-                thumbColor={notificationsEnabled ? colors.textPrimary : colors.textSecondary}
                 ios_backgroundColor={colors.borderLight}
               />
             }

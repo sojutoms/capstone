@@ -1,0 +1,16 @@
+# Only mobile/ is needed for EAS builds — finals/, backend/, and admin/
+# are unrelated sibling projects in this monorepo and were being swept
+# into the build archive, pushing it past EAS's 2GB upload limit.
+admin/
+backend/
+finals/
+
+node_modules/
+**/node_modules/
+.git/
+
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/android/
+mobile/ios/

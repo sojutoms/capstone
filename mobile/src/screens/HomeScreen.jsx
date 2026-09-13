@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -15,10 +15,9 @@ import {
   RefreshControl,
   Linking,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { VideoView, useVideoPlayer } from "expo-video";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { CommonActions } from "@react-navigation/native";
+import { CommonActions, useFocusEffect } from "@react-navigation/native";
 import { useFavorites } from "../context/FavoritesContext";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
@@ -44,15 +43,24 @@ const BRAND_LOGO = require("../../assets/GSPH-removebg.png");
 // right now (no Nike/Jordan logo files were provided), each mapped to the
 // exact brand value ShoesScreen's filter expects.
 const BRANDS = [
+  { label: "Nike", value: "nike", logo: require("../../assets/nike_logo.jpg") },
   { label: "Adidas", value: "adidas", logo: require("../../assets/adidas_logo.png") },
   { label: "New Balance", value: "nb", logo: require("../../assets/nb_logo.png") },
-  { label: "On", value: "on", logo: require("../../assets/oncloud_logo.png") },
+  { label: "On Cloud", value: "on", logo: require("../../assets/oncloud_logo.png") },
   { label: "Puma", value: "puma", logo: require("../../assets/puma_logo.png") },
+];
+
+// Note: the 3rd file is named "silde_3.jpg" (typo) in assets, not "slide_3.jpg".
+const EDITORIAL_SLIDES = [
+  require("../../assets/slide_1.jpg"),
+  require("../../assets/slide_2.jpg"),
+  require("../../assets/silde_3.jpg"),
+  require("../../assets/slide_4.jpg"),
 ];
 
 // Space reserved at the top of the ScrollView so its content starts below
 // the floating header panel (logo + greeting) instead of underneath it.
-const FLOATING_HEADER_CLEARANCE = 216;
+const FLOATING_HEADER_CLEARANCE = 160;
 
 /* ─────────────────── CATEGORY DROPDOWN (copied from ShopScreen.jsx,
    which stays untouched — same CATEGORIES config, AccordionTile, and
@@ -378,11 +386,30 @@ export default function HomeScreen({ navigation }) {
 
   const [refreshing, setRefreshing] = useState(false);
 
+  // Bumped every time the Home tab regains focus, forcing FadeInItem below
+  // to remount and replay its fade/rise-in — otherwise it only ever plays
+  // once on the very first mount since React Navigation keeps tab screens
+  // alive in the background instead of unmounting them on tab switch.
+  const [greetingAnimKey, setGreetingAnimKey] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setGreetingAnimKey((k) => k + 1);
+    }, [])
+  );
+
   const featuredVideoPlayer = useVideoPlayer(require("../../assets/featured_vid.mp4"), (p) => {
     p.loop = true;
     p.muted = true;
     p.play();
   });
+
+  const [editorialSlide, setEditorialSlide] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setEditorialSlide((prev) => (prev + 1) % EDITORIAL_SLIDES.length);
+    }, 3500);
+    return () => clearInterval(timer);
+  }, []);
 
   // Drives the floating header's fade: the whole panel — logo (sitting
   // where the profile icon used to be, top-left) + greeting text — fades
@@ -454,11 +481,11 @@ export default function HomeScreen({ navigation }) {
               flexbox centers them against each other automatically instead
               of guessing manual offsets that never quite lined up. */}
           <View style={s.greetingRow}>
-            <View style={{ flex: 1 }}>
+            <FadeInItem key={greetingAnimKey} style={{ flex: 1 }}>
               <Text style={s.headerEyebrow}>{getGreeting()}</Text>
               <Text style={s.headerGreeting} numberOfLines={1}>Hello, {firstName}</Text>
               <Text style={s.headerQuestion}>What's your next pair?</Text>
-            </View>
+            </FadeInItem>
             <Image source={BRAND_LOGO} style={[s.miniLogo, { tintColor: "#ffffff" }]} resizeMode="contain" />
           </View>
         </Animated.View>
@@ -486,11 +513,7 @@ export default function HomeScreen({ navigation }) {
 
         {/* ── BRANDS ── */}
         <View style={s.brandsSection}>
-          <SectionHeader
-            title="Brands"
-            onSeeAll={() => navigateToShopCategory("ShoesScreen")}
-            s={s}
-          />
+          <SectionHeader title="Brands" s={s} />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -506,7 +529,7 @@ export default function HomeScreen({ navigation }) {
                 <View style={s.brandCircle}>
                   <Image
                     source={b.logo}
-                    style={[s.brandLogo, isDark && { tintColor: "#fff" }]}
+                    style={[s.brandLogo, { tintColor: "#fff" }]}
                     resizeMode="contain"
                   />
                 </View>
@@ -522,7 +545,6 @@ export default function HomeScreen({ navigation }) {
             <SectionHeader
               eyebrow="MOST WANTED THIS WEEK"
               title="Trending Now"
-              onSeeAll={() => {}}
               s={s}
             />
             <ScrollView
@@ -567,7 +589,6 @@ export default function HomeScreen({ navigation }) {
             <SectionHeader
               eyebrow="FRESH ARRIVALS"
               title="Just Dropped"
-              onSeeAll={() => {}}
               s={s}
             />
             <ScrollView
@@ -597,7 +618,7 @@ export default function HomeScreen({ navigation }) {
             surfaceType="textureView" below — the default surfaceView is a
             hardware overlay that ignores the rounded/clipped container and
             resizes unreliably. */}
-        <SectionHeader title="Featured" onSeeAll={() => {}} s={s} />
+        <SectionHeader title="Featured" s={s} />
         <View style={s.heroFullBleed}>
           <VideoView
             player={featuredVideoPlayer}
@@ -608,18 +629,24 @@ export default function HomeScreen({ navigation }) {
           />
         </View>
 
-        {/* ── FEATURED EDITORIAL BANNER ── */}
+        {/* ── FEATURED EDITORIAL BANNER — auto-advancing photo slideshow ── */}
         <View style={s.editorialWrap}>
-          <View style={s.editorial}>
-            <Text style={s.editorialWatermark}>GS</Text>
-            <View style={s.editorialDecor} />
-            <View style={s.editorialDecor2} />
-            <Text style={s.editorialEye}>THE EDIT</Text>
-            <Text style={s.editorialTitle}>{"Crafted for\nthe streets."}</Text>
-            <TouchableOpacity style={s.editorialBtn} activeOpacity={0.8}>
-              <Text style={s.editorialBtnText}>EXPLORE THE EDIT →</Text>
-            </TouchableOpacity>
-          </View>
+          <ImageBackground
+            source={EDITORIAL_SLIDES[editorialSlide]}
+            style={s.editorial}
+            imageStyle={s.editorialBgImage}
+          >
+            <View style={s.editorialScrim} pointerEvents="none" />
+            <View style={s.editorialContent}>
+              <Text style={s.editorialEye}>GOODSOLESPH</Text>
+              <Text style={s.editorialTitle}>{"Crafted for\nthe streets."}</Text>
+            </View>
+            <View style={s.editorialDots} pointerEvents="none">
+              {EDITORIAL_SLIDES.map((_, i) => (
+                <View key={i} style={[s.editorialDot, i === editorialSlide && s.editorialDotActive]} />
+              ))}
+            </View>
+          </ImageBackground>
         </View>
 
         {/* ── STORE MAP SECTION (moved from ShopScreen.jsx) ── */}
@@ -734,9 +761,9 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.bgCard,
+    backgroundColor: "#000000",
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: "rgba(255,255,255,0.15)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
@@ -745,7 +772,7 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
   brandLabel: {
     fontSize: 10,
     letterSpacing: 0.5,
-    color: colors.textSecondary,
+    color: isDark ? "#ffffff" : "#000000",
     fontFamily: fonts.bodySemibold,
     textAlign: "center",
   },
@@ -756,33 +783,26 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
   /* EDITORIAL BANNER */
   editorialWrap: { marginHorizontal: 16, marginTop: 32 },
   editorial: {
-    backgroundColor: colors.bgCard,
-    borderWidth: 0.5, borderColor: colors.borderLight,
-    borderRadius: radius.xl, padding: 26,
-    overflow: "hidden", position: "relative", minHeight: 160,
+    borderRadius: radius.xl,
+    overflow: "hidden", height: 260,
   },
-  editorialWatermark: {
-    position: "absolute", right: -10, bottom: -20,
-    fontSize: 120, color: "rgba(255,255,255,0.03)", letterSpacing: -4, fontFamily: fonts.display,
+  editorialBgImage: { resizeMode: "cover" },
+  editorialScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
-  editorialDecor: {
-    position: "absolute", right: -30, top: -30,
-    width: 140, height: 140, borderRadius: 70,
-    borderWidth: 0.5, borderColor: colors.bgSurface,
+  editorialContent: { flex: 1, padding: 26, justifyContent: "flex-end" },
+  editorialDots: {
+    position: "absolute", top: 16, right: 20,
+    flexDirection: "row", gap: 5,
   },
-  editorialDecor2: {
-    position: "absolute", left: -20, bottom: -20,
-    width: 80, height: 80, borderRadius: 40,
-    borderWidth: 0.5, borderColor: colors.bgSurface,
+  editorialDot: {
+    width: 5, height: 5, borderRadius: 2.5,
+    backgroundColor: "rgba(255,255,255,0.4)",
   },
-  editorialEye:   { fontSize: 8, letterSpacing: 3.5, color: colors.textTertiary, marginBottom: 10, fontFamily: fonts.bodyBold },
-  editorialTitle: { fontSize: 34, color: colors.textPrimary, lineHeight: 36, letterSpacing: 0.3, fontFamily: fonts.display },
-  editorialBtn: {
-    marginTop: 20, borderWidth: 0.5, borderColor: colors.borderLight,
-    alignSelf: "flex-start", paddingVertical: 10, paddingHorizontal: 18,
-    borderRadius: radius.full, backgroundColor: "rgba(255,255,255,0.04)",
-  },
-  editorialBtnText: { ...typography.button, fontSize: 10, color: colors.textPrimary },
+  editorialDotActive: { backgroundColor: "#ffffff" },
+  editorialEye:   { fontSize: 8, letterSpacing: 3.5, color: "rgba(255,255,255,0.7)", marginBottom: 10, fontFamily: fonts.bodyBold },
+  editorialTitle: { fontSize: 34, color: "#ffffff", lineHeight: 36, letterSpacing: 0.3, fontFamily: fonts.display },
 
   /* BRAND CHIPS */
   brandsRow: { marginBottom: 8 },

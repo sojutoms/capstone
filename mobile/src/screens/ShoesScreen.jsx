@@ -201,7 +201,7 @@ export default function ShoesScreen({ navigation, route }) {
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
           >
-            <Text style={styles.backText}>←</Text>
+            <Ionicons name="arrow-back" size={18} color={colors.textPrimary} />
           </TouchableOpacity>
           <View>
             <Text style={styles.eyebrow}>BROWSE</Text>
@@ -297,7 +297,7 @@ export default function ShoesScreen({ navigation, route }) {
         {/* ── PRODUCT GRID ── */}
         {displayed.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>👟</Text>
+            <Ionicons name="footsteps-outline" size={48} color={colors.textMuted} style={styles.emptyIcon} />
             <Text style={styles.emptyTitle}>NO PRODUCTS FOUND</Text>
             <Text style={styles.emptySubtitle}>
               Try a different category or search term.
@@ -390,7 +390,6 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.bgSurface, borderWidth: 1, borderColor: colors.borderLight,
     justifyContent: "center", alignItems: "center",
   },
-  backText:  { color: colors.textPrimary, fontSize: 16 },
   eyebrow:   { fontSize: 9, letterSpacing: 3, color: colors.textMuted, fontFamily: fonts.bodyRegular, marginBottom: 1 },
   navTitle:  { fontSize: 30, fontFamily: fonts.display, color: colors.textPrimary, letterSpacing: 1.5 },
   navIcons:  { flexDirection: "row", gap: 8, paddingTop: 6 },
