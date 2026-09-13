@@ -1,7 +1,4 @@
-/* ============================================
-   SETTINGS - Premium Dark Account Panel
-   ============================================ */
-
+﻿
 :root {
   --settings-bg: var(--bg-primary);
   --settings-panel: var(--bg-secondary);
@@ -166,7 +163,6 @@
   color: var(--bg-primary);
 }
 
-/* ── Form ── */
 .innovative-form {
   display: flex;
   flex-direction: column;
@@ -283,7 +279,6 @@
   color: var(--text-secondary, #a0a0a0);
 }
 
-/* ── Alerts ── */
 .floating-alert {
   position: fixed;
   top: 100px;
@@ -329,7 +324,6 @@
   color: #ffffff;
 }
 
-/* ── Security tab ── */
 .pwd-input-wrapper {
   position: relative;
   display: flex;
@@ -407,7 +401,6 @@
   color: var(--settings-danger);
 }
 
-/* ── OTP ── */
 .otp-verify-block {
   display: flex;
   flex-direction: column;
@@ -494,7 +487,6 @@
   text-align: center;
 }
 
-/* ── Modal ── */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -576,7 +568,6 @@
   box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
 }
 
-/* ── Responsive ── */
 @media (max-width: 980px) {
   .settings-main {
     padding: 32px 28px;
@@ -644,7 +635,6 @@
   }
 }
 
-/* ── Animations ── */
 @keyframes fadeIn {
   from {
     opacity: 0;

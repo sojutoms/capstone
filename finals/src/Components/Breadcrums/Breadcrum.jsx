@@ -3,7 +3,7 @@ import "./Breadcrum.css";
 import arrow_icon from "../Assets/breadcrum_arrow.png";
 
 const Breadcrum = ({ product }) => {
-  if (!product) return null; // or a loading placeholder
+  if (!product) return null;
 
   return (
     <div className="breadcrum">

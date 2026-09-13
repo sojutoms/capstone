@@ -22,7 +22,6 @@ const Hero = () => {
 
   return (
     <div className="hero-brutalist" onMouseMove={handleMouseMove}>
-      {/* Background Video */}
       <video
         className="hero-bg"
         ref={videoRef}
@@ -34,11 +33,9 @@ const Hero = () => {
         <source src={hero_video} type="video/mp4" />
       </video>
 
-      {/* Gradient overlay for readability */}
       <div className="hero-overlay" />
 
-      {/* Main Content */}
-      <div 
+      <div
         className="hero-content"
         style={{
           transform: `translate3d(${mousePos.x}px, ${mousePos.y}px, 0)`,
@@ -60,7 +57,6 @@ const Hero = () => {
           Authentic. Always. Based in the Philippines.
         </p>
 
-        {/* CTA Buttons */}
         <div className="hero-cta-row">
           <a href="/shoes" className="hero-btn-primary">
             Shop Now
@@ -70,7 +66,6 @@ const Hero = () => {
           </a>
         </div>
 
-        {/* Trust Badges */}
         <div className="hero-stats">
           <div className="hero-stat">
             <span className="hero-stat-dot" />
@@ -87,7 +82,6 @@ const Hero = () => {
         </div>
       </div>
 
-      {/* Mute Button */}
       <button
         className="hero-mute-btn"
         onClick={toggleMute}
@@ -104,7 +98,6 @@ const Hero = () => {
         )}
       </button>
 
-      {/* Scroll hint */}
       <div className="hero-scroll-hint">
         <span>Scroll</span>
         <div className="hero-scroll-line" />

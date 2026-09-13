@@ -4,8 +4,6 @@ import Item from "../Item/Item";
 import { Link } from "react-router-dom";
 import API_BASE_URL from "../../services/api";
 
-// Reads subCategory from whichever field the backend uses —
-// matches the same logic ShopCategory uses for its filter.
 const getSubCategories = (item) => {
   if (Array.isArray(item?.subCategories) && item.subCategories.length > 0)
     return item.subCategories;
@@ -33,12 +31,10 @@ const RelatedProducts = ({ category, subCategory, currentProductId }) => {
           const itemSubs = getSubCategories(item);
           const itemCat = item.category?.toLowerCase().trim();
 
-          // Primary: match any overlapping subCategory tag
           if (normalizedSub && itemSubs.length > 0) {
             return itemSubs.some((s) => s.toLowerCase().trim() === normalizedSub);
           }
 
-          // Fallback: no subCategory on either side → match by category
           return itemCat === normalizedCat;
         });
 
@@ -51,8 +47,6 @@ const RelatedProducts = ({ category, subCategory, currentProductId }) => {
       });
   }, [category, subCategory, currentProductId]);
 
-  // Build the "See All" link:
-  // If we have a subCategory, link to that — otherwise fall back to the category page.
   const seeAllHref = subCategory
     ? `/${category}?sub=${encodeURIComponent(subCategory)}`
     : `/${category}`;
@@ -60,7 +54,6 @@ const RelatedProducts = ({ category, subCategory, currentProductId }) => {
   return (
     <div className="relatedproducts">
       <h1>Related Products</h1>
-      <hr />
 
       <div className="relatedproducts-item">
         {loading ? (
@@ -76,7 +69,6 @@ const RelatedProducts = ({ category, subCategory, currentProductId }) => {
               image={item.image}
               sizes={item.sizes || item.variants || item.price_map}
               new_price={item.new_price}
-              old_price={item.old_price}
             />
           ))
         )}

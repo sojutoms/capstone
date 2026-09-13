@@ -1,6 +1,3 @@
-/* ==========================================================================
-   THE VAULT - Curated Favorites
-   ========================================================================== */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 .favorites-page {
@@ -62,14 +59,12 @@
   background: rgba(255, 77, 77, 0.05);
 }
 
-/* ── Grid ── */
 .favorites-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 30px;
 }
 
-/* ── Pagination ── */
 .favorites-pagination {
   display: flex;
   justify-content: center;
@@ -109,7 +104,6 @@
   cursor: not-allowed;
 }
 
-/* ── Empty State ── */
 .favorites-empty {
   text-align: center;
   padding: 120px 20px;
@@ -153,7 +147,6 @@
   box-shadow: 0 10px 20px rgba(255, 255, 255, 0.1);
 }
 
-/* ── Info Cards ── */
 .favorites-info {
   display: grid;
   grid-template-columns: 1fr 1fr;

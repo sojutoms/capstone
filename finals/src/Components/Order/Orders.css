@@ -1,6 +1,3 @@
-/* ==========================================================================
-   ACQUISITION SUCCESS - The Final Sequence
-   ========================================================================== */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 .confirmation-terminal {
@@ -81,7 +78,6 @@
   font-weight: 700;
 }
 
-/* ── Manifest ── */
 .receipt-content h3 {
   font-family: 'Bebas Neue', sans-serif;
   font-size: 14px;
@@ -136,7 +132,6 @@
   color: var(--text-primary);
 }
 
-/* ── Totals ── */
 .receipt-totals {
   margin-top: 32px;
   background: rgba(255, 255, 255, 0.02);
@@ -162,7 +157,6 @@
   font-family: var(--font-display);
 }
 
-/* ── Actions ── */
 .receipt-footer-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -198,7 +192,6 @@
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
 }
 
-/* ── Holographic Stamp ── */
 .holographic-stamp {
   position: absolute;
   top: -20px;
@@ -223,7 +216,6 @@
   text-align: center;
 }
 
-/* ── GCash Paid Badge ──────────────────────────────────────────────────────── */
 .gcash-paid-badge {
   display: flex;
   align-items: center;

@@ -54,11 +54,9 @@ const ShopCategory = (props) => {
   const [currentPage,  setCurrentPage]  = useState(1);
   const [animState,    setAnimState]    = useState("idle");
 
-  // ── Dynamic subcategories from API ────────────────────────────────────────
-  const [apiSubcats, setApiSubcats] = useState([]); // [{ name, slug, parentCategory }]
+  const [apiSubcats, setApiSubcats] = useState([]);
 
   useEffect(() => {
-    // Trigger initial entry animation
     setAnimState("enter-up");
     const t = setTimeout(() => setAnimState("idle"), 800);
 
@@ -119,7 +117,6 @@ const ShopCategory = (props) => {
   const getNumericPrice = useCallback((product) => {
     if (!product) return NaN;
 
-    // Handle sizes when it's an object (from backend)
     if (product.sizes && typeof product.sizes === "object" && !Array.isArray(product.sizes)) {
       const sizeValues = Object.values(product.sizes);
       if (sizeValues.length > 0) {
@@ -131,7 +128,6 @@ const ShopCategory = (props) => {
       }
     }
 
-    // Handle sizes when it's an array (legacy format)
     if (Array.isArray(product.sizes) && product.sizes.length > 0) {
       const prices = product.sizes
         .map((s) => (!s ? NaN : typeof s === "object" && s.price !== undefined ? toNumber(s.price) : toNumber(s)))
@@ -139,13 +135,11 @@ const ShopCategory = (props) => {
       if (prices.length > 0) return Math.min(...prices);
     }
 
-    // Fallback to price fields
     for (const c of [product.price, product.new_price, product.price_php, product.amount, product.value]) {
       const n = toNumber(c);
       if (Number.isFinite(n) && n > 0) return n;
     }
 
-    // Use priceRange from backend if available
     if (product.priceRange && typeof product.priceRange === "object") {
       if (Number.isFinite(product.priceRange.min) && product.priceRange.min > 0) {
         return product.priceRange.min;
@@ -155,8 +149,6 @@ const ShopCategory = (props) => {
     return NaN;
   }, [toNumber]);
 
-  // ── Build available subcategories ─────────────────────────────────────────
-  // Merge: API-defined subcats + any slugs already on products (for backwards compat)
   const availableSubCategories = useMemo(() => {
     const fromProducts = new Set();
     all_product.forEach((item) => {
@@ -164,14 +156,11 @@ const ShopCategory = (props) => {
         item.subCategories.forEach((sc) => { if (sc) fromProducts.add(sc); });
     });
 
-    // Build a display map: slug → display name
     const displayMap = {};
     apiSubcats.forEach((sc) => { displayMap[sc.slug] = sc.name; });
 
-    // Collect all slugs that exist in products
     const allSlugs = new Set([...fromProducts]);
 
-    // Also add any API subcats for this category even if no product has them yet
     apiSubcats
       .filter((sc) => !sc.parentCategory || sc.parentCategory === props.category)
       .forEach((sc) => allSlugs.add(sc.slug));
@@ -316,7 +305,6 @@ const ShopCategory = (props) => {
                 </div>
               </div>
 
-              {/* ── Dynamic subcategory filter ── */}
               {availableSubCategories.length > 0 && (
                 <div className="shopcategory-sidebar-section">
                   <h3 className="shopcategory-sidebar-heading">

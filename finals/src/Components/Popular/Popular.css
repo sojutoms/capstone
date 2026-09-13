@@ -1,7 +1,3 @@
-/* ============================================
-   POPULAR - Premium Section
-   ============================================ */
-/* ─── Container ─────────────────────────────────────────────────── */
 .popular-container {
   width: 100%;
 }
@@ -30,7 +26,6 @@
   pointer-events: none;
 }
 
-/* ─── Header ──────────────────────────────────────────────────────── */
 .popular-header {
   width: 100%;
   display: flex;
@@ -40,11 +35,11 @@
 }
 
 .popular h1 {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: clamp(1.8rem, 4vw, 3rem);
-  font-weight: 700;
-  text-transform: none;
-  letter-spacing: -0.02em;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   margin: 0 0 1rem 0;
   color: var(--text-primary);
   line-height: 1.1;
@@ -61,7 +56,51 @@
   background: var(--accent-gold);
 }
 
-/* ─── Grid ───────────────────────────────────────────────────────── */
+.section-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  margin-bottom: 8px;
+  position: relative;
+  padding-left: 20px;
+}
+
+.section-label::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 1px;
+  background: var(--accent-gold);
+}
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+}
+
+.section-divider-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--glass-border), transparent);
+}
+
+.section-divider-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  flex-shrink: 0;
+  box-shadow: 0 0 10px var(--accent-gold);
+}
+
 .popular-item {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -71,12 +110,10 @@
   border: none;
 }
 
-/* Make items smaller to fit in side column */
 .popular-item > div {
   min-width: 0;
 }
 
-/* ─── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 1400px) {
   .popular-item {
     gap: 12px;

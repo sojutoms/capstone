@@ -1,6 +1,3 @@
-/* ═══════════════════════════════════════════════════════════════
-   Floating Chat Widget
-═══════════════════════════════════════════════════════════════ */
 .chat-fab {
   position: fixed;
   bottom: 24px;
@@ -64,7 +61,7 @@
   justify-content: space-between;
   padding: 16px 18px;
   background: var(--accent-gold);
-  color: var(--text-primary);
+  color: var(--bg-primary);
   flex-shrink: 0;
 }
 
@@ -86,7 +83,7 @@
 .chat-panel-close {
   background: none;
   border: none;
-  color: var(--text-primary);
+  color: var(--bg-primary);
   cursor: pointer;
   display: flex;
   padding: 4px;

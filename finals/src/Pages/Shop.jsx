@@ -5,15 +5,13 @@ import Hero from "../Components/Hero/Hero";
 import Banner from "../Components/Banner/Banner";
 import Popular from "../Components/Popular/Popular";
 import NewCollections from "../Components/NewCollections/NewCollections";
-import NewsLetter from "../Components/NewsLetter/NewsLetter";
 import SocialFeed from "../Components/SocialFeed/SocialFeed";
 import StoreMap from "../Components/Storemap/StoreMap";
+import NewsLetter from "../Components/NewsLetter/NewsLetter";
 
 const Shop = () => {
     const location = useLocation();
 
-    // Lets other pages (e.g. Contact Us's "Find Store" button) land here and
-    // land the user straight on the store map instead of the top of the page.
     useEffect(() => {
         if (location.state?.scrollTo === "store-map") {
             const timer = setTimeout(() => {
@@ -36,7 +34,6 @@ const Shop = () => {
             </div>
             <Banner />
 
-            {/* Social feed + store map side by side below the banner */}
             <div className="shop-community-row">
                 <div className="shop-community-col">
                     <SocialFeed />

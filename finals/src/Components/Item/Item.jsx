@@ -3,7 +3,6 @@ import PropTypes from "prop-types";
 import "./Item.css";
 import { Link, useNavigate } from "react-router-dom";
 
-/* Safe primitive -> number conversion */
 const toNumber = (v) => {
   if (v === null || v === undefined || v === "") return NaN;
   if (typeof v === "object") return NaN;
@@ -147,7 +146,6 @@ const Item = (props) => {
         className="item-link"
         onClick={() => window.scrollTo(0, 0)}
       >
-        {/* ── Image ── */}
         <div className="item-image-wrapper">
           {props.isNew && <span className="new-badge">New</span>}
           {!props.isNew && props.isJustIn && (
@@ -156,8 +154,6 @@ const Item = (props) => {
           {!props.isNew && !props.isJustIn && props.isTopSellerInBrand && (
             <span className="bestseller-badge">Best Seller</span>
           )}
-          
-          {/* Badges removed to reduce clutter as per user feedback */}
 
           <img
             src={(isHovered && props.subImages && props.subImages.length > 0) ? props.subImages[0] : props.image}
@@ -170,44 +166,40 @@ const Item = (props) => {
             }}
           />
 
-          {/* Quick Size Overlay - Only show if multiple sizes are available */}
           {((Array.isArray(props.sizes) && props.sizes.filter(s => s.quantity > 0).length > 0) || 
             (props.sizes && typeof props.sizes === 'object' && Object.keys(props.sizes).length > 0)) && (
             <div className="item-size-overlay">
-              <div className="size-overlay-inner">
-                <span className="size-overlay-title">Select Size</span>
-                <div className="size-list-mini">
-                  {Array.isArray(props.sizes) ? (
-                    props.sizes.filter(s => s.quantity > 0).slice(0, 5).map((s, idx) => (
-                      <span 
-                        key={idx} 
-                        className="mini-size-item"
-                        onClick={(e) => handleSizeClick(e, s.size)}
-                      >
-                        {s.size}
-                      </span>
-                    ))
-                  ) : props.sizes && typeof props.sizes === 'object' ? (
-                    Object.entries(props.sizes).filter(([_, v]) => (typeof v === 'object' ? v.quantity : v) > 0).slice(0, 5).map(([k], idx) => (
-                      <span 
-                        key={idx} 
-                        className="mini-size-item"
-                        onClick={(e) => handleSizeClick(e, k)}
-                      >
-                        {k}
-                      </span>
-                    ))
-                  ) : null}
-                  {((Array.isArray(props.sizes) ? props.sizes.filter(s => s.quantity > 0).length : Object.keys(props.sizes || {}).length) > 5) && (
-                    <span className="mini-size-item mini-size-more">+</span>
-                  )}
-                </div>
+              <span className="size-overlay-title">Select Size</span>
+              <div className="size-list-mini">
+                {Array.isArray(props.sizes) ? (
+                  props.sizes.filter(s => s.quantity > 0).slice(0, 5).map((s, idx) => (
+                    <span
+                      key={idx}
+                      className="mini-size-item"
+                      onClick={(e) => handleSizeClick(e, s.size)}
+                    >
+                      {s.size}
+                    </span>
+                  ))
+                ) : props.sizes && typeof props.sizes === 'object' ? (
+                  Object.entries(props.sizes).filter(([_, v]) => (typeof v === 'object' ? v.quantity : v) > 0).slice(0, 5).map(([k], idx) => (
+                    <span
+                      key={idx}
+                      className="mini-size-item"
+                      onClick={(e) => handleSizeClick(e, k)}
+                    >
+                      {k}
+                    </span>
+                  ))
+                ) : null}
+                {((Array.isArray(props.sizes) ? props.sizes.filter(s => s.quantity > 0).length : Object.keys(props.sizes || {}).length) > 5) && (
+                  <span className="mini-size-item mini-size-more">+</span>
+                )}
               </div>
             </div>
           )}
         </div>
 
-        {/* ── Info ── */}
         <div className="item-info">
           <p className="item-name">{props.name}</p>
           <div className="item-prices">

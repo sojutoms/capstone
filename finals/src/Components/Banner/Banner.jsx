@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./Banner.css";
 
-// Slide content — update text to match your actual banner images
 const SLIDE_DATA = [
     {
         tag: "Watches",
@@ -64,8 +63,6 @@ const Banner = () => {
 
     return (
         <div className="hero-banner">
-
-            {/* Slide counter */}
             <div className="banner-counter">
                 <span>{String(currentSlide + 1).padStart(2, "0")}</span>
                 {" / "}
@@ -91,8 +88,6 @@ const Banner = () => {
                         return (
                             <div key={index} className="banner-slide">
                                 <img src={slide} alt={`Banner ${index + 1}`} draggable="false" />
-
-                                {/* Text overlay */}
                                 <div className="banner-slide-content">
                                     <span className="banner-slide-tag">{data.tag}</span>
                                     <h2 className="banner-slide-title">
@@ -110,8 +105,6 @@ const Banner = () => {
                     })}
                 </div>
             </div>
-
-            {/* Nav buttons */}
             <button className="banner-nav-btn prev-btn" onClick={prevSlide} aria-label="Previous slide">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                     <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" />
@@ -122,8 +115,6 @@ const Banner = () => {
                     <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="square" strokeLinejoin="miter" />
                 </svg>
             </button>
-
-            {/* Dots */}
             <div className="banner-dots">
                 {slides.map((_, index) => (
                     <button
@@ -134,7 +125,6 @@ const Banner = () => {
                     />
                 ))}
             </div>
-
         </div>
     );
 };

@@ -4,7 +4,6 @@ import "react-toastify/dist/ReactToastify.css";
 import "./CSS/LoginSignup.css";
 import API_BASE_URL from "../services/api";
 
-/* ─── Password rules ─────────────────────────────────────────────────────────── */
 const passwordRules = [
   { key: "length", label: "At least 8 characters", test: (p) => p.length >= 8 },
   { key: "upper", label: "One uppercase letter (A-Z)", test: (p) => /[A-Z]/.test(p) },
@@ -12,7 +11,6 @@ const passwordRules = [
   { key: "special", label: "One special character (!@#$...)", test: (p) => /[^A-Za-z0-9]/.test(p) },
 ];
 
-/* ─── Terms & Privacy content ────────────────────────────────────────────────── */
 const TERMS_CONTENT = {
   terms: {
     title: "Terms of Use",
@@ -46,7 +44,6 @@ const TERMS_CONTENT = {
   },
 };
 
-/* ─── Legal Modal ────────────────────────────────────────────────────────────── */
 const LegalModal = ({ type, onClose, onAgree, agreed }) => {
   const content = TERMS_CONTENT[type];
   const scrollRef = useRef(null);
@@ -122,7 +119,6 @@ const LegalModal = ({ type, onClose, onAgree, agreed }) => {
   );
 };
 
-/* ─── MultiOtpInput ─────────────────────────────────────────────────────────── */
 const MultiOtpInput = ({ value, length = 6, onChange, error }) => {
   const inputsRef = useRef([]);
   const digits = value.split("").slice(0, length);
@@ -182,18 +178,12 @@ const MultiOtpInput = ({ value, length = 6, onChange, error }) => {
   );
 };
 
-/* ─── ResendOtpButton ────────────────────────────────────────────────────────── */
-// Cooldown schedule:
-//   resendAttempts = 0 (button shown for first time) → initial cooldown = 60s
-//   resendAttempts = 1 (after first resend)          → next cooldown = 120s
-//   resendAttempts >= 2 (after second+ resend)       → next cooldown = 180s
 const ResendOtpButton = ({ email, type, onResendSuccess, initialCooldownSeconds = 60 }) => {
   const [countdown, setCountdown] = useState(initialCooldownSeconds);
   const [resendAttempts, setResendAttempts] = useState(0);
   const [isResending, setIsResending] = useState(false);
   const timerRef = useRef(null);
 
-  // Start countdown on mount and whenever countdown is set to a positive value
   useEffect(() => {
     if (countdown <= 0) return;
     timerRef.current = setInterval(() => {
@@ -227,16 +217,12 @@ const ResendOtpButton = ({ email, type, onResendSuccess, initialCooldownSeconds 
         const newAttempts = resendAttempts + 1;
         setResendAttempts(newAttempts);
 
-        // Determine next cooldown based on updated attempt count
-        // newAttempts=1 → we just did 1st resend → next cooldown is 120s
-        // newAttempts>=2 → we just did 2nd+ resend → next cooldown is 180s
         const nextCooldown = data.nextCooldownSeconds ||
           (newAttempts === 1 ? 120 : 180);
         setCountdown(nextCooldown);
 
         if (onResendSuccess) onResendSuccess();
       } else {
-        // Server returned 429 or other error — sync countdown with server's remaining time
         const serverRemaining = data.remainingSeconds;
         if (serverRemaining && serverRemaining > 0) {
           setCountdown(serverRemaining);
@@ -276,7 +262,6 @@ const ResendOtpButton = ({ email, type, onResendSuccess, initialCooldownSeconds 
   );
 };
 
-/* ─── Password strength ─────────────────────────────────────────────────────── */
 const getPasswordStrength = (pw) => {
   if (!pw) return "";
   let s = 0;
@@ -286,7 +271,6 @@ const getPasswordStrength = (pw) => {
   if (s <= 2) return "Weak"; if (s <= 4) return "Medium"; return "Strong";
 };
 
-/* ─── Brand Panel ────────────────────────────────────────────────────────────── */
 const BrandPanel = () => (
   <div className="ls-brand-inner">
     <div className="ls-brand-top">
@@ -319,7 +303,6 @@ const BrandPanel = () => (
   </div>
 );
 
-/* ─── Field wrapper ──────────────────────────────────────────────────────────── */
 const Field = ({ error, children }) => (
   <div className="ls-field">
     <div className="ls-field-inner">
@@ -331,7 +314,6 @@ const Field = ({ error, children }) => (
   </div>
 );
 
-/* ─── Eye icons ──────────────────────────────────────────────────────────────── */
 const EyeIcon = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden focusable="false">
     <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -346,7 +328,6 @@ const EyeOffIcon = ({ size = 18 }) => (
   </svg>
 );
 
-/* ─── Main Component ─────────────────────────────────────────────────────────── */
 const LoginSignup = () => {
   const [mode, setMode] = useState("login");
   const [animating, setAnimating] = useState(false);
@@ -368,9 +349,7 @@ const LoginSignup = () => {
   const [errors, setErrors] = useState({});
   const [pwStrength, setPwStrength] = useState("");
 
-  // Tracks the initial cooldown seconds to pass into ResendOtpButton when OTP is first sent.
-  // After the first send it's always 60s. After each resend the component manages its own state.
-  const [resendKey, setResendKey] = useState(0); // bump to remount ResendOtpButton on new OTP flow
+  const [resendKey, setResendKey] = useState(0);
 
   const [showLoginPwd, setShowLoginPwd] = useState(false);
   const [showSignupPwd, setShowSignupPwd] = useState(false);
@@ -418,7 +397,6 @@ const LoginSignup = () => {
     setResendKey((k) => k + 1); // reset resend button
   };
 
-  /* ── Handlers ── */
   const login = async () => {
     clearErrors();
     const email = (formData.email || "").trim();
@@ -462,7 +440,7 @@ const LoginSignup = () => {
     const data = await api("/signup", { firstName, lastName, email, phone, password });
     if (data.success) {
       setOtpSent(true);
-      setResendKey((k) => k + 1); // mount fresh ResendOtpButton
+      setResendKey((k) => k + 1);
       toast.success("OTP sent to your email!");
     } else {
       if (data.field) setErr(data.field, data.errors); else toast.error(data.errors || "Failed to send OTP");
@@ -485,7 +463,7 @@ const LoginSignup = () => {
     const data = await api("/forgot-password", { email });
     if (data.success) {
       setOtpSent(true);
-      setResendKey((k) => k + 1); // mount fresh ResendOtpButton
+      setResendKey((k) => k + 1);
       toast.success("Reset OTP sent!");
       setMode("reset");
     } else {
@@ -512,18 +490,15 @@ const LoginSignup = () => {
     }
   };
 
-  /* ── Enter key handlers ── */
   const handleLoginKey = (e) => { if (e.key === "Enter") login(); };
   const handleSignupKey = (e) => { if (e.key === "Enter") { if (!otpSent) sendOtp(); else verifyOtp(); } };
   const handleForgotKey = (e) => { if (e.key === "Enter") forgotPassword(); };
   const handleResetKey = (e) => { if (e.key === "Enter") resetPassword(); };
 
-  /* ── Checklist helpers ── */
   const getPwdChecks = (pwd) => passwordRules.map((r) => ({ ...r, passed: r.test(pwd) }));
   const signupPwdChecks = getPwdChecks(formData.password || "");
   const resetPwdChecks = getPwdChecks(formData.newPassword || "");
 
-  /* ── Clipboard blockers ── */
   const blockClipboard = (e) => e.preventDefault();
   const blockClipboardKey = (e) => {
     const key = (e.key || "").toLowerCase(), ctrl = e.ctrlKey || e.metaKey;
@@ -532,12 +507,10 @@ const LoginSignup = () => {
   };
   const blockSelect = (e) => e.preventDefault();
 
-  /* ── Combined key handler for password fields ── */
   const pwdKeyLogin = (e) => { blockClipboardKey(e); handleLoginKey(e); };
   const pwdKeySignup = (e) => { blockClipboardKey(e); handleSignupKey(e); };
   const pwdKeyReset = (e) => { blockClipboardKey(e); handleResetKey(e); };
 
-  /* ── Forms ── */
   const LoginForm = (
     <div className="ls-form-section">
       <div>
@@ -608,7 +581,6 @@ const LoginSignup = () => {
           />
         </Field>
 
-        {/* Password */}
         <div className="ls-field">
           <div className="ls-field-inner">
             <input name="password" placeholder="Password" type={showSignupPwd ? "text" : "password"}
@@ -634,7 +606,6 @@ const LoginSignup = () => {
           {pwStrength && <div className={`ls-pw-strength ls-pw-${pwStrength.toLowerCase()}`}>{pwStrength}</div>}
         </div>
 
-        {/* Confirm password */}
         <div className="ls-field">
           <div className="ls-field-inner">
             <input name="confirmPassword" placeholder="Confirm password" type={showSignupConfirm ? "text" : "password"}
@@ -651,9 +622,8 @@ const LoginSignup = () => {
         </div>
       </div>
 
-      {/* Terms row */}
       <div>
-        <div 
+        <div
           className="ls-terms-row ls-terms-row--interactive" 
           onClick={() => !bothAgreed && setLegalModal("terms")}
         >
@@ -692,7 +662,6 @@ const LoginSignup = () => {
           <p className="ls-otp-hint">Enter the 6-digit code sent to <strong>{formData.email}</strong></p>
           <MultiOtpInput value={otp} onChange={setOtp} error={errors.otp} />
           <button className="ls-btn" onClick={verifyOtp}><span>Verify &amp; Create Account</span></button>
-          {/* Resend button — 60s → 120s → 180s cooldowns */}
           <ResendOtpButton
             key={resendKey}
             email={formData.email.trim()}
@@ -772,7 +741,6 @@ const LoginSignup = () => {
       <MultiOtpInput value={otp} onChange={setOtp} error={errors.otp} />
       <button className="ls-btn" onClick={resetPassword}><span>Reset Password</span></button>
 
-      {/* Resend button for forgot-password flow — 60s → 120s → 180s cooldowns */}
       <ResendOtpButton
         key={resendKey}
         email={formData.email.trim()}

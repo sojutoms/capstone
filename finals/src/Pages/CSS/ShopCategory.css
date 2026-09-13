@@ -1,6 +1,3 @@
-/* ══════════════════════════════════════════
-   SHOP CATEGORY - Premium Design
-   ══════════════════════════════════════════ */
 :root {
   --sc-bg: var(--bg-primary);
   --sc-border: var(--border-subtle);
@@ -12,9 +9,6 @@
   --sc-body: var(--font-body, 'Outfit', sans-serif);
 }
 
-/* ══════════════════════════════════════════
-   PAGE CONTAINER
-   ══════════════════════════════════════════ */
 .shopcategory-page {
   display: flex;
   flex-direction: column;
@@ -22,9 +16,6 @@
   min-height: 100vh;
 }
 
-/* ══════════════════════════════════════════
-   HEADER
-   ══════════════════════════════════════════ */
 .shopcategory-header {
   border-bottom: 1px solid var(--sc-border);
   padding: 60px 48px 48px;
@@ -36,7 +27,6 @@
   overflow: hidden;
 }
 
-/* Gold gradient glow */
 .shopcategory-header::before {
   content: '';
   position: absolute;
@@ -87,9 +77,6 @@
   border-bottom: 1px solid var(--sc-border);
 }
 
-/* ══════════════════════════════════════════
-   BODY LAYOUT
-   ══════════════════════════════════════════ */
 .shopcategory-body {
   display: flex;
   margin: 0 48px;
@@ -98,9 +85,6 @@
   align-items: flex-start;
 }
 
-/* ══════════════════════════════════════════
-   STICKY SIDEBAR
-   ══════════════════════════════════════════ */
 .shopcategory-sidebar {
   width: 260px;
   flex-shrink: 0;
@@ -153,9 +137,6 @@
   flex-shrink: 0;
 }
 
-/* ══════════════════════════════════════════
-   FILTER BUTTONS
-   ══════════════════════════════════════════ */
 .shopcategory-filter-btn {
   display: flex;
   align-items: center;
@@ -217,9 +198,6 @@
   to { transform: scale(1); }
 }
 
-/* ══════════════════════════════════════════
-   BRAND CHIPS
-   ══════════════════════════════════════════ */
 .shopcategory-brand-chips {
   display: flex;
   flex-direction: column;
@@ -269,9 +247,6 @@
   padding-left: 16px;
 }
 
-/* ══════════════════════════════════════════
-   PAGE INDICATOR
-   ══════════════════════════════════════════ */
 .sidebar-page-indicator {
   padding-top: 24px;
   display: flex;
@@ -328,9 +303,6 @@
   color: var(--sc-muted);
 }
 
-/* ══════════════════════════════════════════
-   PRICE SLIDER
-   ══════════════════════════════════════════ */
 .shopcategory-price-slider-wrap {
   margin-top: 16px;
   padding: 0 4px;
@@ -397,7 +369,6 @@
   -webkit-user-select: none;
 }
 
-/* Fallback for browsers that don't support custom range styling */
 .shopcategory-slider-input::-webkit-slider-runnable-track {
   background: transparent;
   height: 2px;
@@ -437,9 +408,6 @@
   pointer-events: all;
 }
 
-/* ══════════════════════════════════════════
-   MAIN CONTENT
-   ══════════════════════════════════════════ */
 .shopcategory-main {
   flex: 1;
   padding-left: 40px;
@@ -539,9 +507,6 @@
   color: var(--sc-text);
 }
 
-/* ══════════════════════════════════════════
-   SORT DROPDOWN
-   ══════════════════════════════════════════ */
 .shopcategory-sort-wrapper {
   position: relative;
 }
@@ -629,9 +594,6 @@
   background: var(--glass-bg-hover);
 }
 
-/* ══════════════════════════════════════════
-   SCROLL SENTINELS
-   ══════════════════════════════════════════ */
 .sc-sentinel {
   display: flex;
   align-items: center;
@@ -704,14 +666,10 @@
   color: var(--sc-muted);
 }
 
-/* ══════════════════════════════════════════
-   GRID ANIMATIONS
-   ══════════════════════════════════════════ */
 .shopcategory-grid-wrapper {
   min-height: 400px;
 }
 
-/* exit animations */
 .anim-exit-up .sc-item {
   animation: exitUp 0.28s cubic-bezier(0.4, 0, 1, 1) both;
   animation-delay: calc(var(--i) * 20ms);
@@ -722,7 +680,6 @@
   animation-delay: calc(var(--i) * 20ms);
 }
 
-/* enter animations */
 .anim-enter-up .sc-item {
   animation: enterUp 0.45s cubic-bezier(0, 0, 0.2, 1) both;
   animation-delay: calc(var(--i) * 40ms);
@@ -733,7 +690,6 @@
   animation-delay: calc(var(--i) * 40ms);
 }
 
-/* idle — no animation */
 .anim-idle .sc-item {
   opacity: 1;
   transform: none;
@@ -764,9 +720,6 @@
   will-change: transform, opacity;
 }
 
-/* ══════════════════════════════════════════
-   GRID
-   ══════════════════════════════════════════ */
 .shopcategory-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -775,13 +728,11 @@
   width: 100%;
 }
 
-/* Fix for grid items to not overflow */
 .shopcategory-grid > * {
   min-width: 0;
   max-width: 100%;
 }
 
-/* Empty state */
 .shopcategory-empty {
   text-align: center;
   padding: 100px 24px;
@@ -793,9 +744,6 @@
   border-top: 1px solid var(--sc-border);
 }
 
-/* ══════════════════════════════════════════
-   RESPONSIVE
-   ══════════════════════════════════════════ */
 @media (max-width: 1200px) {
   .shopcategory-header { padding: 48px 32px 40px; }
   .shopcategory-body { margin: 0 32px; }
@@ -864,7 +812,6 @@
   .shopcategory-sort-btn { min-width: 160px; }
   .shopcategory-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
 
-  /* Price slider fix */
   .shopcategory-price-slider-wrap {
     padding: 0;
     width: 100%;

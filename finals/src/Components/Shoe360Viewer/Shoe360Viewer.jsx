@@ -1,15 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./Shoe360Viewer.css";
 
-// Every this-many px of horizontal drag advances one frame — tuned so a full
-// sweep across the viewer roughly spins the shoe all the way around once.
 const PX_PER_FRAME = 8;
 
-/**
- * StockX-style 360° product viewer: drag left/right to spin through a
- * pre-rendered turntable frame sequence. `frames` must be an ordered array
- * of image URLs spanning a full rotation.
- */
 const Shoe360Viewer = ({ frames }) => {
   const [index, setIndex] = useState(0);
   const [interacted, setInteracted] = useState(false);

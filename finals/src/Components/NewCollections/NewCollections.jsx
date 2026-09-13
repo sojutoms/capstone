@@ -8,7 +8,6 @@ const useNumericPrice = () =>
   useCallback((item) => {
     if (!item) return undefined;
 
-    // Handle sizes when it's an object (from backend)
     if (item.sizes && typeof item.sizes === "object" && !Array.isArray(item.sizes)) {
       const sizeValues = Object.values(item.sizes);
       if (sizeValues.length > 0) {
@@ -20,7 +19,6 @@ const useNumericPrice = () =>
       }
     }
 
-    // Handle sizes when it's an array (legacy format)
     if (Array.isArray(item.sizes) && item.sizes.length > 0) {
       const prices = item.sizes
         .map((s) => (s && typeof s === "object" ? Number(s.price) : Number(s)))
@@ -34,7 +32,6 @@ const useNumericPrice = () =>
       if (Number.isFinite(n) && n > 0) return n;
     }
 
-    // Use priceRange from backend if available
     if (item.priceRange && typeof item.priceRange === "object") {
       if (Number.isFinite(item.priceRange.min) && item.priceRange.min > 0) {
         return item.priceRange.min;
@@ -83,7 +80,6 @@ const NewCollections = () => {
                   sizes={item.sizes || item.variants || item.price_map}
                   price={resolvedPrice}
                   new_price={item.new_price}
-                  old_price={item.old_price}
                   isNew={item.isNew}
                 />
               );

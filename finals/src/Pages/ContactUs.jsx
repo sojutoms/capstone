@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import s from './darkPageStyles';
+import s from './CSS/darkPageStyles';
 
 const ContactUs = () => {
   const navigate = useNavigate();

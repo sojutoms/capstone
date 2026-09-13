@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './CSS/MyVouchers.css';
 import API_BASE_URL from '../services/api';
+import { showToast } from '../utils/toast';
 
 const MyVouchers = () => {
   const [points, setPoints] = useState(0);
@@ -9,7 +10,6 @@ const MyVouchers = () => {
   const [activeTab, setActiveTab] = useState('unused');
   const [pointsToRedeem, setPointsToRedeem] = useState(100);
   const [redeeming, setRedeeming] = useState(false);
-  const [toast, setToast] = useState(null);
 
   const fetchVouchersData = useCallback(async () => {
     try {
@@ -32,11 +32,6 @@ const MyVouchers = () => {
     fetchVouchersData();
   }, [fetchVouchersData]);
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-
   const handleRedeem = async () => {
     if (points < pointsToRedeem) return;
     setRedeeming(true);
@@ -51,14 +46,14 @@ const MyVouchers = () => {
       });
       const data = await res.json();
       if (data.success) {
-        showToast(data.message);
+        showToast('success', data.message);
         fetchVouchersData();
         setPointsToRedeem(100);
       } else {
-        showToast(data.error || "Redemption failed", 'error');
+        showToast('error', data.error || "Redemption failed");
       }
     } catch (err) {
-      showToast("Server error", 'error');
+      showToast('error', "Server error");
     } finally {
       setRedeeming(false);
     }
@@ -66,7 +61,7 @@ const MyVouchers = () => {
 
   const copyToClipboard = (code) => {
     navigator.clipboard.writeText(code);
-    showToast("Voucher code copied!");
+    showToast('success', "Voucher code copied!");
   };
 
   const filteredVouchers = vouchers.filter(v => {
@@ -83,8 +78,6 @@ const MyVouchers = () => {
   return (
     <div className="my-vouchers-container">
       <div className="vouchers-content">
-        
-        {/* POINTS DASHBOARD */}
         <section className="points-dashboard">
           <div className="points-info">
             <p>Your Balance</p>
@@ -118,14 +111,12 @@ const MyVouchers = () => {
           </div>
         </section>
 
-        {/* TABS */}
         <div className="voucher-tabs">
           <button className={`v-tab ${activeTab === 'unused' ? 'active' : ''}`} onClick={() => setActiveTab('unused')}>Unused</button>
           <button className={`v-tab ${activeTab === 'used' ? 'active' : ''}`} onClick={() => setActiveTab('used')}>Used</button>
           <button className={`v-tab ${activeTab === 'expired' ? 'active' : ''}`} onClick={() => setActiveTab('expired')}>Expired</button>
         </div>
 
-        {/* VOUCHER GRID */}
         <div className="vouchers-grid">
           {filteredVouchers.length > 0 ? (
             filteredVouchers.map(v => (
@@ -149,41 +140,6 @@ const MyVouchers = () => {
           )}
         </div>
       </div>
-
-      {/* TOAST */}
-      {toast && (
-        <div className={`toast-simple ${toast.type}`}>
-          {toast.message}
-        </div>
-      )}
-
-      {/* Inline styles for toast simple if not in CSS */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        .toast-simple {
-          position: fixed;
-          bottom: 40px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #fff;
-          color: #000;
-          padding: 12px 30px;
-          border-radius: 99px;
-          font-family: 'Bebas Neue', sans-serif;
-          font-size: 14px;
-          letter-spacing: 0.1em;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-          z-index: 10000;
-          animation: toastPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .toast-simple.error {
-          background: #ff4d4d;
-          color: #fff;
-        }
-        @keyframes toastPop {
-          from { bottom: 0; opacity: 0; }
-          to { bottom: 40px; opacity: 1; }
-        }
-      `}} />
     </div>
   );
 };

@@ -1,11 +1,5 @@
-/* ═══════════════════════════════════════════════════════════════
-   PRODUCT DISPLAY - Premium Design
-═══════════════════════════════════════════════════════════════ */
+﻿
 
-
-/* ═══════════════════════════════════════════════════════════════
-   Main Layout
-═══════════════════════════════════════════════════════════════ */
 .productdisplay {
   display: grid;
   grid-template-columns: 1fr 500px 320px;
@@ -17,7 +11,6 @@
   position: relative;
 }
 
-/* ── Toast Container ────────────────────────────────────────────────── */
 .toast-container {
   position: fixed;
   top: 100px;
@@ -33,7 +26,6 @@
   pointer-events: auto;
 }
 
-/* ── Left Column: Cinematic Gallery ────────────────────────────────── */
 .productdisplay-left {
   display: flex;
   gap: 24px;
@@ -69,7 +61,6 @@
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* ── MAIN IMAGE ──────────────────────────────────────────────────────── */
 .productdisplay-img {
   flex: 1;
   border-radius: 24px;
@@ -86,14 +77,9 @@
 .productdisplay-main-img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  padding: 40px;
-  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.productdisplay-main-img.lifestyle-view {
   object-fit: cover;
-  padding: 0;
+  object-position: center;
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .lifestyle-toggle {
@@ -132,7 +118,16 @@
   color: var(--text-primary);
 }
 
-/* ── Right Column: Sticky Info ─────────────────────────────────────── */
+.lifestyle-btn:disabled {
+  color: var(--text-muted);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.lifestyle-btn:disabled:hover {
+  color: var(--text-muted);
+}
+
 .productdisplay-right {
   position: sticky;
   top: 120px;
@@ -155,7 +150,6 @@
   margin: 0;
 }
 
-/* Stars */
 .productdisplay-right-stars {
   display: flex;
   align-items: center;
@@ -171,9 +165,6 @@
   margin-left: 4px;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Price
-═══════════════════════════════════════════════════════════════ */
 .productdisplay-right-prices {
   display: flex;
   margin: 24px 0 20px;
@@ -211,20 +202,45 @@
   color: var(--text-muted, #666666);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Description
-═══════════════════════════════════════════════════════════════ */
 .productdisplay-right-description {
   font-size: 14px;
   color: var(--text-muted, #666666);
   line-height: 1.8;
   margin-bottom: 24px;
   text-align: justify;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Meta Tags
-═══════════════════════════════════════════════════════════════ */
+.productdisplay-right-description.expanded {
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.description-see-more {
+  align-self: flex-start;
+  margin-top: -1.5rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--accent-gold);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.description-see-more:hover {
+  color: var(--accent-gold-light);
+  text-decoration: underline;
+}
+
 .productdisplay-meta-tags {
   display: flex;
   flex-wrap: wrap;
@@ -256,9 +272,6 @@
   text-transform: capitalize;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Colorway Switcher
-═══════════════════════════════════════════════════════════════ */
 .colorway-active-badge {
   display: inline-flex;
   align-items: center;
@@ -343,9 +356,6 @@
   box-shadow: 0 0 0 2px var(--accent-gold, #ffffff);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Size Section
-═══════════════════════════════════════════════════════════════ */
 .productdisplay-right-size {
   margin-bottom: 24px;
 }
@@ -387,14 +397,12 @@
   border-color: var(--accent-gold, #ffffff);
 }
 
-/* Size Header Right — unit toggle + guide icon */
 .size-header-right {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* Compact inline unit toggle */
 .sz-unit-toggle {
   display: flex;
   background: var(--bg-secondary, #111111);
@@ -431,7 +439,6 @@
   color: var(--bg-primary);
 }
 
-/* Size Dropdown */
 .size-dropdown {
   position: relative;
   width: 100%;
@@ -504,7 +511,6 @@
   color: var(--accent-gold, #ffffff);
 }
 
-/* Dropdown Menu */
 .sz-dropdown-menu {
   position: absolute;
   top: 100%;
@@ -534,7 +540,6 @@
   }
 }
 
-/* Dropdown Items */
 .sz-dropdown-item {
   width: 100%;
   display: flex;
@@ -617,7 +622,6 @@
   margin-left: 4px;
 }
 
-/* Selection Bar */
 .sz-selection-bar {
   display: flex;
   align-items: center;
@@ -646,9 +650,6 @@
   font-weight: 600;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Actions
-═══════════════════════════════════════════════════════════════ */
 .product-actions {
   display: flex;
   flex-direction: column;
@@ -794,9 +795,6 @@
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Reviews Column
-═══════════════════════════════════════════════════════════════ */
 .productdisplay-reviews-right {
   position: sticky;
   top: 120px;
@@ -972,9 +970,6 @@
   font-style: italic;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Shipping Upsell
-═══════════════════════════════════════════════════════════════ */
 .product-shipping-upsell {
   margin: 24px 0;
   padding: 16px;
@@ -1015,9 +1010,6 @@
   color: var(--accent-gold);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Thumbnail
-═══════════════════════════════════════════════════════════════ */
 .thumbnail {
   width: 80px;
   height: 100px;
@@ -1033,9 +1025,6 @@
   border-color: var(--accent-gold, #ffffff);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Zoom Indicator
-═══════════════════════════════════════════════════════════════ */
 .zoom-indicator {
   position: absolute;
   bottom: 16px;
@@ -1054,9 +1043,6 @@
   white-space: nowrap;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Responsive
-═══════════════════════════════════════════════════════════════ */
 @media (max-width: 1400px) {
   .productdisplay {
     grid-template-columns: 1fr 400px;
@@ -1105,7 +1091,6 @@
     flex-shrink: 0;
   }
 
-  /* Unstick the left column on single-column layout */
   .productdisplay-left {
     position: relative;
     top: auto;
@@ -1164,7 +1149,6 @@
   }
 }
 
-/* ── Collector & Authenticity Enhancements ───────────────────────────── */
 .product-category-brand {
   font-family: var(--font-display);
   font-size: 14px;
@@ -1241,7 +1225,6 @@
   margin-top: 2px;
 }
 
-/* ── Entrance Animations ────────────────────────────────────────────── */
 @keyframes fadeInUp {
   from {
     opacity: 0;

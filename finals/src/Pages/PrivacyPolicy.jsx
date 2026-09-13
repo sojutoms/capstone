@@ -1,5 +1,5 @@
 import React from 'react';
-import s from './darkPageStyles';
+import s from './CSS/darkPageStyles';
 
 const PrivacyPolicy = () => {
     return (

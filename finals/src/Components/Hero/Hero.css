@@ -1,10 +1,6 @@
-/* ============================================
-   HERO - Bold Luxury Streetwear
-   ============================================ */
-/* ─── Hero Section ─────────────────────────────────────────────────── */
 .hero-brutalist {
   position: relative;
-  height: 100vh;
+  height: calc(100vh - var(--nav-height));
   width: 100%;
   overflow: hidden;
   background-color: var(--bg-primary);
@@ -12,7 +8,6 @@
   align-items: flex-end;
 }
 
-/* ─── Video Background ────────────────────────────────────────────── */
 .hero-bg {
   position: absolute;
   inset: 0;
@@ -30,7 +25,6 @@
   transform: scale(1.05);
 }
 
-/* ─── Atmospheric Gradient Overlay ────────────────────────────────── */
 .hero-overlay {
   position: absolute;
   inset: 0;
@@ -45,7 +39,6 @@
     radial-gradient(ellipse at 70% 100%, rgba(255, 255, 255, 0.05) 0%, transparent 40%);
 }
 
-/* ─── Noise Texture ──────────────────────────────────────────────── */
 .hero-brutalist::after {
   content: '';
   position: absolute;
@@ -124,10 +117,9 @@
   }
 }
 
-/* Italic words get special treatment */
 .hero-title em {
-  font-family: var(--font-serif);
-  font-style: italic;
+  font-family: var(--font-display);
+  font-style: normal;
   font-weight: 400;
   color: var(--accent-gold-light);
   position: relative;
@@ -331,52 +323,10 @@
   }
 }
 
-/* ─── Floating Particles (decorative) ─────────────────────────────── */
-.hero-particles {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.particle {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  background: var(--accent-gold);
-  border-radius: 50%;
-  opacity: 0.3;
-  animation: floatParticle 15s infinite;
-}
-
-.particle:nth-child(1) { left: 10%; top: 20%; animation-delay: 0s; }
-.particle:nth-child(2) { left: 20%; top: 60%; animation-delay: 2s; }
-.particle:nth-child(3) { left: 70%; top: 30%; animation-delay: 4s; }
-.particle:nth-child(4) { left: 80%; top: 70%; animation-delay: 6s; }
-.particle:nth-child(5) { left: 50%; top: 40%; animation-delay: 8s; }
-
-@keyframes floatParticle {
-  0%, 100% {
-    transform: translateY(0) translateX(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 0.4;
-  }
-  90% {
-    opacity: 0.4;
-  }
-  100% {
-    transform: translateY(-100px) translateX(20px);
-    opacity: 0;
-  }
-}
-
 /* ─── Mobile ───────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .hero-brutalist {
-    height: 100dvh;
+    height: calc(100dvh - var(--nav-height));
   }
 
   .hero-content {

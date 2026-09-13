@@ -1,7 +1,3 @@
-/* ============================================
-   BREADCRUMB - Premium Navigation Trail
-   ============================================ */
-
 .breadcrum {
   display: flex;
   align-items: center;
@@ -33,7 +29,6 @@
   color: var(--text-secondary);
 }
 
-/* ─── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
   .breadcrum {
     font-size: 11px;

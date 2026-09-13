@@ -1,17 +1,10 @@
-/* ============================================
-   SHARED PAGE STYLES
-   Hypebeast-Luxe Design System (theme-aware)
-   ============================================ */
-
-const darkPageStyles = {
-  /* ── Page Container ── */
+﻿const darkPageStyles = {
   pageContainer: {
     background: 'var(--bg-primary)',
     minHeight: '100vh',
     color: 'var(--text-primary)',
   },
 
-  /* ── Hero Section ── */
   hero: {
     background: 'linear-gradient(135deg, var(--glass-bg-hover) 0%, var(--bg-primary) 100%)',
     position: 'relative',
@@ -59,14 +52,12 @@ const darkPageStyles = {
     clipPath: 'polygon(0 50%, 100% 0, 100% 100%, 0 100%)',
   },
 
-  /* ── Page Content Wrapper ── */
   pageContent: {
     maxWidth: '1100px',
     margin: '0 auto',
     padding: '48px 20px',
   },
 
-  /* ── Content Section Card ── */
   contentSection: {
     background: 'var(--bg-card)',
     border: '1px solid var(--glass-border)',
@@ -76,7 +67,6 @@ const darkPageStyles = {
     transition: 'border-color 0.3s ease',
   },
 
-  /* ── Section Badge ── */
   sectionBadge: {
     display: 'inline-block',
     background: 'linear-gradient(135deg, var(--white), #f0f0f0)',
@@ -95,17 +85,16 @@ const darkPageStyles = {
     color: 'var(--text-primary)',
   },
 
-  /* ── Section Title ── */
   sectionTitle: {
-    fontFamily: "'Playfair Display', serif",
+    fontFamily: 'var(--font-display)',
     fontSize: 'clamp(1.5rem, 3vw, 2rem)',
     color: 'var(--text-primary)',
     marginBottom: '24px',
-    fontWeight: 700,
-    fontStyle: 'italic',
+    fontWeight: 400,
+    textTransform: 'uppercase',
+    letterSpacing: '0.02em',
   },
 
-  /* ── Story / Paragraph ── */
   storyContent: {
     marginTop: '16px',
   },
@@ -128,7 +117,6 @@ const darkPageStyles = {
     backgroundClip: 'text',
   },
 
-  /* ── Values Section (accent bg) ── */
   valuesSection: {
     background: 'linear-gradient(135deg, var(--glass-bg-hover) 0%, var(--bg-card) 100%)',
     borderColor: 'var(--border-light)',
@@ -167,7 +155,6 @@ const darkPageStyles = {
     margin: 0,
   },
 
-  /* ── Feature List ── */
   featureList: {
     listStyle: 'none',
     padding: 0,
@@ -203,7 +190,6 @@ const darkPageStyles = {
     fontSize: '0.8rem',
   },
 
-  /* ── Stats Grid ── */
   statsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -236,7 +222,6 @@ const darkPageStyles = {
     marginTop: '6px',
   },
 
-  /* ── Steps / Timeline ── */
   stepsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -276,7 +261,6 @@ const darkPageStyles = {
     margin: 0,
   },
 
-  /* ── Form Elements ── */
   formGroup: {
     marginBottom: '20px',
   },
@@ -334,7 +318,6 @@ const darkPageStyles = {
     width: '100%',
   },
 
-  /* ── CTA / Banner ── */
   ctaSection: {
     background: 'linear-gradient(135deg, rgba(var(--accent-gold-rgb),0.12) 0%, var(--bg-card) 100%)',
     border: '1px solid rgba(var(--accent-gold-rgb),0.2)',
@@ -344,12 +327,13 @@ const darkPageStyles = {
     marginBottom: '28px',
   },
   ctaTitle: {
-    fontFamily: "'Playfair Display', serif",
+    fontFamily: 'var(--font-display)',
     fontSize: 'clamp(1.4rem, 3vw, 1.8rem)',
     color: 'var(--text-primary)',
     marginBottom: '14px',
-    fontWeight: 700,
-    fontStyle: 'italic',
+    fontWeight: 400,
+    textTransform: 'uppercase',
+    letterSpacing: '0.02em',
   },
   ctaDesc: {
     color: 'var(--text-muted)',
@@ -375,7 +359,6 @@ const darkPageStyles = {
     transition: 'all 0.3s ease',
   },
 
-  /* ── Info Grid (contact, etc.) ── */
   infoGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -408,7 +391,6 @@ const darkPageStyles = {
     margin: 0,
   },
 
-  /* ── Table styles ── */
   table: {
     width: '100%',
     borderCollapse: 'separate',
@@ -434,7 +416,6 @@ const darkPageStyles = {
     fontFamily: "'Outfit', sans-serif",
   },
 
-  /* ── Accordion / FAQ ── */
   faqItem: {
     background: 'var(--bg-primary)',
     border: '1px solid var(--glass-border)',
@@ -461,7 +442,6 @@ const darkPageStyles = {
     fontFamily: "'Outfit', sans-serif",
   },
 
-  /* ── Job Card / Listing ── */
   jobCard: {
     background: 'var(--glass-bg)',
     border: '1px solid var(--glass-border)',
@@ -503,7 +483,6 @@ const darkPageStyles = {
     textTransform: 'uppercase',
   },
 
-  /* ── Legal Text ── */
   legalText: {
     fontFamily: "'Outfit', sans-serif",
     fontSize: '13px',
@@ -530,7 +509,6 @@ const darkPageStyles = {
     marginBottom: '6px',
   },
 
-  /* ── Tier / Pricing Card ── */
   tierGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',

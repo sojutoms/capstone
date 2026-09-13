@@ -46,7 +46,6 @@ const StoreMap = () => {
   const [expanded, setExpanded] = useState(false);
   const [mapReady, setMapReady] = useState(false);
 
-  // Load Leaflet CSS + JS once
   useEffect(() => {
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link");
@@ -64,7 +63,6 @@ const StoreMap = () => {
     document.head.appendChild(script);
   }, []);
 
-  // Initialize map once Leaflet is ready and DOM is mounted
   useEffect(() => {
     if (!mapReady || !mapRef.current || mapInstanceRef.current) return;
 
@@ -84,7 +82,6 @@ const StoreMap = () => {
       maxZoom: 19,
     }).addTo(map);
 
-    // Custom marker icon
     const customIcon = L.divIcon({
       className: "",
       html: `
@@ -123,7 +120,6 @@ const StoreMap = () => {
     mapInstanceRef.current = map;
   }, [mapReady]);
 
-  // Resize map when card expands/collapses
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     const timer = setTimeout(() => {
@@ -155,12 +151,7 @@ const StoreMap = () => {
         </button>
       </div>
 
-      {/* Map area */}
-      <div
-        className="store-map__map-container"
-        onMouseEnter={() => setExpanded(true)}
-        onMouseLeave={() => setExpanded(false)}
-      >
+      <div className="store-map__map-container">
         {!mapReady && (
           <div className="store-map__loading">
             <div className="store-map__loading-dot" />
@@ -170,7 +161,6 @@ const StoreMap = () => {
         <div ref={mapRef} className="store-map__map" />
       </div>
 
-      {/* Store info */}
       <div className="store-map__info">
         <div className="store-map__info-row">
           <span className="store-map__info-icon"><PinIcon /></span>

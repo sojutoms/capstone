@@ -10,7 +10,7 @@ const CartTotal = ({
   shippingFee = 0,
   shippingTierLabel = "",
   shippingEta = "",
-  items = null, // optional override of the real cart — e.g. a Buy Now single-item checkout
+  items = null,
 }) => {
   const { all_product, cartItems: contextCartItems } = useContext(ShopContext);
   const cartItems = items || contextCartItems;
@@ -70,7 +70,6 @@ const CartTotal = ({
 
   const getDeliveryDateRange = () => {
     const today = new Date();
-    // Parse eta string like "2–3 business days" to get min/max days
     let minDays = 3;
     let maxDays = 6;
 
@@ -135,14 +134,10 @@ const CartTotal = ({
       }}>
         Order Summary
       </h2>
-
-      {/* Subtotal */}
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", fontSize: "16px", color: "var(--text-primary)", fontWeight: "700" }}>
         <span style={{ color: "var(--text-muted)", fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase" }}>Subtotal</span>
         <span>₱{formatPrice(subtotal)}</span>
       </div>
-
-      {/* Shipping fee row */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", fontSize: "16px", color: "var(--text-primary)", fontWeight: "700" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
           <span style={{ color: "var(--text-muted)", fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase" }}>
@@ -177,7 +172,6 @@ const CartTotal = ({
         </div>
       </div>
 
-      {/* Voucher discount row */}
       {voucherCode && discount > 0 && (
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", fontSize: "16px", color: "var(--text-primary)", fontWeight: "700" }}>
           <span style={{ color: "var(--text-muted)", fontSize: "12px", letterSpacing: "1px", textTransform: "uppercase" }}>
@@ -187,7 +181,6 @@ const CartTotal = ({
         </div>
       )}
 
-      {/* Free shipping progress bar — only show if NOT already free */}
       {!isFreeShipping && hasRegion && (
         <div style={{ margin: "16px 0" }}>
           <p style={{ fontSize: "12px", color: "var(--text-primary)", marginBottom: "8px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px" }}>
@@ -207,7 +200,6 @@ const CartTotal = ({
         </div>
       )}
 
-      {/* No region selected placeholder */}
       {!hasRegion && (
         <div style={{ margin: "16px 0", padding: "12px", border: "1px dashed var(--border-light)", background: "var(--glass-bg)", borderRadius: "8px" }}>
           <p style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", margin: 0, textAlign: "center" }}>
@@ -216,7 +208,6 @@ const CartTotal = ({
         </div>
       )}
 
-      {/* Total */}
       <div style={{
         display: "flex",
         justifyContent: "space-between",
@@ -231,10 +222,7 @@ const CartTotal = ({
         <span>Total</span>
         <span>₱{formatPrice(total)}</span>
       </div>
-
       <hr style={{ border: "none", borderTop: "1px solid var(--glass-border)", margin: "20px 0" }} />
-
-      {/* Estimated delivery */}
       <div style={{ marginBottom: "20px" }}>
         <p style={{ fontSize: "14px", color: "var(--text-primary)", fontWeight: "800", textTransform: "uppercase" }}>
           Arrives {getDeliveryDateRange()}
@@ -246,7 +234,6 @@ const CartTotal = ({
         )}
       </div>
 
-      {/* Cart items list */}
       <div style={{ marginTop: "20px" }}>
         {Object.entries(cartItems).map(([key, quantity]) => {
           const [productId, sizeToken] = key.split("_");

@@ -3,17 +3,17 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg);
   padding: 15px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
   overflow: hidden;
 }
 
 .skeleton-image-wrapper {
   width: 100%;
   aspect-ratio: 1/1;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-tertiary);
   border-radius: 8px;
   position: relative;
   overflow: hidden;
@@ -26,7 +26,7 @@
 }
 
 .skeleton-line {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-tertiary);
   border-radius: 4px;
   position: relative;
   overflow: hidden;
@@ -57,7 +57,7 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.05) 50%,
+    var(--glass-bg-hover) 50%,
     transparent 100%
   );
   animation: shimmer-anim 1.5s infinite;
@@ -73,7 +73,7 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(255, 255, 255, 0.05) 50%,
+    var(--glass-bg-hover) 50%,
     transparent 100%
   );
   animation: shimmer-anim 1.5s infinite;

@@ -9,7 +9,6 @@ import { getShippingFee, getShippingTier } from '../../services/shippingFee';
 const NCR_REGION_CODE = '1300000000';
 const SIMPLE_CATEGORIES = ['bags', 'collectibles'];
 
-// ─── PSGC fetch helper ────────────────────────────────────────────────────────
 const fixEncoding = (str) => {
   try {
     const bytes = Uint8Array.from(str, (c) => c.charCodeAt(0));
@@ -37,7 +36,6 @@ const psgcGet = async (url) => {
   }
 };
 
-// ─── Voucher Panel ────────────────────────────────────────────────────────────
 const VoucherPanel = ({ subtotal, onApply, onRemove, appliedCode }) => {
   const [open, setOpen] = useState(false);
   const [vouchers, setVouchers] = useState([]);
@@ -142,14 +140,8 @@ const VoucherPanel = ({ subtotal, onApply, onRemove, appliedCode }) => {
 // by redeeming them into a voucher (see MyVouchers), then applying that
 // voucher here like any other. Keeps a single, non-overlapping way to spend
 // points instead of two parallel mechanisms that could stack on one order.
-// const calculateTier = (total) => {
-//   if (total >= 100000) return { name: "PRESTIGE LEGEND", color: "#FFD700", next: null, min: 100000 };
-//   if (total >= 10000) return { name: "ELITE COLLECTOR", color: "#C0C0C0", next: "PRESTIGE LEGEND", min: 10000, nextMin: 100000 };
-//   return { name: "ROOKIE", color: "#CD7F32", next: "ELITE COLLECTOR", min: 0, nextMin: 10000 };
-// };
 
 
-// ─── Shipping Info Banner ──────────────────────────────────────────────────────
 const ShippingBanner = ({ regionCode }) => {
   if (!regionCode) return null;
   const tier = getShippingTier(regionCode);
@@ -170,7 +162,6 @@ const ShippingBanner = ({ regionCode }) => {
   );
 };
 
-// ─── Payment Cancelled Banner ───────────────────────────────────────────────────
 // Shown when PayMongo's hosted checkout redirects back here via cancel_url.
 const PaymentCancelledBanner = ({ orderNumber, onRetry, retrying }) => (
   <div className="cod-fee-notice content-fade-in" style={{ marginBottom: '24px' }}>
@@ -190,7 +181,6 @@ const PaymentCancelledBanner = ({ orderNumber, onRetry, retrying }) => (
   </div>
 );
 
-// ─── PlaceOrder ───────────────────────────────────────────────────────────────
 const PlaceOrder = () => {
   const [method, setMethod] = useState('online');
   const navigate = useNavigate();
@@ -290,7 +280,6 @@ const PlaceOrder = () => {
     return sum + getNumericPrice(product, size) * quantity;
   }, 0);
 
-  // ── Derived shipping values ────────────────────────────────────────────────
   const shippingFee = getShippingFee(formData.region);
   const shippingTier = getShippingTier(formData.region, cartSubtotal);
 
@@ -446,7 +435,6 @@ const PlaceOrder = () => {
       return;
     }
 
-    // Reset downstream address fields when region changes
     if (name === 'region') {
       setFormData((p) => ({
         ...p,
@@ -581,8 +569,8 @@ const PlaceOrder = () => {
       });
       const data = await res.json();
       if (data.success) { setSavedAddresses(data.addresses || []); setEditingIndex(null); setEditFormData(null); }
-      else alert(data.error || 'Failed to update address.');
-    } catch (err) { console.error(err); alert('Failed to update address.'); }
+      else addToast('error', data.error || 'Failed to update address.');
+    } catch (err) { console.error(err); addToast('error', 'Failed to update address.'); }
     finally { setEditLoading((p) => ({ ...p, saving: false })); }
   };
 
@@ -594,8 +582,8 @@ const PlaceOrder = () => {
       const res = await fetch(`${API_BASE_URL}/deleteaddress/${idx}`, { method: 'DELETE', headers: { 'auth-token': token } });
       const data = await res.json();
       if (data.success) { setSavedAddresses(data.addresses || []); if (editingIndex === idx) { setEditingIndex(null); setEditFormData(null); } }
-      else alert(data.error || 'Failed to delete address.');
-    } catch (err) { console.error(err); alert('Failed to delete address.'); }
+      else addToast('error', data.error || 'Failed to delete address.');
+    } catch (err) { console.error(err); addToast('error', 'Failed to delete address.'); }
     finally { setDeletingIndex(null); }
   };
 
@@ -633,7 +621,6 @@ const PlaceOrder = () => {
     };
   };
 
-  // Redirects the browser to PayMongo's hosted checkout page for the given order.
   const startPayMongoCheckout = async (orderNumber) => {
     const authToken = localStorage.getItem('auth-token');
     const sessionData = await createCheckoutSession(authToken, orderNumber);
@@ -862,7 +849,6 @@ const PlaceOrder = () => {
               </div>
               <div className="field-group"><label>Phone Number</label><input name="phone" value={formData.phone} onChange={handleInputChange} placeholder="09XXXXXXXXX" required /></div>
 
-              {/* ── Dynamic shipping banner ── */}
               <ShippingBanner regionCode={formData.region} />
 
               {isAlreadySaved ? (

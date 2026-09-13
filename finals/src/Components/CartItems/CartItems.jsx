@@ -3,6 +3,7 @@ import "./CartItems.css";
 import { ShopContext } from "../../Context/ShopContext";
 import { useNavigate } from "react-router-dom";
 import API_BASE_URL from "../../services/api";
+import { showToast } from "../../utils/toast";
 
 const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 const WATCH_CATEGORIES  = ["watch"];
@@ -71,8 +72,6 @@ const CartItems = () => {
     return Boolean(product);
   });
 
-  // ✅ Depend on cartItems + all_product (the stable sources), not cartItemsArray
-  // which is re-derived on every render and would cause an infinite loop.
   const validateCart = useCallback(async () => {
     const token = localStorage.getItem("auth-token");
 
@@ -114,7 +113,7 @@ const CartItems = () => {
     } finally {
       setValidating(false);
     }
-  }, [cartItems, all_product]); // ✅ stable source deps only
+  }, [cartItems, all_product]);
 
   useEffect(() => {
     validateCart();
@@ -127,8 +126,8 @@ const CartItems = () => {
     const key = `${productId}_${normalizedSize}`;
     const availableStock = getAvailableStock(product, normalizedSize);
     const currentQuantity = cartItems[key] || 0;
-    if (availableStock <= 0) { alert("Out of stock."); return; }
-    if (currentQuantity >= availableStock) { alert(`Max stock reached.`); return; }
+    if (availableStock <= 0) { showToast("error", "Out of stock."); return; }
+    if (currentQuantity >= availableStock) { showToast("error", "Max stock reached."); return; }
     addToCart(Number(productId), normalizedSize || null);
   };
 

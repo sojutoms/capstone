@@ -8,7 +8,6 @@ import { FavoritesContext } from "../../Context/FavoritesContext";
 import API_BASE_URL from "../../services/api";
 import Shoe360Viewer from "../Shoe360Viewer/Shoe360Viewer";
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
 const ProductSkeleton = () => (
   <div className="productdisplay">
     <div className="productdisplay-left">
@@ -76,7 +75,6 @@ const StarRow = ({ rating, max = 5 }) => (
   </div>
 );
 
-// ─── Size conversion tables ───────────────────────────────────────────────────
 const SIZE_CONVERSIONS = {
   US: ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13", "13.5", "14", "14.5", "15"],
   UK: ["5.5", "6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13", "13.5", "14", "14.5"],
@@ -113,13 +111,11 @@ const getAllConversions = (usSize) => `US ${usSize} · UK ${getConvertedSize(usS
 
 const FALLBACK_SIZES = ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13"];
 
-// ─── Component ────────────────────────────────────────────────────────────────
 const ProductDisplay = ({ product, loading = false }) => {
   const { addToCart, cartItems } = useContext(ShopContext);
   const { addToFavorites, removeFromFavorites, isFavorite } = useContext(FavoritesContext);
   const navigate = useNavigate();
 
-  // ── Dynamic sizes from API ────────────────────────────────────────────────
   const [dynamicSizes, setDynamicSizes] = useState(FALLBACK_SIZES);
 
   useEffect(() => {
@@ -143,16 +139,15 @@ const ProductDisplay = ({ product, loading = false }) => {
   const [reviewCount, setReviewCount] = useState(0);
   const [mainImage, setMainImage] = useState(product?.image || "");
   const [showReviews, setShowReviews] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
   const [reviewPage, setReviewPage] = useState(1);
   const REVIEWS_PER_PAGE = 3;
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
   const sizeDropdownRef = useRef(null);
   const [favoriteLocal, setFavoriteLocal] = useState(() => (product ? Boolean(isFavorite(product.id)) : false));
 
-  // ── Colorway state ────────────────────────────────────────────────────────
   const [selectedColorway, setSelectedColorway] = useState(null);
 
-  // ── NEW: child colorway products fetched from API ─────────────────────────
   const [childColorways, setChildColorways] = useState([]);
   const [cwLoading, setCwLoading] = useState(false);
   const [parentProduct, setParentProduct] = useState(null);
@@ -174,18 +169,15 @@ const ProductDisplay = ({ product, loading = false }) => {
   const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
   const imageRef = useRef(null);
   const [addingToCart, setAddingToCart] = useState(false);
-  const [lifestyleMode, setLifestyleMode] = useState(false);
   const [show360, setShow360] = useState(false);
   const has3D = product?.model3d?.status === "ready" && (product.model3d.turntableFrames || []).length > 0;
 
-  // Touch zoom refs and state for mobile
   const touchZoomedRef = useRef(false);
   const [touchZoomed, setTouchZoomed] = useState(false);
   const [touchOrigin, setTouchOrigin] = useState({ x: 50, y: 50 });
   const touchMoved = useRef(false);
   const imgContainerRef = useRef(null);
 
-  // Register non-passive touchmove so preventDefault works
   useEffect(() => {
     const el = imgContainerRef.current;
     if (!el) return;
@@ -223,7 +215,6 @@ const ProductDisplay = ({ product, loading = false }) => {
     touchMoved.current = false;
   };
 
-  // ── Stock helpers ─────────────────────────────────────────────────────────
   const findSizeEntry = (sizesInput, sizeKey) => {
     if (!sizesInput) return undefined;
     if (Array.isArray(sizesInput)) return sizesInput.find((e) => String(e?.size ?? "").trim() === String(sizeKey).trim());
@@ -301,9 +292,6 @@ const ProductDisplay = ({ product, loading = false }) => {
     return { disabled: false, label: "ADD TO BAG" };
   };
 
-  // Buy Now skips the bag entirely, so it only cares whether the selected
-  // size actually has stock — not how much of it is already sitting in the
-  // user's cart (that's what "MAX IN BAG" is about, and doesn't apply here).
   const getBuyNowState = () => {
     if (!product) return { disabled: true, label: "BUY NOW" };
     if (isSimpleCategory) {
@@ -331,7 +319,6 @@ const ProductDisplay = ({ product, loading = false }) => {
     }
   }, [product?.id]);
 
-  // ── Reset state when product changes ─────────────────────────────────────
   useEffect(() => {
     if (product?.id) {
       fetchReviews();
@@ -359,13 +346,9 @@ const ProductDisplay = ({ product, loading = false }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.id, location.state?.initialSize]);
 
-  // ── NEW: fetch child colorway products from API ───────────────────────────
   useEffect(() => {
     if (!product?.id) return;
 
-    // Determine the root parentId:
-    // - if this product IS a colorway, its parentId is the base product
-    // - if this product is a base product, its own id is the parentId
     const rootParentId = product.parentId ? product.parentId : product.id;
 
     setCwLoading(true);
@@ -377,19 +360,16 @@ const ProductDisplay = ({ product, loading = false }) => {
       .then((all) => {
         if (!Array.isArray(all)) return;
 
-        // Children: all non-deleted products that point to the root parent
         const children = all.filter(
           (p) => !p.isDeleted && String(p.parentId) === String(rootParentId)
         );
 
-        // Find the parent product itself (for the "Default" swatch)
         const parent = all.find(
           (p) => !p.isDeleted && String(p.id) === String(rootParentId)
         );
 
         if (parent) setParentProduct(parent);
 
-        // Normalize each child into the colorway shape ProductDisplay expects
         const normalized = children.map((child) => ({
           _productId: child.id,
           _isProductColorway: true,
@@ -423,32 +403,25 @@ const ProductDisplay = ({ product, loading = false }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ── Merged colorways ──────────────────────────────────────────────────────
-  // Legacy embedded colorways (product.colorways[]) + new product-based colorways
   const embeddedColorways = Array.isArray(product?.colorways) ? product.colorways : [];
   const childNames = new Set(childColorways.map((c) => c.name.toLowerCase()));
-  // Drop embedded entries that are already covered by a child product
   const filteredEmbedded = embeddedColorways.filter(
     (cw) => !childNames.has((cw.name || "").toLowerCase())
   );
   const allColorways = [...filteredEmbedded, ...childColorways];
   const hasColorways = allColorways.length > 0;
 
-  // ── Colorway handlers ─────────────────────────────────────────────────────
   const handleColorwayClick = (cw) => {
     if (cw._isProductColorway) {
-      // Navigate to that colorway product's own page so its sizes/stock render correctly
       navigate(`/product/${cw._productId}`);
       return;
     }
-    // Legacy embedded colorway — swap images in place
     setSelectedColorway(cw);
     setMainImage(cw.image || product.image || "");
   };
 
   const handleDefaultColorway = () => {
     if (product.parentId && parentProduct) {
-      // Currently on a colorway page → go back to the base product
       navigate(`/product/${parentProduct.id}`);
       return;
     }
@@ -456,11 +429,16 @@ const ProductDisplay = ({ product, loading = false }) => {
     setMainImage(product.image || "");
   };
 
+  const activeMainImage = selectedColorway?.image || product?.image || "";
+
   const activeSubImages = selectedColorway?.subImages?.length > 0
     ? selectedColorway.subImages
     : (product?.subImages || []);
 
-  // ── Toast system ──────────────────────────────────────────────────────────
+  const activeThumbnails = activeMainImage
+    ? [activeMainImage, ...activeSubImages.filter((img) => img !== activeMainImage)]
+    : activeSubImages;
+
   const [toasts, setToasts] = useState([]);
   const toastIdRef = useRef(0);
   const toastTimersRef = useRef({});
@@ -523,8 +501,6 @@ const ProductDisplay = ({ product, loading = false }) => {
       setSizeDropdownOpen(true);
       return;
     }
-    // Doesn't touch the cart at all — PlaceOrder reads this straight from
-    // router state and checks out just this one item.
     navigate("/place-order", {
       state: { buyNowItem: { id: product.id, size: selectedSize || "", quantity: 1 } },
     });
@@ -567,7 +543,6 @@ const ProductDisplay = ({ product, loading = false }) => {
   const hasSizes = product.sizes && (Array.isArray(product.sizes) ? product.sizes.length > 0 : Object.keys(product.sizes).length > 0);
   const selectedSizeRemaining = selectedSize ? getRemainingStock(selectedSize) : null;
 
-  // For watches, derive size list from product.sizes (object or array — backend normalizes to object)
   const watchSizeList = isWatchCategory && hasSizes
     ? (() => {
         const sz = product.sizes;
@@ -601,13 +576,12 @@ const ProductDisplay = ({ product, loading = false }) => {
 
       <div className="productdisplay">
 
-      {/* ── Left: images ─────────────────────────────────────────────────── */}
       <div className="productdisplay-left">
         <div className="productdisplay-img-list">
-          {activeSubImages.map((img, index) => (
-            <img key={index} src={img} alt={`Product angle ${index}`}
-              onClick={() => setMainImage(img)}
-              className={`thumbnail ${mainImage === img ? "active" : ""}`}
+          {activeThumbnails.map((img, index) => (
+            <img key={index} src={img} alt={index === 0 ? "Main product view" : `Product angle ${index}`}
+              onClick={() => { setShow360(false); setMainImage(img); }}
+              className={`thumbnail ${mainImage === img && !show360 ? "active" : ""}`}
             />
           ))}
         </div>
@@ -619,33 +593,22 @@ const ProductDisplay = ({ product, loading = false }) => {
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}>
           
-          {/* Lifestyle / 360° Toggle */}
-          {(product.subImages && product.subImages.length > 0) || has3D ? (
-            <div className="lifestyle-toggle">
-              <button
-                className={`lifestyle-btn ${!lifestyleMode && !show360 ? 'active' : ''}`}
-                onClick={() => { setShow360(false); setLifestyleMode(false); setMainImage(product.image); }}
-              >
-                STUDIO
-              </button>
-              {product.subImages && product.subImages.length > 0 && (
-                <button
-                  className={`lifestyle-btn ${lifestyleMode && !show360 ? 'active' : ''}`}
-                  onClick={() => { setShow360(false); setLifestyleMode(true); setMainImage(product.subImages[0]); }}
-                >
-                  LIFESTYLE
-                </button>
-              )}
-              {has3D && (
-                <button
-                  className={`lifestyle-btn ${show360 ? 'active' : ''}`}
-                  onClick={() => setShow360(true)}
-                >
-                  360°
-                </button>
-              )}
-            </div>
-          ) : null}
+          <div className="lifestyle-toggle">
+            <button
+              className={`lifestyle-btn ${!show360 ? 'active' : ''}`}
+              onClick={() => { setShow360(false); setMainImage(product.image); }}
+            >
+              STUDIO
+            </button>
+            <button
+              className={`lifestyle-btn ${show360 ? 'active' : ''}`}
+              onClick={() => has3D && setShow360(true)}
+              disabled={!has3D}
+              title={has3D ? undefined : "360° view coming soon for this product"}
+            >
+              360°
+            </button>
+          </div>
 
           {show360 ? (
             <Shoe360Viewer frames={product.model3d.turntableFrames} />
@@ -653,7 +616,7 @@ const ProductDisplay = ({ product, loading = false }) => {
             <>
               <img
                 ref={imageRef}
-                className={`productdisplay-main-img ${lifestyleMode ? 'lifestyle-view' : ''}`}
+                className="productdisplay-main-img"
                 src={mainImage || product.image || "https://via.placeholder.com/400x400"}
                 alt="Main product view"
                 style={{
@@ -677,7 +640,6 @@ const ProductDisplay = ({ product, loading = false }) => {
         </div>
       </div>
 
-      {/* ── Right: product info ───────────────────────────────────────────── */}
       <div className="productdisplay-right">
         <div className="product-entrance-stagger">
           <p className="product-category-brand">{brandDisplay || "STREETWEAR"}</p>
@@ -718,11 +680,19 @@ const ProductDisplay = ({ product, loading = false }) => {
           </div>
         </div>
 
-        <div className="productdisplay-right-description">
+        <div className={`productdisplay-right-description ${descExpanded ? "expanded" : ""}`}>
           {product.description || "No description available."}
         </div>
+        {(product.description || "").length > 100 && (
+          <button
+            type="button"
+            className="description-see-more"
+            onClick={() => setDescExpanded((prev) => !prev)}
+          >
+            {descExpanded ? "See Less" : "See More"}
+          </button>
+        )}
 
-        {/* Shipping Upsell Message */}
         <div className="product-shipping-upsell">
           <div className="upsell-qualified">
             <span className="upsell-line"></span>
@@ -730,7 +700,6 @@ const ProductDisplay = ({ product, loading = false }) => {
           </div>
         </div>
 
-        {/* Category / Brand / Tags */}
         <div className="productdisplay-meta-tags">
           <span className="meta-tag">
             <span className="meta-tag-label">Category</span>
@@ -748,24 +717,20 @@ const ProductDisplay = ({ product, loading = false }) => {
           </span>
         </div>
 
-        {/* ── Colorway switcher ─────────────────────────────────────────── */}
         {(hasColorways || cwLoading) && (
           <div className="colorway-selector">
             <div className="colorway-selector-label">
               Color:
               <span className="colorway-selector-name">
-                {/* Label shows the active colorway name, or the parent name if we're
-                    currently viewing a child colorway product */}
                 {selectedColorway && !selectedColorway._isProductColorway
                   ? selectedColorway.name
                   : product.parentId
-                    ? product.name          // we ARE the colorway — show our own name
+                    ? product.name
                     : "Default"}
               </span>
             </div>
 
             <div className="colorway-swatches">
-              {/* Default swatch → always points to the base/parent product */}
               <button
                 className={`colorway-swatch ${!product.parentId && !selectedColorway ? "active" : ""}`}
                 onClick={handleDefaultColorway}
@@ -778,11 +743,10 @@ const ProductDisplay = ({ product, loading = false }) => {
                 />
               </button>
 
-              {/* All colorways (embedded + product-based children) */}
               {allColorways.map((cw, i) => {
                 const isActive = cw._isProductColorway
-                  ? String(cw._productId) === String(product.id)   // currently on this colorway's page
-                  : selectedColorway?.name === cw.name;             // legacy embedded selection
+                  ? String(cw._productId) === String(product.id)
+                  : selectedColorway?.name === cw.name;
 
                 return (
                   <button
@@ -808,14 +772,12 @@ const ProductDisplay = ({ product, loading = false }) => {
           </div>
         )}
 
-        {/* Size selector — watch products (case diameter) */}
         {isWatchCategory && hasSizes && (
           <div className="productdisplay-right-size">
             <div className="size-header">
               <h1>Select Case Size</h1>
             </div>
 
-            {/* Dropdown */}
             <div className="size-dropdown" ref={sizeDropdownRef}>
               <button
                 className={`sz-trigger ${!selectedSize ? "placeholder" : ""} ${sizeDropdownOpen ? "open" : ""}`}
@@ -892,7 +854,6 @@ const ProductDisplay = ({ product, loading = false }) => {
           </div>
         )}
 
-        {/* Size selector — shoe / other sized products */}
         {!isSimpleCategory && !isWatchCategory && hasSizes && (
           <div className="productdisplay-right-size">
             <div className="size-header">
@@ -916,7 +877,6 @@ const ProductDisplay = ({ product, loading = false }) => {
               </div>
             </div>
 
-            {/* Dropdown */}
             <div className="size-dropdown" ref={sizeDropdownRef}>
               <button
                 className={`sz-trigger ${!selectedSize ? "placeholder" : ""} ${sizeDropdownOpen ? "open" : ""}`}
@@ -996,7 +956,6 @@ const ProductDisplay = ({ product, loading = false }) => {
           </div>
         )}
 
-        {/* Simple category stock */}
         {isSimpleCategory && (
           <div className="productdisplay-simple-meta">
             <div className="simple-stock">
@@ -1015,7 +974,6 @@ const ProductDisplay = ({ product, loading = false }) => {
           </div>
         )}
 
-        {/* Actions */}
         <div className="product-actions">
           <div className="product-actions-primary">
             <button className="add-to-cart-btn" onClick={handleAddToCart} disabled={addingToCart || addDisabled}>
@@ -1043,7 +1001,6 @@ const ProductDisplay = ({ product, loading = false }) => {
         </div>
       </div>
 
-      {/* ── Reviews ──────────────────────────────────────────────────────── */}
       <div className="productdisplay-reviews-right">
         <div className="reviews-header" onClick={() => setShowReviews(!showReviews)}>
           <h2>Reviews ({reviewCount})</h2>

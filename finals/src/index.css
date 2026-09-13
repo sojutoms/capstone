@@ -1,14 +1,6 @@
-/* ============================================
-   GOODSOLES.PH - Luxury Streetwear Design System
-   Bold. Distinctive. Unforgettable.
-   ============================================ */
-
-/* ─── Imports ───────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
 
-/* ─── CSS Variables ────────────────────────── */
 :root {
-  /* Common Tokens (Fonts, Spacing, Transitions) */
   --font-display: 'Bebas Neue', sans-serif;
   --font-body: 'Outfit', sans-serif;
   --font-serif: 'Playfair Display', serif;
@@ -26,6 +18,12 @@
   --transition-base: 0.25s ease;
   --transition-slow: 0.4s cubic-bezier(0.22, 1, 0.36, 1);
   --transition-bounce: 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Fixed navbar's own height — kept in sync with header.navbar in
+     Navbar.css (100px desktop / 64px at <=900px) so anything that needs
+     to clear or fill around the nav (page padding, full-bleed hero
+     sections) reads one source of truth instead of a guessed constant. */
+  --nav-height: 100px;
 
   --radius-full: 9999px;
   --radius-xl: 24px;
@@ -47,17 +45,16 @@
   --danger: #e5484d;
 }
 
-/* Default to Dark Theme (The original look) */
 :root, [data-theme='dark'] {
-  --bg-primary: #0a0a0a;
-  --bg-primary-rgb: 10, 10, 10;
-  --bg-secondary: #121212;
-  --bg-secondary-rgb: 18, 18, 18;
-  --bg-surface: #1a1a1a;
-  --bg-surface-rgb: 26, 26, 26;
-  --bg-elevated: #222222;
-  --bg-card: #151515;
-  --bg-tertiary: #1e1e1e;
+  --bg-primary: #1c1c1e;
+  --bg-primary-rgb: 28, 28, 30;
+  --bg-secondary: #232325;
+  --bg-secondary-rgb: 35, 35, 37;
+  --bg-surface: #2c2c2e;
+  --bg-surface-rgb: 44, 44, 46;
+  --bg-elevated: #3a3a3c;
+  --bg-card: #3a3a3c;
+  --bg-tertiary: #333335;
 
   --text-primary: #ffffff;
   --text-primary-rgb: 255, 255, 255;
@@ -67,10 +64,10 @@
   --text-muted: #666666;
   --text-inverse: #000000;
 
-  --accent-gold: #c5a059;
-  --accent-gold-rgb: 197, 160, 89;
-  --accent-gold-rgb-01: rgba(197, 160, 89, 0.15);
-  --accent-gold-light: #e2c28d;
+  --accent-gold: #ffffff;
+  --accent-gold-rgb: 255, 255, 255;
+  --accent-gold-rgb-01: rgba(255, 255, 255, 0.15);
+  --accent-gold-light: #cccccc;
   --gold: var(--accent-gold);
 
   --border-subtle: rgba(255, 255, 255, 0.08);
@@ -100,7 +97,6 @@
 }
 
 [data-theme='light'] {
-  /* Core Colors - Balanced Luxe Light */
   --bg-primary: #ffffff;
   --bg-primary-rgb: 255, 255, 255;
   --bg-secondary: #f8f8f8;
@@ -108,7 +104,7 @@
   --bg-surface: #ffffff;
   --bg-surface-rgb: 255, 255, 255;
   --bg-elevated: #f4f4f4;
-  --bg-card: #ffffff;
+  --bg-card: #e0e0e0;
   --bg-tertiary: #eeeeee;
 
   --text-primary: #111111;
@@ -123,10 +119,10 @@
   --hero-overlay-mid: rgba(255, 255, 255, 0.5);
   --hero-overlay-end: rgba(255, 255, 255, 0.98);
   --hero-muted: rgba(0, 0, 0, 0.7);
-  --accent-gold: #8B6D3D; /* Deep Luxury Gold for Legibility */
-  --accent-gold-rgb: 139, 109, 61;
-  --accent-gold-rgb-01: rgba(139, 109, 61, 0.15);
-  --accent-gold-light: #B89B6D;
+  --accent-gold: #000000;
+  --accent-gold-rgb: 0, 0, 0;
+  --accent-gold-rgb-01: rgba(0, 0, 0, 0.15);
+  --accent-gold-light: #333333;
   --gold: var(--accent-gold);
 
   --border-subtle: rgba(0, 0, 0, 0.08);
@@ -142,7 +138,7 @@
   --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.12);
   --shadow-xl: 0 30px 70px rgba(0, 0, 0, 0.16);
-  --shadow-glow-gold: 0 0 40px rgba(139, 109, 61, 0.05);
+  --shadow-glow-gold: 0 0 40px rgba(0, 0, 0, 0.05);
   --shadow-inner: inset 0 1px 2px rgba(0, 0, 0, 0.05);
   --gradient-glow: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0, 0, 0, 0.04), transparent 70%);
   
@@ -150,19 +146,17 @@
   --dark-icon-filter: none;
   --noise-opacity: 0.015;
   
-  --gold-gradient: linear-gradient(135deg, #111111 0%, #444444 50%, #111111 100%);
+  --gold-gradient: linear-gradient(135deg, #000000 0%, #333333 50%, #000000 100%);
   --dropdown-bg: #ffffff;
   --nav-bg: rgba(252, 252, 252, 0.85);
 }
 
-/* ─── Reset & Base ─────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-/* Noise Texture Overlay */
 body::before {
   content: "";
   position: fixed;
@@ -206,16 +200,20 @@ body {
 
 .main-content {
   flex: 1;
-  padding-top: 80px;
+  padding-top: var(--nav-height);
 }
 
-/* ─── Selection ─────────────────────────────── */
+@media (max-width: 900px) {
+  :root {
+    --nav-height: 64px;
+  }
+}
+
 ::selection {
   background: var(--accent-gold);
   color: var(--bg-primary);
 }
 
-/* ─── Scrollbar ─────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -235,7 +233,6 @@ body {
   background: var(--text-muted);
 }
 
-/* ─── Typography ─────────────────────────────── */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   font-weight: 400;
@@ -267,7 +264,6 @@ input, textarea, select {
   font-family: var(--font-body);
 }
 
-/* ─── Utility Classes ────────────────────────── */
 .container {
   width: 100%;
   max-width: 1400px;
@@ -279,7 +275,6 @@ input, textarea, select {
   padding: var(--space-4xl) 0;
 }
 
-/* ─── Animations ─────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -333,7 +328,6 @@ input, textarea, select {
   50% { box-shadow: 0 0 40px rgba(255, 255, 255, 0.15); }
 }
 
-/* Staggered Entrance */
 .stagger-item {
   opacity: 0;
   animation: slideUp var(--transition-slow) forwards;
@@ -345,7 +339,6 @@ input, textarea, select {
 .stagger-4 { animation-delay: 0.4s; }
 .stagger-5 { animation-delay: 0.5s; }
 
-/* ─── Scroll Reveal ─────────────────────────── */
 .reveal {
   opacity: 0;
   transform: translateY(30px);
@@ -357,7 +350,6 @@ input, textarea, select {
   transform: translateY(0);
 }
 
-/* ─── Glass Card ─────────────────────────────── */
 .glass {
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
@@ -414,7 +406,6 @@ input, textarea, select {
   animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* ─── Gold Accent ─────────────────────────────── */
 .gold-text {
   color: var(--accent-gold);
 }
@@ -426,7 +417,6 @@ input, textarea, select {
   background-clip: text;
 }
 
-/* ─── Buttons ────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -501,7 +491,6 @@ input, textarea, select {
   border-color: var(--glass-border-hover);
 }
 
-/* ─── Input Styles ────────────────────────────── */
 .input-field {
   width: 100%;
   padding: var(--space-md) var(--space-lg);
@@ -524,7 +513,6 @@ input, textarea, select {
   background: var(--bg-tertiary);
 }
 
-/* ─── Loading States ─────────────────────────── */
 .skeleton {
   background: linear-gradient(
     90deg,
@@ -542,47 +530,6 @@ input, textarea, select {
   100% { background-position: 200% 0; }
 }
 
-/* ─── Responsive ─────────────────────────────── */
-@media (max-width: 1024px) {
-  :root {
-    --space-4xl: 64px;
-    --space-3xl: 48px;
-  }
-}
-
-@media (max-width: 768px) {
-  :root {
-    --space-4xl: 48px;
-    --space-3xl: 32px;
-    --space-2xl: 24px;
-  }
-
-  .container {
-    padding: 0 var(--space-md);
-  }
-}
-
-@media (max-width: 480px) {
-  :root {
-    --space-xl: 20px;
-    --space-lg: 16px;
-  }
-}
-
-/* ─── Loading States ─────────────────────────── */
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--bg-tertiary) 25%,
-    var(--bg-elevated) 50%,
-    var(--bg-tertiary) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-md);
-}
-
-/* ─── Responsive ─────────────────────────────── */
 @media (max-width: 1024px) {
   :root {
     --space-4xl: 64px;

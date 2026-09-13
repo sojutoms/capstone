@@ -17,11 +17,6 @@ const makeSession = () => ({
   messages: [WELCOME_MESSAGE],
 });
 
-// Pulls the account's stable user id out of the JWT so chat history is
-// scoped per-account instead of one fixed key shared by every login on the
-// browser. Login/logout both force a full page reload (see LoginSignup.jsx
-// / Settings.jsx), so it's safe to resolve this once per page load rather
-// than watching for auth-token changes mid-session.
 const decodeUserId = () => {
   try {
     const token = localStorage.getItem("auth-token");
@@ -85,9 +80,6 @@ const ChatWidget = () => {
   const inputRef = useRef(null);
 
   const activeSession = sessions.find((s) => s.id === activeId) || sessions[0];
-
-  // Lets other parts of the site (e.g. Contact Us's "Start Chat" button)
-  // open this same global widget instead of duplicating a chat UI.
   useEffect(() => {
     const handleOpen = () => setOpen(true);
     window.addEventListener("open-chatbot", handleOpen);

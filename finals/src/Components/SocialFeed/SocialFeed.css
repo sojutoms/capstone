@@ -122,11 +122,11 @@
 }
 
 .sf-panel__body--fb .fb-page,
-.sf-panel__body--fb .fb-page>span,
-.sf-panel__body--fb .fb-page>span>iframe {
+.sf-panel__body--fb .fb-page span,
+.sf-panel__body--fb iframe {
   width: 100% !important;
-  min-width: 0 !important;
-  display: block !important;
+  min-height: 480px;
+  background: var(--bg-primary, #0a0a0a);
 }
 
 .sf-panel__body--ig {
@@ -179,7 +179,8 @@
     min-height: auto;
   }
 
-  .sf-panel__ig-iframe {
+  .sf-panel__ig-iframe,
+  .sf-panel__fb-iframe {
     min-height: 380px;
   }
 }

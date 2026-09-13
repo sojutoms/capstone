@@ -1,48 +1,36 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect } from "react";
 import "./SocialFeed.css";
 
 const FB_PAGE_URL = "https://www.facebook.com/goodsoles.ph";
-const IG_PROFILE = "https://www.instagram.com/goodsolesphofficial/";
+const IG_PROFILE = "https://www.instagram.com/goodsolesph/?hl=en";
 
-/* ── Facebook feed panel ── */
+const loadFacebookSdk = () => {
+  if (!document.getElementById("fb-root")) {
+    const root = document.createElement("div");
+    root.id = "fb-root";
+    document.body.appendChild(root);
+  }
+  if (window.FB) {
+    window.FB.XFBML.parse();
+    return;
+  }
+  if (document.getElementById("facebook-jssdk")) return;
+  const script = document.createElement("script");
+  script.id = "facebook-jssdk";
+  script.src = "https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v19.0";
+  script.async = true;
+  script.defer = true;
+  script.crossOrigin = "anonymous";
+  document.body.appendChild(script);
+};
+
 const FacebookFeed = () => {
-  const containerRef = useRef(null);
-  const fbRef = useRef(null);
-  const [width, setWidth] = useState(360);
-
   useEffect(() => {
-    window.fbAsyncInit = () => {
-      window.FB.init({ xfbml: true, version: "v17.0" });
-    };
-    if (!document.getElementById("facebook-jssdk")) {
-      const s = document.createElement("script");
-      s.id = "facebook-jssdk";
-      s.src = "https://connect.facebook.net/en_US/sdk.js";
-      s.async = true;
-      s.defer = true;
-      document.body.appendChild(s);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const measure = () => {
-      const w = containerRef.current?.offsetWidth || 360;
-      setWidth(w);
-      const fbDiv = fbRef.current?.querySelector(".fb-page");
-      if (fbDiv) {
-        fbDiv.setAttribute("data-width", String(w));
-        if (window.FB) window.FB.XFBML.parse(fbRef.current);
-      }
-    };
-    const t = setTimeout(measure, 300);
-    const observer = new ResizeObserver(measure);
-    observer.observe(containerRef.current);
-    return () => { clearTimeout(t); observer.disconnect(); };
+    loadFacebookSdk();
   }, []);
 
   return (
-    <div className="sf-panel" ref={containerRef}>
+    <div className="sf-panel">
       <div className="sf-panel__header">
         <div className="sf-panel__brand">
           <div className="sf-panel__avatar">G</div>
@@ -59,25 +47,26 @@ const FacebookFeed = () => {
         </a>
       </div>
 
-      <div className="sf-panel__body sf-panel__body--fb" ref={fbRef}>
-        <div id="fb-root" />
+      <div className="sf-panel__body sf-panel__body--fb">
         <div
           className="fb-page"
           data-href={FB_PAGE_URL}
           data-tabs="timeline"
-          data-width={width}
           data-height="600"
           data-small-header="false"
           data-adapt-container-width="true"
           data-hide-cover="false"
           data-show-facepile="true"
-        />
+        >
+          <blockquote cite={FB_PAGE_URL} className="fb-xfbml-parse-ignore">
+            <a href={FB_PAGE_URL}>GoodSoles PH</a>
+          </blockquote>
+        </div>
       </div>
     </div>
   );
 };
 
-/* ── Instagram feed panel ── */
 const InstagramFeed = () => (
   <div className="sf-panel">
     <div className="sf-panel__header">
@@ -91,7 +80,7 @@ const InstagramFeed = () => (
         </div>
         <div>
           <div className="sf-panel__name">GoodSoles PH</div>
-          <div className="sf-panel__handle">@goodsolesphofficial</div>
+          <div className="sf-panel__handle">@goodsolesph</div>
         </div>
       </div>
       <a href={IG_PROFILE} target="_blank" rel="noopener noreferrer" className="sf-panel__badge sf-panel__badge--ig">
@@ -106,12 +95,12 @@ const InstagramFeed = () => (
 
     <div className="sf-panel__body sf-panel__body--ig">
       <iframe
-        src="https://www.instagram.com/goodsolesphofficial/embed"
+        src="https://www.instagram.com/goodsolesph/embed"
         title="GoodSoles PH Instagram"
         className="sf-panel__ig-iframe"
         frameBorder="0"
         scrolling="yes"
-        allowTransparency="true"
+        allowtransparency="true"
         allow="encrypted-media"
       />
       <div className="sf-panel__ig-footer">

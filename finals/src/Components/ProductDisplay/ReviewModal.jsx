@@ -2,12 +2,8 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import "./ReviewModal.css";
 import API_BASE_URL from "../../services/api";
 
-// ─── Profanity filter (lightweight, no API key needed) ────────────────────────
-// Install with: npm install bad-words
-// Falls back gracefully if the package is unavailable.
 let Filter;
 try {
-  // CJS / ESM dual-package: works with both import styles
   const badWords = require("bad-words");
   Filter = badWords.Filter || badWords.default || badWords;
 } catch {
@@ -16,23 +12,16 @@ try {
 
 const profanityFilter = Filter ? new Filter() : null;
 
-/**
- * Returns { clean, hasProfanity }
- * `clean`       – censored version of the text (bad words replaced with ***)
- * `hasProfanity`– true if at least one word was replaced
- */
 const checkAndClean = (text) => {
   if (!profanityFilter || !text) return { clean: text, hasProfanity: false };
   try {
     const clean = profanityFilter.clean(text);
     return { clean, hasProfanity: clean !== text };
   } catch {
-    // bad-words throws when the entire input is a bad word
     return { clean: "***", hasProfanity: true };
   }
 };
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
 const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = typeof open === "boolean";
@@ -48,7 +37,6 @@ const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // Profanity warning state
   const [profanityWarning, setProfanityWarning] = useState("");
 
   const [toasts, setToasts] = useState([]);
@@ -103,7 +91,6 @@ const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
     return () => window.removeEventListener("keydown", onKey);
   }, [isOpen, safeClose]);
 
-  // ── Review text change: live profanity check ──────────────────────────────
   const handleReviewChange = (e) => {
     const raw = e.target.value;
     setReview(raw);
@@ -125,7 +112,6 @@ const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
     }
   };
 
-  // ── Title change: live profanity check ───────────────────────────────────
   const handleTitleChange = (e) => {
     setTitle(e.target.value);
   };
@@ -142,7 +128,6 @@ const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
       return;
     }
 
-    // ── Sanitize before sending ───────────────────────────────────────────
     const { clean: cleanReview } = checkAndClean(review.trim());
     const { clean: cleanTitle }  = checkAndClean(title.trim());
 
@@ -153,7 +138,7 @@ const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
       const payload = {
         productId,
         rating,
-        review:    cleanReview,   // censored text sent to server
+        review:    cleanReview,
         title:     cleanTitle,
         fit,
         comfort,
@@ -296,7 +281,6 @@ const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                   <small>{review.length}/5000</small>
                 </div>
-                {/* Live profanity warning */}
                 {profanityWarning && (
                   <div className="profanity-warning">
                     {profanityWarning}
@@ -386,7 +370,6 @@ const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
                 </label>
               </div>
 
-              {/* Content policy notice */}
               <div className="review-policy-notice">
                 Reviews are automatically checked for inappropriate language. Offensive content will be censored or rejected.
               </div>

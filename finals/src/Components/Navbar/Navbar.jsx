@@ -47,14 +47,6 @@ const MoonIcon = () => (
   </svg>
 );
 
-const MonitorIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-    <line x1="8" y1="21" x2="16" y2="21"></line>
-    <line x1="12" y1="17" x2="12" y2="21"></line>
-  </svg>
-);
-
 const Navbar = () => {
   const { 
     getTotalCartItems, 
@@ -138,7 +130,6 @@ const Navbar = () => {
     }
   }, [path]);
 
-  // Close dropdowns on click outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (userDropdownRef.current && !userDropdownRef.current.contains(e.target)) setUserDropdownOpen(false);
@@ -215,6 +206,38 @@ const Navbar = () => {
     return sData?.price || p.new_price || p.price || 0;
   };
 
+  const handleDrawerCheckout = async () => {
+    const token = localStorage.getItem("auth-token");
+    if (!token) {
+      setCartDrawerOpen(false);
+      navigate("/place-order");
+      return;
+    }
+    try {
+      const items = cartItemsArray.map(([key, quantity]) => {
+        const [id, sizeToken] = key.split("_");
+        const size = sizeToken === "null" || sizeToken === "undefined" ? "" : sizeToken;
+        return { id: Number(id), size, quantity };
+      });
+      const res = await fetch(`${API_BASE_URL}/validate-cart`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "auth-token": token },
+        body: JSON.stringify({ items }),
+      });
+      const data = await res.json();
+      setCartDrawerOpen(false);
+      if (data.success && !data.allAvailable) {
+        navigate("/cart");
+        return;
+      }
+      navigate("/place-order");
+    } catch (err) {
+      console.error("Drawer checkout validation failed:", err);
+      setCartDrawerOpen(false);
+      navigate("/place-order");
+    }
+  };
+
   const clearCloseTimer = () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); };
   const startCloseTimer = () => {
     clearCloseTimer();
@@ -225,12 +248,14 @@ const Navbar = () => {
   const panelLabel = searchQuery.trim() ? "Search Results" : "Trending Now";
 
   const cartItemsArray = Object.entries(cartItems).filter(([_, q]) => q > 0);
-  // Helper to get lowest price for display in results
   const getProductDisplayPrice = (p) => {
     if (p.new_price) return p.new_price;
     if (p.price) return p.price;
     if (Array.isArray(p.sizes) && p.sizes.length > 0) {
       const prices = p.sizes.map(s => Number(s.price)).filter(pr => pr > 0);
+      if (prices.length > 0) return Math.min(...prices);
+    } else if (p.sizes && typeof p.sizes === "object") {
+      const prices = Object.values(p.sizes).map(s => Number(s?.price)).filter(pr => pr > 0);
       if (prices.length > 0) return Math.min(...prices);
     }
     return 0;
@@ -316,27 +341,21 @@ const Navbar = () => {
 
           <div className="theme-menu" ref={themeDropdownRef}>
             <button className="nav-theme-btn" onClick={() => setThemeDropdownOpen(!themeDropdownOpen)}>
-              {theme === 'light' ? <SunIcon /> : theme === 'dark' ? <MoonIcon /> : <MonitorIcon />}
+              {theme === 'light' ? <SunIcon /> : <MoonIcon />}
             </button>
             {themeDropdownOpen && (
               <div className="theme-dropdown">
-                <button 
-                  className={`theme-dropdown-item ${theme === 'light' ? 'active' : ''}`} 
+                <button
+                  className={`theme-dropdown-item ${theme === 'light' ? 'active' : ''}`}
                   onClick={() => { setTheme('light'); setThemeDropdownOpen(false); }}
                 >
                   <SunIcon /> LIGHT
                 </button>
-                <button 
-                  className={`theme-dropdown-item ${theme === 'dark' ? 'active' : ''}`} 
+                <button
+                  className={`theme-dropdown-item ${theme === 'dark' ? 'active' : ''}`}
                   onClick={() => { setTheme('dark'); setThemeDropdownOpen(false); }}
                 >
                   <MoonIcon /> DARK
-                </button>
-                <button 
-                  className={`theme-dropdown-item ${theme === 'system' ? 'active' : ''}`} 
-                  onClick={() => { setTheme('system'); setThemeDropdownOpen(false); }}
-                >
-                  <MonitorIcon /> SYSTEM
                 </button>
               </div>
             )}
@@ -352,9 +371,11 @@ const Navbar = () => {
                   <div className="user-dropdown-header">
                     <span className="user-dropdown-name">{userName}</span>
                   </div>
+                  <Link to="/profile" className="user-dropdown-item" onClick={() => setUserDropdownOpen(false)}>MY PROFILE</Link>
                   <Link to="/orderhistory" className="user-dropdown-item" onClick={() => setUserDropdownOpen(false)}>MY ORDERS</Link>
                   <Link to="/my-vouchers" className="user-dropdown-item" onClick={() => setUserDropdownOpen(false)}>MY VOUCHERS</Link>
                   <Link to="/favorites" className="user-dropdown-item" onClick={() => setUserDropdownOpen(false)}>FAVORITES</Link>
+                  <Link to="/my-reviews" className="user-dropdown-item" onClick={() => setUserDropdownOpen(false)}>MY REVIEWS</Link>
                   <Link to="/settings" className="user-dropdown-item" onClick={() => setUserDropdownOpen(false)}>ACCOUNT SETTINGS</Link>
                   <div className="user-dropdown-divider" />
                   <button className="user-dropdown-item logout" onClick={handleLogout}>LOGOUT</button>
@@ -372,7 +393,6 @@ const Navbar = () => {
         </div>
       </header>
 
-      {/* SEARCH OVERLAY */}
       <div className={`search-vault-overlay ${searchOpen ? "active" : ""}`}>
         <div className="vault-container">
           <div className="vault-header">
@@ -436,7 +456,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* CART DRAWER */}
       <div className={`cart-drawer-overlay ${cartDrawerOpen ? "open" : ""}`} onClick={() => setCartDrawerOpen(false)} />
       <div className={`cart-drawer ${cartDrawerOpen ? "open" : ""}`}>
         <div className="cart-drawer-header">
@@ -449,33 +468,46 @@ const Navbar = () => {
               <p>COMPLIMENTARY SHIPPING TO METRO MANILA · Rates vary by region at checkout</p>
             </div>
           )}
-          <div className="drawer-items">
-            {cartItemsArray.map(([key, qty]) => {
-              const [id, size] = key.split("_");
-              const p = all_product.find(x => x.id === Number(id));
-              const sz = size === "null" ? "" : size;
-              return (
-                <div key={key} className="drawer-item">
-                  <img src={p.image} alt={p.name} />
-                  <div className="drawer-item-info">
-                    <h4>{p.name}</h4>
-                    {sz && <p>Size: {sz}</p>}
-                    <div className="drawer-item-controls">
-                      <button onClick={() => removeFromCart(key)}>-</button>
-                      <span>{qty}</span>
-                      <button onClick={() => addToCart(p.id, sz || null)}>+</button>
-                      <span className="price">₱{(getSizePrice(p, sz) * qty).toLocaleString()}</span>
+          {cartItemsArray.length > 0 ? (
+            <div className="drawer-items">
+              {cartItemsArray.map(([key, qty]) => {
+                const [id, size] = key.split("_");
+                const p = all_product.find(x => x.id === Number(id));
+                if (!p) return null;
+                const sz = size === "null" ? "" : size;
+                return (
+                  <div key={key} className="drawer-item">
+                    <img src={p.image} alt={p.name} />
+                    <div className="drawer-item-info">
+                      <h4>{p.name}</h4>
+                      {sz && <p>Size: {sz}</p>}
+                      <div className="drawer-item-controls">
+                        <button onClick={() => removeFromCart(key)}>-</button>
+                        <span>{qty}</span>
+                        <button onClick={() => addToCart(p.id, sz || null)}>+</button>
+                        <span className="price">₱{(getSizePrice(p, sz) * qty).toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="drawer-empty">
+              <p>Your bag is empty</p>
+              <button className="drawer-shop-btn" onClick={() => { setCartDrawerOpen(false); navigate("/shoes"); }}>
+                SHOP NOW
+              </button>
+            </div>
+          )}
         </div>
         {cartItemsArray.length > 0 && (
           <div className="cart-drawer-footer">
             <div className="drawer-total"><span>Total</span><span>₱{calculateCartTotal().toLocaleString()}</span></div>
-            <button className="drawer-checkout-btn" onClick={() => { setCartDrawerOpen(false); navigate("/place-order"); }}>CHECKOUT</button>
+            <div className="drawer-footer-actions">
+              <button className="drawer-checkout-btn" onClick={handleDrawerCheckout}>CHECKOUT</button>
+              <button className="drawer-view-cart-btn" onClick={() => { setCartDrawerOpen(false); navigate("/cart"); }}>VIEW FULL BAG</button>
+            </div>
           </div>
         )}
       </div>

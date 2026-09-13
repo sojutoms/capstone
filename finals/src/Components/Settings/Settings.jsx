@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+﻿import React, { useEffect, useState, useRef, useCallback } from "react";
 import "./Settings.css";
 import API_BASE_URL from "../../services/api";
 
@@ -24,7 +24,6 @@ const EyeOffIcon = ({ size = 18 }) => (
   </svg>
 );
 
-/* ─── OTP boxes for password change verification ─────────────────────────── */
 const OtpInput = ({ value, length = 6, onChange, error }) => {
   const inputsRef = useRef([]);
 
@@ -103,36 +102,28 @@ const OtpInput = ({ value, length = 6, onChange, error }) => {
   );
 };
 
-/* ─── Main Component ─────────────────────────────────────────────────────── */
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("profile");
 
-  /* ── Profile state ── */
   const [profile, setProfile] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [originalProfile, setOriginalProfile] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [editing, setEditing] = useState(false);
 
-  /* ── Password state ── */
   const [passwords, setPasswords] = useState({ current: "", newPass: "", confirm: "" });
   const [pwdErrors, setPwdErrors] = useState({});
   const [showNewPwd, setShowNewPwd] = useState(false);
   const [showConfirmPwd, setShowConfirmPwd] = useState(false);
   const [showCurrentPwd, setShowCurrentPwd] = useState(false);
 
-  /* ── Password-change OTP flow ── */
-  // Steps: "form" → "otp" → done
-  const [pwdStep, setPwdStep] = useState("form"); // "form" | "otp"
+  const [pwdStep, setPwdStep] = useState("form");
   const [pwdOtp, setPwdOtp] = useState("");
   const [pwdOtpError, setPwdOtpError] = useState("");
   const [pwdOtpSending, setPwdOtpSending] = useState(false);
-  // store validated passwords while waiting for OTP
   const pendingPwdRef = useRef({ current: "", newPass: "" });
 
-  /* ── Shared ── */
   const [message, setMessage] = useState(null);
   const closeMsgRef = useRef(null);
 
-  /* ── Delete modal ── */
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -142,7 +133,6 @@ const Settings = () => {
     closeMsgRef.current = setTimeout(() => setMessage(null), 3500);
   }, []);
 
-  /* ── Fetch profile ── */
   const fetchProfile = useCallback(async () => {
     const token = localStorage.getItem("auth-token");
     if (!token) return;
@@ -172,7 +162,6 @@ const Settings = () => {
     return () => { if (closeMsgRef.current) clearTimeout(closeMsgRef.current); };
   }, [fetchProfile]);
 
-  /* ── Profile helpers ── */
   const handleCancel = () => { setProfile(originalProfile); setEditing(false); };
 
   const handleUpdate = async (e) => {
@@ -192,13 +181,11 @@ const Settings = () => {
     }
   };
 
-  /* ── Password helpers ── */
   const getPwdChecks = (pwd) => passwordRules.map((r) => ({ ...r, passed: r.test(pwd) }));
   const pwdChecks = getPwdChecks(passwords.newPass);
 
   const blockClipboard = (e) => e.preventDefault();
 
-  /* Step 1: validate fields, request OTP to be sent to user's email */
   const handleRequestPwdOtp = async (e) => {
     e.preventDefault();
     const errs = {};
@@ -216,7 +203,6 @@ const Settings = () => {
 
     const token = localStorage.getItem("auth-token");
     try {
-      // First verify the current password is correct before sending OTP
       const verifyRes = await fetch(`${API_BASE_URL}/user/verify-current-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "auth-token": token },
@@ -229,7 +215,6 @@ const Settings = () => {
         return;
       }
 
-      // Current password is correct — send OTP to email
       const otpRes = await fetch(`${API_BASE_URL}/user/send-change-password-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "auth-token": token },
@@ -251,7 +236,6 @@ const Settings = () => {
     }
   };
 
-  /* Step 2: verify OTP then change password */
   const handleVerifyPwdOtp = async () => {
     setPwdOtpError("");
     if (!/^\d{6}$/.test(pwdOtp)) { setPwdOtpError("Enter all 6 digits."); return; }
@@ -290,8 +274,7 @@ const Settings = () => {
     setPwdOtpError("");
   };
 
-  /* ── Name input sanitizer ── */
-  const sanitizeName = (v) => v.replace(/[^A-Za-z\s]/g, "");
+  const sanitizeName = (v) => v.replace(/[^\p{L}' -]/gu, "").slice(0, 54);
   const handleFirstNameChange = (e) => setProfile((p) => ({ ...p, firstName: sanitizeName(e.target.value) }));
   const handleLastNameChange = (e) => setProfile((p) => ({ ...p, lastName: sanitizeName(e.target.value) }));
   const handleNamePaste = (e, setter) => {
@@ -301,7 +284,6 @@ const Settings = () => {
     setter((p) => ({ ...p, [name]: sanitizeName(paste) }));
   };
 
-  /* ── Delete account ── */
   const deleteAccount = async () => {
     setDeleting(true);
     const token = localStorage.getItem("auth-token");
@@ -321,12 +303,10 @@ const Settings = () => {
     }
   };
 
-  /* ─── Render ─────────────────────────────────────────────────────────────── */
   return (
     <div className="settings-container">
       <div className="settings-glass-panel">
 
-        {/* SIDEBAR */}
         <aside className="settings-sidebar">
           <div className="sidebar-brand">
             <div className="brand-dot" />
@@ -344,11 +324,9 @@ const Settings = () => {
           </div>
         </aside>
 
-        {/* MAIN */}
         <main className="settings-main">
           {message && <div className={`floating-alert ${message.type}`}>{message.text}</div>}
 
-          {/* ── PROFILE TAB ── */}
           {activeTab === "profile" && (
             <div className="content-fade-in">
               <header className="section-header">
@@ -360,7 +338,6 @@ const Settings = () => {
               </header>
 
               <form className="innovative-form" onSubmit={handleUpdate}>
-                {/* Name row */}
                 <div className="row-flex" style={{ display: "flex", gap: 20 }}>
                   <div className="input-group" style={{ flex: 1 }}>
                     <label>First Name</label>
@@ -390,11 +367,10 @@ const Settings = () => {
                   </div>
                 </div>
 
-                {/* Email — always locked/read-only */}
                 <div className="input-group">
                   <label>
                     Contact Email
-                    <span className="field-locked-badge"></span>
+                    <span className="field-locked-badge">Locked</span>
                   </label>
                   <input
                     value={profile.email}
@@ -405,7 +381,6 @@ const Settings = () => {
                   />
                 </div>
 
-                {/* Phone number */}
                 <div className="input-group">
                   <label>Phone Number</label>
                   <input
@@ -439,17 +414,14 @@ const Settings = () => {
             </div>
           )}
 
-          {/* ── SECURITY TAB ── */}
           {activeTab === "security" && (
             <div className="content-fade-in">
               <header className="section-header">
                 <h2>Password Settings</h2>
               </header>
 
-              {/* ── Step 1: password form ── */}
               {pwdStep === "form" && (
                 <form className="innovative-form" onSubmit={handleRequestPwdOtp}>
-                  {/* Current Password */}
                   <div className="input-group">
                     <label>Current Password</label>
                     <div className="pwd-input-wrapper">
@@ -469,7 +441,6 @@ const Settings = () => {
                     {pwdErrors.current && <span className="field-error">{pwdErrors.current}</span>}
                   </div>
 
-                  {/* New Password */}
                   <div className="input-group">
                     <label>New Password</label>
                     <div className="pwd-input-wrapper">
@@ -499,7 +470,6 @@ const Settings = () => {
                     )}
                   </div>
 
-                  {/* Confirm Password */}
                   <div className="input-group">
                     <label>Confirm New Password</label>
                     <div className="pwd-input-wrapper">
@@ -525,7 +495,6 @@ const Settings = () => {
                 </form>
               )}
 
-              {/* ── Step 2: OTP verification ── */}
               {pwdStep === "otp" && (
                 <div className="innovative-form">
                   <div className="otp-verify-block">
@@ -546,7 +515,6 @@ const Settings = () => {
             </div>
           )}
 
-          {/* ── DANGER TAB ── */}
           {activeTab === "danger" && (
             <div className="content-fade-in">
               <header className="section-header">
@@ -561,7 +529,6 @@ const Settings = () => {
         </main>
       </div>
 
-      {/* Delete confirmation modal */}
       {showDeleteModal && (
         <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
           <div className="modal-card">

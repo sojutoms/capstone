@@ -30,18 +30,6 @@ const daysElapsed = (isoTimestamp, days) => {
   return Date.now() - new Date(isoTimestamp).getTime() >= ms;
 };
 
-// const timeUntilAutoComplete = (deliveredAt) => {
-//   if (!deliveredAt) return null;
-//   const deadline =
-//     new Date(deliveredAt).getTime() +
-//     DELIVERED_AUTO_COMPLETE_DAYS * 24 * 60 * 60 * 1000;
-//   const diffMs = deadline - Date.now();
-//   if (diffMs <= 0) return null;
-//   const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-//   if (diffHrs < 24) return `${diffHrs}h`;
-//   return `${Math.ceil(diffHrs / 24)}d`;
-// };
-
 const STATUS_DISPLAY_LABELS = {
   pending: "Pending",
   confirmed: "Confirmed",
@@ -54,29 +42,6 @@ const STATUS_DISPLAY_LABELS = {
   refund_rejected: "Refund Rejected",
   refunded: "Refunded",
 };
-
-// const RiderCard = ({ rider }) => {
-//   if (!rider || !rider.name) return null;
-//   return (
-//     <div className="rider-card">
-//       <span className="rider-card__title">YOUR RIDER IS EN ROUTE</span>
-//       <div className="rider-card__body">
-//         <div className="rider-card__field">
-//           <span className="rider-card__label">NAME:</span>
-//           <span className="rider-card__value">{rider.name}</span>
-//         </div>
-//         <div className="rider-card__field">
-//           <span className="rider-card__label">PLATE:</span>
-//           <span className="rider-card__value">{rider.plate}</span>
-//         </div>
-//         <div className="rider-card__field">
-//           <span className="rider-card__label">PHONE:</span>
-//           <a className="rider-card__phone" href={`tel:${rider.phone}`}>{rider.phone}</a>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
 
 const DigitalCertificate = ({ order, onClose }) => {
   if (!order) return null;
@@ -259,8 +224,6 @@ const OrderHistory = () => {
       }
     } catch (err) {
       addToast("error", "Failed to confirm receipt.");
-    } finally {
-      // Done
     }
   };
 
@@ -384,8 +347,8 @@ const OrderHistory = () => {
         addToast("success", "Order cancelled.");
         fetchOrders(currentPage);
       }
-    } finally {
-      // Done
+    } catch (err) {
+      addToast("error", "Failed to cancel order.");
     }
   };
 

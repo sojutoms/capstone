@@ -84,8 +84,6 @@ const Favorites = () => {
 
   const totalPages = Math.max(1, Math.ceil(favoriteProducts.length / ITEMS_PER_PAGE));
 
-  // Clamp back to a valid page if items were removed (e.g. unfavorited)
-  // while on a later page that no longer exists.
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [currentPage, totalPages]);
@@ -113,7 +111,6 @@ const Favorites = () => {
   return (
     <div className="favorites-page">
       <div className="favorites-container">
-        {/* Header */}
         <div className="favorites-header">
           <div>
             <h1 className="favorites-title">My Favorites</h1>
@@ -128,7 +125,6 @@ const Favorites = () => {
           )}
         </div>
 
-        {/* Empty State */}
         {favoriteProducts.length === 0 ? (
           <div className="favorites-empty">
             <div className="empty-icon">
@@ -146,7 +142,6 @@ const Favorites = () => {
           </div>
         ) : (
           <>
-            {/* Products Grid */}
             <div className="favorites-grid">
               {pageProducts.map((item) => {
                 const numericPrice = resolveBestPrice(item);
@@ -162,8 +157,6 @@ const Favorites = () => {
                     old_price={item.old_price}
                     isNew={item.isNew}
                     salesCount={item.salesCount || 0}
-                    // Optionally pass formatted price if Item expects a string:
-                    // formattedPrice={Number.isFinite(numericPrice) ? `₱${formatPrice(numericPrice)}` : null}
                   />
                 );
               })}
@@ -179,7 +172,6 @@ const Favorites = () => {
           </>
         )}
 
-        {/* Info Section */}
         {favorites.length > 0 && (
           <div className="favorites-info">
             <div className="info-card">

@@ -10,8 +10,6 @@ const Footer = () => {
     return (
         <footer className="footer">
             <div className="footer-master-grid">
-
-                {/* ── Brand ── */}
                 <div className="footer-cell brand-cell">
                     <img src={footer_logo} alt="GoodSoles PH" className="footer-logo" />
                     <p className="footer-description">
@@ -19,37 +17,6 @@ const Footer = () => {
                         Authentic. Always. Based in the Philippines.
                     </p>
                 </div>
-
-                {/* ── Newsletter ── */}
-                <div className="footer-cell newsletter-cell">
-                    <h3>Join the Collective</h3>
-                    <p>Gain priority access to limited drops, curated collections, and private events.</p>
-                    <div className="newsletter-form">
-                        <input
-                            type="email"
-                            placeholder="Priority Email"
-                            className="newsletter-input"
-                        />
-                        <button className="newsletter-button">Register</button>
-                    </div>
-                    
-                    <div className="footer-complimentary-services">
-                        <div className="service-item">
-                            <span className="service-icon">✦</span>
-                            <span className="service-text">AUTHENTICITY CERTIFIED</span>
-                        </div>
-                        <div className="service-item">
-                            <span className="service-icon">✦</span>
-                            <span className="service-text">SECURE TRANSACTIONS</span>
-                        </div>
-                        <div className="service-item">
-                            <span className="service-icon">✦</span>
-                            <span className="service-text">EXPERT CURATION</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── Quick Links ── */}
                 <div className="footer-cell">
                     <h3>Quick Links</h3>
                     <ul className="footer-links-grid">
@@ -58,7 +25,6 @@ const Footer = () => {
                     </ul>
                 </div>
 
-                {/* ── Service ── */}
                 <div className="footer-cell">
                     <h3>Service</h3>
                     <ul className="footer-links-grid">
@@ -69,8 +35,6 @@ const Footer = () => {
                         <li><Link to="/track-order">Track Order</Link></li>
                     </ul>
                 </div>
-
-                {/* ── Comms & Socials ── */}
                 <div className="footer-cell comms-cell">
                     <h3>Comms Link</h3>
                     <div className="footer-contact-info">
@@ -79,7 +43,7 @@ const Footer = () => {
                         <p><strong>H:</strong> Mon–Sun 10:00 AM – 9:00 PM</p>
                     </div>
                     <div className="footer-social-icon">
-                        <a href="https://www.instagram.com/goodsolesphofficial/" target="_blank" rel="noreferrer" aria-label="Instagram">
+                        <a href="https://www.instagram.com/goodsolesph/?hl=en" target="_blank" rel="noreferrer" aria-label="Instagram">
                             <img src={instagram_icon} alt="Instagram" />
                         </a>
                         <a href="https://www.facebook.com/goodsoles.ph/" target="_blank" rel="noreferrer" aria-label="Facebook">
@@ -90,10 +54,7 @@ const Footer = () => {
                         </a>
                     </div>
                 </div>
-
             </div>
-
-            {/* ── Bottom legal bar ── */}
             <div className="footer-bottom-wrapper">
                 <div className="footer-bottom">
                     <div className="footer-legal">

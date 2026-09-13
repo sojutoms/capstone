@@ -1,7 +1,4 @@
-/* ==========================================
-   REVIEW MODAL — LUXE BOUTIQUE THEME
-========================================== */
-
+﻿
 .review-modal-overlay {
   position: fixed;
   top: 0;
@@ -13,7 +10,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Must be higher than Navbar (9999) */
   z-index: 10005;
   padding: 40px 20px;
 }
@@ -37,7 +33,6 @@
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* ── Header ── */
 .review-modal-header {
   padding: 36px 48px 24px;
   background: #0f0f0f;
@@ -88,7 +83,6 @@
   transform: rotate(90deg);
 }
 
-/* ── Product Strip ── */
 .review-product-info {
   display: flex;
   align-items: center;
@@ -112,7 +106,6 @@
   color: #fff;
 }
 
-/* ── Form ── */
 .review-form {
   padding: 40px 48px;
 }
@@ -166,7 +159,6 @@
   font-weight: 500;
 }
 
-/* ── Stars ── */
 .star-rating {
   display: flex;
   gap: 16px;
@@ -191,7 +183,6 @@
   transform: scale(1.2);
 }
 
-/* ── Luxe Radios ── */
 .radio-group {
   display: flex;
   flex-direction: column;
@@ -242,7 +233,6 @@
   box-shadow: 0 0 10px #fff;
 }
 
-/* ── Agreement ── */
 .agreement {
   margin-top: 48px;
   padding: 24px;
@@ -280,7 +270,17 @@
   border-color: #fff;
 }
 
-/* ── Policy Notice ── */
+.profanity-warning {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  color: #f59e0b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .review-policy-notice {
   padding: 20px 48px;
   color: #555;
@@ -291,7 +291,6 @@
   line-height: 1.5;
 }
 
-/* ── Footer ── */
 .button-row {
   padding: 0 48px 48px;
   display: flex;
@@ -340,7 +339,142 @@
   cursor: not-allowed;
 }
 
-/* ── Scrollbar ── */
+.review-success-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+  text-align: center;
+  gap: 12px;
+  animation: fadeUp 0.3s ease both;
+}
+
+.review-success-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #f0fdf4;
+  border: 2px solid #86efac;
+  color: #16a34a;
+  font-size: 26px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.review-success-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.review-success-body {
+  font-size: 14px;
+  color: #aaa;
+  line-height: 1.6;
+  max-width: 320px;
+}
+
+.review-success-body strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.review-success-closing {
+  font-size: 12px;
+  color: #666;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.toast-container {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 11000;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-width: 300px;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  padding: 9px 11px;
+  border-radius: 7px;
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.3);
+  background-color: #1a1a1a;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  animation: toast-slide-in 200ms ease;
+}
+
+.toast.success {
+  background-color: #ecfdf5;
+  border-color: #34d399;
+  color: #065f46;
+}
+
+.toast.error {
+  background-color: #fff1f2;
+  border-color: #f87171;
+  color: #7f1d1d;
+}
+
+.toast-message {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  line-height: 1.2;
+}
+
+.toast-close {
+  background: transparent;
+  border: none;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+  padding: 2px;
+  border-radius: 4px;
+  transition: background 100ms ease;
+  flex-shrink: 0;
+}
+
+.toast-close:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+@keyframes toast-slide-in {
+  from {
+    transform: translateY(-5px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .review-modal::-webkit-scrollbar {
   width: 6px;
 }

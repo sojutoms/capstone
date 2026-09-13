@@ -1,25 +1,26 @@
-import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useContext, useEffect, useState } from "react";
 import "./RecentlyViewed.css";
 import Item from "../Item/Item";
+import { ShopContext } from "../../Context/ShopContext";
 
 const RecentlyViewed = ({ currentProductId }) => {
+  const { all_product } = useContext(ShopContext);
   const [recentProducts, setRecentProducts] = useState([]);
 
   useEffect(() => {
-    // Get existing recently viewed from localStorage
     const stored = localStorage.getItem("recentlyViewed");
     let viewedList = stored ? JSON.parse(stored) : [];
 
-    // Filter out current product if it's already there
     if (currentProductId) {
       viewedList = viewedList.filter(p => p.id !== currentProductId);
-      // Add current product to the front (we'll fetch its full data from the main list if needed, 
-      // but usually we store a minimal version)
     }
 
-    setRecentProducts(viewedList.slice(0, 4));
-  }, [currentProductId]);
+    const fresh = viewedList
+      .map((entry) => all_product.find((p) => p.id === entry.id && !p.isDeleted))
+      .filter(Boolean);
+
+    setRecentProducts(fresh.slice(0, 4));
+  }, [currentProductId, all_product]);
 
   if (recentProducts.length === 0) return null;
 
@@ -32,7 +33,7 @@ const RecentlyViewed = ({ currentProductId }) => {
       </div>
       <div className="recently-viewed-grid">
         {recentProducts.map((item) => (
-          <Item 
+          <Item
             key={item.id}
             id={item.id}
             name={item.name}
@@ -40,6 +41,9 @@ const RecentlyViewed = ({ currentProductId }) => {
             new_price={item.new_price}
             price={item.price}
             sizes={item.sizes}
+            isNew={item.isNew}
+            isJustIn={item.isJustIn}
+            isTopSellerInBrand={item.isTopSellerInBrand}
           />
         ))}
       </div>

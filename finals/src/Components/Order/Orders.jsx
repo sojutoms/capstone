@@ -13,8 +13,6 @@ const Orders = () => {
   const redirectOrderNumber = searchParams.get('orderNumber');
   const paymentStatusParam = searchParams.get('paymentStatus');
 
-  // PayMongo's hosted checkout redirects back via a plain URL (success_url),
-  // so there's no React Router state to read — the order has to be fetched.
   const needsFetch = Boolean(redirectOrderNumber) && !stateData.purchasedItems;
 
   const [fetchedOrder, setFetchedOrder] = useState(null);
@@ -49,7 +47,6 @@ const Orders = () => {
   const formatPrice = (val) =>
     Number(val).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  // ── Normalize into one shape regardless of source (navigate-state vs fetched order) ──
   const orderNumber        = fetchedOrder?.orderNumber || stateData.orderNumber || 'N/A';
   const purchasedItems     = fetchedOrder?.items || stateData.purchasedItems || [];
   const discountAmount     = Number(fetchedOrder?.discountAmount ?? stateData.discountAmount ?? 0);
@@ -163,7 +160,6 @@ const Orders = () => {
             </div>
           )}
 
-          {/* ── Order totals ── */}
           <div className="receipt-totals">
 
             <div className="receipt-totals-row">
@@ -171,7 +167,6 @@ const Orders = () => {
               <span>₱{formatPrice(subtotal)}</span>
             </div>
 
-            {/* Shipping fee row */}
             <div className="receipt-totals-row">
               <span>
                 Delivery / Shipping
@@ -186,7 +181,6 @@ const Orders = () => {
               )}
             </div>
 
-            {/* COD fee row */}
             {isCod && cod > 0 && (
               <div className="receipt-totals-row">
                 <span>
@@ -199,7 +193,6 @@ const Orders = () => {
               </div>
             )}
 
-            {/* Voucher discount row */}
             {voucherCode && discount > 0 && (
               <div className="receipt-totals-row receipt-totals-row--discount">
                 <span>

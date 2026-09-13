@@ -1,6 +1,3 @@
-/* ==========================================================================
-   MY VOUCHERS - Luxury Rewards Dashboard
-   ========================================================================== */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 .my-vouchers-container {
@@ -17,7 +14,6 @@
   margin: 0 auto;
 }
 
-/* ── Points Section ── */
 .points-dashboard {
   background: var(--glass-bg);
   backdrop-filter: blur(20px);
@@ -135,7 +131,6 @@
   display: block;
 }
 
-/* ── Voucher Tabs ── */
 .voucher-tabs {
   display: flex;
   gap: 40px;
@@ -170,7 +165,6 @@
   background: var(--text-primary);
 }
 
-/* ── Voucher Cards ── */
 .vouchers-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));

@@ -31,7 +31,6 @@ export const FavoritesProvider = ({ children }) => {
     if (!token) return { success: false, error: "no-token" };
     const idStr = String(productId);
 
-    // Optimistic update
     setFavorites((prev) => (prev.includes(idStr) ? prev : [...prev, idStr]));
 
     try {
@@ -45,13 +44,11 @@ export const FavoritesProvider = ({ children }) => {
         setFavorites(normalize(data.favorites || []));
         return { success: true };
       } else {
-        // Revert optimistic update
         setFavorites((prev) => prev.filter((id) => id !== idStr));
         console.warn("addToFavorites failed:", data);
         return { success: false, error: data?.message || "server-failed", payload: data };
       }
     } catch (err) {
-      // Revert optimistic update
       setFavorites((prev) => prev.filter((id) => id !== idStr));
       console.error("Failed to add favorite", err);
       return { success: false, error: err.message || "network-error" };
@@ -63,7 +60,6 @@ export const FavoritesProvider = ({ children }) => {
     if (!token) return { success: false, error: "no-token" };
     const idStr = String(productId);
 
-    // Optimistic update: remove locally first
     const previous = favorites;
     setFavorites((prev) => prev.filter((id) => id !== idStr));
 
@@ -78,13 +74,11 @@ export const FavoritesProvider = ({ children }) => {
         setFavorites(normalize(data.favorites || []));
         return { success: true };
       } else {
-        // Revert optimistic update
         setFavorites(normalize(previous || []));
         console.warn("removeFromFavorites failed:", data);
         return { success: false, error: data?.message || "server-failed", payload: data };
       }
     } catch (err) {
-      // Revert optimistic update
       setFavorites(normalize(previous || []));
       console.error("Failed to remove favorite", err);
       return { success: false, error: err.message || "network-error" };
@@ -123,8 +117,6 @@ export const FavoritesProvider = ({ children }) => {
 
   useEffect(() => {
     loadFavorites();
-    window.addEventListener("auth-token-changed", loadFavorites);
-    return () => window.removeEventListener("auth-token-changed", loadFavorites);
   }, [loadFavorites]);
 
   return (

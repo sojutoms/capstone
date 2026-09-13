@@ -1,6 +1,3 @@
-/* ============================================
-   NAVBAR - Premium Glassmorphism
-   ============================================ */
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 :root {
@@ -8,20 +5,14 @@
   --dropdown-bg: var(--bg-secondary);
   --nav-text: var(--text-primary);
   --nav-text-muted: var(--text-secondary);
-  --text-white: var(--text-primary); /* Keeping for legacy compatibility */
-  --text-black: var(--text-inverse);
   --muted: var(--text-muted);
   --border-color: var(--border-subtle);
-  --glass-bg: var(--glass-bg);
-  --glass-border: var(--glass-border);
   --gold: var(--accent-gold);
   --gold-light: var(--accent-gold-light);
   --nav-font: 'Outfit', sans-serif;
   --nav-display: 'Bebas Neue', sans-serif;
-  --nav-max-w: 1800px;
 }
 
-/* ─── Theme Switcher ────────────────────────────────────────────────── */
 .theme-menu {
   position: relative;
   z-index: 1200;
@@ -118,7 +109,6 @@
   padding: 0;
 }
 
-/* ─── Glassmorphism Navbar ──────────────────────────────────────────── */
 header.navbar {
   position: fixed;
   top: 0;
@@ -179,8 +169,6 @@ header.navbar.is-scrolled::before {
   box-shadow: var(--shadow-lg);
 }
 
-
-/* ─── Logo ──────────────────────────────────────────────────────────── */
 .nav-left {
   flex: 1;
   display: flex;
@@ -210,10 +198,9 @@ header.navbar.is-scrolled::before {
   filter: var(--logo-filter);
 }
 
-/* Text-based logo */
 .nav-logo-text {
   font-family: var(--nav-display);
-  font-size: 22px; /* Slightly larger */
+  font-size: 22px;
   font-weight: 400;
   letter-spacing: 0.18em;
   color: var(--text-white);
@@ -238,7 +225,7 @@ header.navbar.is-scrolled::before {
   cursor: pointer;
   z-index: 10001;
   position: relative;
-  overflow: visible; /* Ensure X shows fully */
+  overflow: visible;
   transition: all 0.3s ease;
 }
 
@@ -256,10 +243,9 @@ header.navbar.is-scrolled::before {
   border-radius: 4px;
   position: relative;
   transform-origin: center;
-  margin: 4px auto; /* Centered in container */
+  margin: 4px auto;
 }
 
-/* X Animation when active */
 .mobile-menu-active .nav-toggle span:nth-child(1) {
   transform: translateY(10px) rotate(45deg);
 }
@@ -289,7 +275,6 @@ header.navbar.is-scrolled::before {
   background: var(--gold);
 }
 
-/* ─── Navigation Center ────────────────────────────────────────────── */
 .nav-center {
   display: flex;
   justify-content: center;
@@ -334,7 +319,6 @@ header.navbar.is-scrolled::before {
   color: var(--gold);
 }
 
-/* ─── Nav Menu ──────────────────────────────────────────────────────── */
 .nav-menu {
   list-style: none;
   display: flex;
@@ -395,7 +379,6 @@ header.navbar.is-scrolled::before {
   transform: translateX(-50%) scaleX(1);
 }
 
-/* ─── Mega Dropdown ─────────────────────────────────────────────────── */
 .has-mega .mega-dropdown {
   position: absolute;
   top: 100%;
@@ -499,7 +482,6 @@ header.navbar.is-scrolled::before {
   transform: translateY(-50%) scaleY(1);
 }
 
-/* ─── Right Section ─────────────────────────────────────────────────── */
 .nav-right {
   display: flex;
   align-items: center;
@@ -511,7 +493,6 @@ header.navbar.is-scrolled::before {
   justify-content: flex-end;
 }
 
-/* ─── Search ────────────────────────────────────────────────────────── */
 .nav-search-wrap {
   position: relative;
   display: flex;
@@ -574,7 +555,6 @@ header.navbar.is-scrolled::before {
   }
 }
 
-/* Hide main navbar logo and icons when search overlay is open */
 header.navbar.search-active .nav-left,
 header.navbar.search-active .nav-toggle,
 header.navbar.search-active .nav-center,
@@ -584,14 +564,12 @@ header.navbar.search-active .nav-right {
   pointer-events: none;
 }
 
-/* Only show nav-search-logo on mobile (desktop keeps it hidden, main logo handles it) */
 @media (min-width: 801px) {
   .nav-search-logo {
     display: none;
   }
 }
 
-/* Nike-style search input row: [Logo] [Search Field] [Cancel] */
 .nav-search-input-row {
   display: flex;
   align-items: center;
@@ -601,7 +579,6 @@ header.navbar.search-active .nav-right {
   width: 100%;
 }
 
-/* Logo inside the search bar */
 .nav-search-logo {
   flex-shrink: 0;
   display: flex;
@@ -618,7 +595,6 @@ header.navbar.search-active .nav-right {
   font-size: 16px;
 }
 
-/* Glass pill search field */
 .nav-search-field {
   flex: 1;
   display: flex;
@@ -922,7 +898,6 @@ header.navbar.search-active .nav-right {
   color: var(--text-white);
 }
 
-/* ─── Login Button ──────────────────────────────────────────────────── */
 .nav-login-btn {
   background: var(--glass-bg);
   color: var(--text-primary);
@@ -952,89 +927,6 @@ header.navbar.search-active .nav-right {
   box-shadow: var(--shadow-md);
 }
 
-/* ─── User Dropdown ─────────────────────────────────────────────────── */
-.user-menu {
-  position: relative;
-}
-
-.user-dropdown {
-  position: absolute;
-  top: calc(100% + 14px);
-  right: 0;
-  background: var(--dropdown-bg);
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border: 1px solid var(--border-subtle);
-  border-radius: 14px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-  min-width: 200px;
-  z-index: 999;
-  overflow: hidden;
-  animation: dropdownFadeIn 0.25s ease both;
-}
-
-@keyframes dropdownFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.user-dropdown-header {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: var(--glass-bg);
-}
-
-.user-dropdown-name {
-  font-family: var(--nav-display);
-  font-weight: 400;
-  color: var(--gold);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-}
-
-.user-dropdown-item {
-  display: block;
-  padding: 12px 18px;
-  font-family: var(--nav-font);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-primary);
-  text-decoration: none;
-  text-transform: uppercase;
-  letter-spacing: 0.08px;
-  background: none;
-  border: none;
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.user-dropdown-item:hover {
-  background: var(--glass-bg);
-  color: var(--gold);
-  padding-left: 24px;
-}
-
-.user-dropdown-item.logout:hover {
-  color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.08);
-}
-
-.user-dropdown-divider {
-  height: 1px;
-  background: var(--border-subtle);
-  margin: 4px 12px;
-}
-
-/* ─── Cart ──────────────────────────────────────────────────────────── */
 .nav-cart-wrapper {
   position: relative;
   display: flex;
@@ -1081,8 +973,6 @@ header.navbar.search-active .nav-right {
   pointer-events: none;
 }
 
-/* ─── Responsive: Tablet ────────────────────────────────────────────── */
-/* ─── Visibility Utilities ─── */
 .desktop-only { display: flex; }
 .mobile-only { display: none; }
 
@@ -1091,7 +981,6 @@ header.navbar.search-active .nav-right {
   .mobile-only { display: flex; }
 }
 
-/* ─── Responsive: Tablet ────────────────────────────────────────────── */
 @media (max-width: 1200px) {
   header.navbar {
     padding: 8px 24px;
@@ -1108,7 +997,6 @@ header.navbar.search-active .nav-right {
   }
 }
 
-/* ─── Responsive: Mobile ─────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   header.navbar {
     display: grid !important;
@@ -1129,7 +1017,6 @@ header.navbar.search-active .nav-right {
     border-bottom: 1px solid var(--border-color);
   }
 
-  /* Hamburger Toggle on the Left */
   .nav-toggle {
     display: flex !important;
     flex-direction: column;
@@ -1150,7 +1037,6 @@ header.navbar.search-active .nav-right {
     display: none;
   }
 
-  /* Centered Brand */
   .nav-brand-mobile {
     display: flex;
     justify-content: center;
@@ -1167,7 +1053,6 @@ header.navbar.search-active .nav-right {
     white-space: nowrap;
   }
 
-  /* Hide brand completely on mobile menu open to clear the stage */
   .mobile-menu-active .nav-brand-mobile {
     opacity: 0;
     pointer-events: none;
@@ -1182,7 +1067,6 @@ header.navbar.search-active .nav-right {
     justify-self: end;
   }
 
-  /* Mobile Drawer Menu */
   .nav-center {
     position: fixed;
     top: 0;
@@ -1242,7 +1126,7 @@ header.navbar.search-active .nav-right {
   }
 
   .nav-link::after {
-    display: none; /* Hide desktop underline on mobile */
+    display: none;
   }
 
   .nav-link:hover, .nav-link.active {
@@ -1250,7 +1134,6 @@ header.navbar.search-active .nav-right {
     background: transparent !important;
   }
 
-  /* Reveal Dropdown Toggle on Mobile */
   .nav-dropdown-toggle {
     position: absolute;
     right: 0;
@@ -1279,14 +1162,13 @@ header.navbar.search-active .nav-right {
     color: var(--gold);
   }
 
-  /* Mobile Submenu Styles */
   .has-mega .mega-dropdown {
     position: relative !important;
     top: 0 !important;
     left: 0 !important;
     transform: none !important;
     width: 100% !important;
-    flex: 0 0 100%; /* Force to own row below the link */
+    flex: 0 0 100%;
     background: rgba(255, 255, 255, 0.02) !important;
     padding: 0 0 16px 24px !important;
     border: none !important;
@@ -1308,7 +1190,6 @@ header.navbar.search-active .nav-right {
     opacity: 1 !important;
   }
 
-  /* Reset mobile link background and borders from desktop */
   .nav-link {
     border: none !important;
     background: transparent !important;
@@ -1320,7 +1201,7 @@ header.navbar.search-active .nav-right {
   }
 
   .mega-col h4 {
-    display: none; /* Hide 'BRANDS' title on mobile */
+    display: none;
   }
 
   .mega-col ul li a {
@@ -1335,7 +1216,7 @@ header.navbar.search-active .nav-right {
   }
 
   .mega-col ul li a::after {
-    display: none !important; /* Force hide any lines */
+    display: none !important;
   }
 }
 
@@ -1355,7 +1236,6 @@ header.navbar.search-active .nav-right {
   }
 }
 
-/* ── CART DRAWER ── */
 .cart-drawer-overlay {
   position: fixed;
   top: 0;
@@ -1441,24 +1321,11 @@ header.navbar.search-active .nav-right {
   flex: 1;
   overflow-y: auto;
   padding: 2rem;
-  scrollbar-width: none; /* Hide scrollbar for clean look */
+  scrollbar-width: none;
 }
 
 .cart-drawer-content::-webkit-scrollbar {
   display: none;
-}
-
-.drawer-items {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.drawer-item {
-  display: grid;
-  grid-template-columns: 100px 1fr auto;
-  gap: 1.5rem;
-  align-items: center;
 }
 
 .drawer-item img {
@@ -1470,41 +1337,6 @@ header.navbar.search-active .nav-right {
   border-radius: 12px;
 }
 
-
-.drawer-shipping-promo {
-  padding: 1.5rem 1.5rem 1rem;
-  background: var(--bg-elevated);
-  border-bottom: 1px solid var(--glass-border);
-}
-
-.shipping-promo-text {
-  font-size: 0.85rem;
-  color: var(--text-primary);
-  margin-bottom: 0.8rem;
-  font-family: 'Outfit', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.shipping-promo-text strong {
-  color: var(--accent-gold);
-}
-
-.shipping-progress-bg {
-  height: 4px;
-  background: var(--border-subtle);
-  border-radius: 10px;
-  overflow: hidden;
-  position: relative;
-}
-
-.shipping-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent-gold), var(--text-primary));
-  border-radius: 10px;
-  transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
-}
 
 .drawer-items {
   padding: 1rem 1.5rem;
@@ -1673,53 +1505,26 @@ header.navbar.search-active .nav-right {
   gap: 1rem;
 }
 
-.drawer-checkout-btn {
-  background: var(--white);
-  color: var(--black);
-  border: 1px solid var(--white);
-  padding: 1.1rem;
+.drawer-view-cart-btn {
+  width: 100%;
+  margin-top: 10px;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+  padding: 18px;
+  border-radius: 12px;
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.3s ease;
-  width: 100%;
-  border-radius: 9999px;
 }
 
-.drawer-checkout-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(255, 255, 255, 0.4);
-}
-
-.drawer-view-cart {
-  background: transparent;
-  border: 1px solid var(--glass-border);
-  color: var(--text-primary);
-  padding: 1rem;
-  font-family: var(--font-display);
-  font-size: 0.85rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  width: 100%;
-  border-radius: 9999px;
-  margin-top: 0.5rem;
-}
-
-.drawer-view-cart:hover {
-  background: var(--glass-bg-hover);
+.drawer-view-cart-btn:hover {
   border-color: var(--accent-gold);
-}
-
-
-
-.drawer-view-cart:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: #fff;
+  color: var(--accent-gold);
 }
 
 .drawer-empty {
@@ -1737,7 +1542,7 @@ header.navbar.search-active .nav-right {
   font-size: 1.2rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #888;
+  color: var(--text-secondary);
 }
 
 .drawer-shop-btn {
@@ -1759,8 +1564,6 @@ header.navbar.search-active .nav-right {
   transform: translateY(-2px);
 }
 
-
-/* Responsiveness */
 @media (max-width: 600px) {
   .cart-drawer {
     width: 100%;
@@ -1848,7 +1651,6 @@ header.navbar.search-active .nav-right {
   }
 }
 
-/* ─── Search Vault Overlay ───────────────────────────────────────── */
 .search-vault-overlay {
   position: fixed;
   top: 0;
@@ -2090,7 +1892,6 @@ header.navbar.search-active .nav-right .nav-auth-cart {
   }
 }
 
-/* ── Cart Drawer Shipping Promo ─────────────────────────────────────── */
 .drawer-shipping-promo {
   padding: 20px;
   background: rgba(255, 255, 255, 0.03);
@@ -2122,10 +1923,6 @@ header.navbar.search-active .nav-right .nav-auth-cart {
   box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
 }
 
-/* Actions removed */
-
-
-
 .drawer-checkout-btn {
   width: 100%;
   margin-top: 15px;
@@ -2148,13 +1945,10 @@ header.navbar.search-active .nav-right .nav-auth-cart {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
 }
 
-/* ─── User Menu & Dropdown ─────────────────────────────────────────── */
 .user-menu {
   position: relative;
   z-index: 1000;
 }
-
-/* Duplicate definition removed */
 
 .user-dropdown {
   position: absolute;

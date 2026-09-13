@@ -17,11 +17,10 @@ const RefundModal = ({ order, open, onClose, onSubmit }) => {
 
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
-  const [mediaFiles, setMediaFiles] = useState([]); // [{file, preview, type}]
+  const [mediaFiles, setMediaFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Keep a ref always in sync with state so callbacks never capture stale values
   const mediaFilesRef = useRef([]);
   useEffect(() => {
     mediaFilesRef.current = mediaFiles;
@@ -100,7 +99,6 @@ const RefundModal = ({ order, open, onClose, onSubmit }) => {
     return () => window.removeEventListener("keydown", onKey);
   }, [isOpen, safeClose]);
 
-  // Process a FileList or array of File objects and add valid ones to state
   const processFiles = useCallback((fileList) => {
     const current = mediaFilesRef.current;
     const remaining = MAX_FILES - current.length;
@@ -132,7 +130,6 @@ const RefundModal = ({ order, open, onClose, onSubmit }) => {
     if (files && files.length > 0) {
       processFiles(files);
     }
-    // Reset so same file can be selected again after removal
     if (e.target) e.target.value = "";
   };
 
@@ -145,7 +142,6 @@ const RefundModal = ({ order, open, onClose, onSubmit }) => {
     });
   }, []);
 
-  // Validate using refs so we always see current values regardless of closure timing
   const validate = useCallback(() => {
     const currentReason = reasonRef.current;
     const currentFiles  = mediaFilesRef.current;
@@ -166,7 +162,6 @@ const RefundModal = ({ order, open, onClose, onSubmit }) => {
     if (e && typeof e.preventDefault === "function") e.preventDefault();
     if (e && typeof e.stopPropagation === "function") e.stopPropagation();
 
-    // Read from refs for guaranteed fresh values
     const currentReason = reasonRef.current;
     const currentFiles  = mediaFilesRef.current;
 
@@ -302,7 +297,6 @@ const RefundModal = ({ order, open, onClose, onSubmit }) => {
           </div>
 
           <form className="refund-form" onSubmit={handleSubmit}>
-            {/* ── Reason ── */}
             <div className="form-group">
               <label htmlFor="refund-reason">Reason for refund <span className="refund-required">*</span></label>
               <select
@@ -323,7 +317,6 @@ const RefundModal = ({ order, open, onClose, onSubmit }) => {
               </select>
             </div>
 
-            {/* ── Notes (optional) ── */}
             <div className="form-group">
               <label htmlFor="refund-notes">Additional details <span className="refund-optional">(optional)</span></label>
               <textarea
@@ -335,14 +328,12 @@ const RefundModal = ({ order, open, onClose, onSubmit }) => {
               />
             </div>
 
-            {/* ── Media upload ── */}
             <div className="form-group">
               <label>
                 Photos / Videos <span className="refund-required">*</span>
                 <span className="refund-media-hint"> — up to {MAX_FILES} files, max {MAX_SIZE_MB}MB each</span>
               </label>
 
-              {/* Drop zone */}
               <div
                 className={`refund-dropzone ${mediaFiles.length >= MAX_FILES ? "refund-dropzone--full" : ""}`}
                 onClick={() => mediaFiles.length < MAX_FILES && fileInputRef.current?.click()}
@@ -388,7 +379,6 @@ const RefundModal = ({ order, open, onClose, onSubmit }) => {
                 onChange={handleFileChange}
               />
 
-              {/* Preview grid */}
               {mediaFiles.length > 0 && (
                 <div className="refund-media-grid">
                   {mediaFiles.map((m, idx) => (
