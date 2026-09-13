@@ -531,7 +531,7 @@ const OrderHistory = () => {
                 </div>
                 <div className="details-final-actions">
                   {cancellableStatuses.includes(normalizeStatus(selected.status)) && <button className="pane-btn btn-danger" onClick={() => setConfirmModal({ open: true, order: selected })}>CANCEL ORDER</button>}
-                  {canRequestRefund(selected) && <button className="pane-btn btn-refund" onClick={() => setRefundOpen(true)}>REQUEST REFUND</button>}
+                  {canRequestRefund(selected) && <button className="pane-btn btn-refund" onClick={() => { setRefundOrder(selected); setRefundOpen(true); }}>REQUEST REFUND</button>}
                 </div>
               </div>
             </div>

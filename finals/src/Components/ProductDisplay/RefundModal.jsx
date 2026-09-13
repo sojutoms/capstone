@@ -180,9 +180,12 @@ const RefundModal = ({ order, open, onClose, onSubmit }) => {
     try {
       if (typeof onSubmit === "function") {
         try {
+          // The parent (onSubmit) owns success handling here — it closes this
+          // modal and shows its own toast once the request actually lands.
+          // Adding a toast in this component right before safeClose() would
+          // just get wiped by safeClose()'s own setToasts([]) before it ever
+          // renders, so we don't duplicate that here.
           await onSubmit(currentReason, notes, currentFiles.map((m) => m.file));
-          addToast("success", "Refund request submitted.");
-          safeClose();
         } catch (err) {
           console.error("Parent onSubmit error:", err);
           addToast("error", err?.message || "Failed to submit refund request.");

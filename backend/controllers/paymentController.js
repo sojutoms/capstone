@@ -149,7 +149,7 @@ const createCheckoutSession = async (req, res) => {
       : `${FRONTEND_URL}/orders?paymentStatus=success&orderNumber=${encodeURIComponent(order.orderNumber)}`;
     const cancelUrl = isNativeClient
       ? `${backendPublicUrl}/payment-return?status=cancelled&orderNumber=${encodeURIComponent(order.orderNumber)}`
-      : `${FRONTEND_URL}/placeorder?paymentStatus=cancelled&orderNumber=${encodeURIComponent(order.orderNumber)}`;
+      : `${FRONTEND_URL}/?paymentStatus=cancelled&orderNumber=${encodeURIComponent(order.orderNumber)}`;
 
     const response = await paymongo.post("/checkout_sessions", {
       data: {

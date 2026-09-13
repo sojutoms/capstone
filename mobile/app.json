@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.mobile",
+      "bundleIdentifier": "com.goodsolesph.mobile",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -26,7 +26,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.mobile"
+      "package": "com.goodsolesph.mobile"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,7 +40,8 @@
         {
           "cameraPermission": "GoodSoles PH needs camera access so you can try shoes on with AR."
         }
-      ]
+      ],
+      "expo-image"
     ],
     "extra": {
       "eas": {

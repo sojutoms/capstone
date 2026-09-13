@@ -237,10 +237,23 @@ export default function MainTabs() {
           listeners={
             tab.name === "Shop" || tab.name === "Home"
               ? ({ navigation }) => ({
-                  tabPress: () => {
+                  tabPress: (e) => {
                     const tabState = navigation.getState();
-                    const target = tabState.routes.find((r) => r.name === tab.name);
+                    const tabIndex = tabState.routes.findIndex((r) => r.name === tab.name);
+                    const isAlreadyFocused = tabState.index === tabIndex;
+                    const target = tabState.routes[tabIndex];
                     if (target?.state && target.state.routes.length > 1) {
+                      // Only suppress the default when re-pressing a tab
+                      // that's already focused — that's the one case where
+                      // React Navigation's own built-in "reset to root on
+                      // re-press" would otherwise also fire right after ours
+                      // and find nothing left to pop (a harmless but noisy
+                      // POP_TO_TOP warning). Our custom tab bar's own switch
+                      // logic (see pressTab above) only calls
+                      // navigation.navigate() when the tab ISN'T already
+                      // focused, so preventDefault() here never risks
+                      // blocking an actual tab switch.
+                      if (isAlreadyFocused) e.preventDefault();
                       navigation.dispatch({
                         ...CommonActions.reset({
                           index: 0,

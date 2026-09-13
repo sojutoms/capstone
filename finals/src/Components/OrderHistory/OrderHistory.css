@@ -784,6 +784,11 @@
   to { transform: translateX(0); opacity: 1; }
 }
 
+.toast.success {
+  background: #ecfdf5;
+  color: #065f46;
+}
+
 .toast.error {
   background: #ef4444;
   color: #fff;

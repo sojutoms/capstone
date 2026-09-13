@@ -4,8 +4,8 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  FlatList,
   Image,
+  ImageBackground,
   TouchableOpacity,
   Platform,
   StatusBar,
@@ -16,6 +16,7 @@ import {
   Linking,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { VideoView, useVideoPlayer } from "expo-video";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { CommonActions } from "@react-navigation/native";
 import { useFavorites } from "../context/FavoritesContext";
@@ -31,21 +32,27 @@ import Toast from "react-native-toast-message";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 import { openChatWidget } from "../utils/chatWidgetBus";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
-const BRAND_LOGO = require("../../assets/logo_hero.png");
+const HERO_VIDEO_HEIGHT = height;
+
+// Same logo used on the Sign In screen (GSPH-removebg.png) — swapped in for
+// the wordmark that used to sit in its own persistent bar up top.
+const BRAND_LOGO = require("../../assets/GSPH-removebg.png");
+
+// Real brand logos for the BRANDS row — only these four exist as assets
+// right now (no Nike/Jordan logo files were provided), each mapped to the
+// exact brand value ShoesScreen's filter expects.
+const BRANDS = [
+  { label: "Adidas", value: "adidas", logo: require("../../assets/adidas_logo.png") },
+  { label: "New Balance", value: "nb", logo: require("../../assets/nb_logo.png") },
+  { label: "On", value: "on", logo: require("../../assets/oncloud_logo.png") },
+  { label: "Puma", value: "puma", logo: require("../../assets/puma_logo.png") },
+];
 
 // Space reserved at the top of the ScrollView so its content starts below
 // the floating header panel (logo + greeting) instead of underneath it.
 const FLOATING_HEADER_CLEARANCE = 216;
-
-// Pure image carousel now — no text overlay, since the greeting/eyebrow/
-// question all live in the header above it instead.
-const HERO_SLIDES = [
-  { id: "1", image: require("../../assets/Running.jpg") },
-  { id: "2", image: require("../../assets/Own.jpg") },
-  { id: "3", image: require("../../assets/Built.jpg") },
-];
 
 /* ─────────────────── CATEGORY DROPDOWN (copied from ShopScreen.jsx,
    which stays untouched — same CATEGORIES config, AccordionTile, and
@@ -58,6 +65,7 @@ const CATEGORIES = [
     active: true,
     screen: "ShoesScreen",
     directNav: false,         // has brand sub-rows
+    bg: require("../../assets/shoes_bg.jpg"),
     brands: [
       { label: "All Brands", value: "all" },
       { label: "Nike",        value: "nike" },
@@ -72,6 +80,7 @@ const CATEGORIES = [
     active: true,
     screen: "WatchesScreen",
     directNav: true,          // navigate directly, no brand sub-rows
+    bg: require("../../assets/watch_bg.jpg"),
     brands: [],
   },
   {
@@ -80,6 +89,7 @@ const CATEGORIES = [
     active: true,
     screen: "BagsScreen",
     directNav: true,
+    bg: require("../../assets/bags_bg.jpg"),
     brands: [],
   },
   {
@@ -88,6 +98,7 @@ const CATEGORIES = [
     active: true,
     screen: "CollectiblesScreen",
     directNav: true,
+    bg: require("../../assets/collectibles_bg.jpg"),
     brands: [],
   },
 ];
@@ -137,28 +148,32 @@ const AccordionTile = ({ category, onBrandSelect, onDirectNav, tileStyles }) => 
 
   return (
     <View style={tileStyles.wrapper}>
-      {/* ── MAIN TILE BUTTON ── */}
+      {/* ── MAIN TILE BUTTON — background photo per category, with a dark
+          scrim underneath so the label/chevron stay readable on any image ── */}
       <TouchableOpacity
-        style={[tileStyles.tile, !category.active && tileStyles.tileDisabled]}
+        style={!category.active && tileStyles.tileDisabled}
         onPress={toggle}
         activeOpacity={category.active ? 0.85 : 1}
       >
-        <Text style={[tileStyles.label, !category.active && tileStyles.labelDisabled]}>
-          {category.label}
-        </Text>
+        <ImageBackground source={category.bg} style={tileStyles.tile} imageStyle={tileStyles.tileBgImage}>
+          <View style={tileStyles.tileScrim} />
+          <Text style={[tileStyles.label, !category.active && tileStyles.labelDisabled]}>
+            {category.label}
+          </Text>
 
-        {category.active ? (
-          // For directNav items, always show a static › arrow (no rotation)
-          category.directNav ? (
-            <Text style={tileStyles.chevron}>›</Text>
+          {category.active ? (
+            // For directNav items, always show a static › arrow (no rotation)
+            category.directNav ? (
+              <Text style={tileStyles.chevron}>›</Text>
+            ) : (
+              <Animated.Text style={[tileStyles.chevron, { transform: [{ rotate }] }]}>
+                ›
+              </Animated.Text>
+            )
           ) : (
-            <Animated.Text style={[tileStyles.chevron, { transform: [{ rotate }] }]}>
-              ›
-            </Animated.Text>
-          )
-        ) : (
-          <Text style={tileStyles.comingSoon}>COMING SOON</Text>
-        )}
+            <Text style={tileStyles.comingSoon}>COMING SOON</Text>
+          )}
+        </ImageBackground>
       </TouchableOpacity>
 
       {/* ── DIVIDER ── */}
@@ -350,8 +365,6 @@ export default function HomeScreen({ navigation }) {
   const [loading,        setLoading]        = useState(true);
   const [selectedBrand,  setSelectedBrand]  = useState("all");
   const [activeQuickCat, setActiveQuickCat] = useState("All");
-  const [heroIndex,      setHeroIndex]      = useState(0);
-  const heroRef = useRef(null);
   const chatBtnRef = useRef(null);
 
   // Measures the header chat icon's actual position and passes it along so
@@ -365,14 +378,11 @@ export default function HomeScreen({ navigation }) {
 
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const next = (heroIndex + 1) % HERO_SLIDES.length;
-      heroRef.current?.scrollToOffset({ offset: (width - 32) * next, animated: true });
-      setHeroIndex(next);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [heroIndex]);
+  const featuredVideoPlayer = useVideoPlayer(require("../../assets/featured_vid.mp4"), (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.play();
+  });
 
   // Drives the floating header's fade: the whole panel — logo (sitting
   // where the profile icon used to be, top-left) + greeting text — fades
@@ -426,33 +436,32 @@ export default function HomeScreen({ navigation }) {
       {/* ── FLOATING HEADER (logo + chat + greeting) ──
           Absolutely positioned above the ScrollView, not a flex sibling
           taking layout space — so once the panel fades to fully
-          transparent, the content scrolling underneath just shows through.
-          The logo sits OUTSIDE the fading Animated.View (as its own
-          absolutely-positioned sibling matching the panel's old top-left
-          inset) so it stays put as a persistent "hero" mark even once the
-          rest of the card (eyebrow/greeting/chat) fades away on scroll. */}
+          transparent, the content scrolling underneath just shows through. */}
       <View style={s.floatingHeaderOverlay} pointerEvents="box-none">
         <Animated.View
           style={[s.headerPanel, { opacity: headerOpacity }]}
           pointerEvents={headerCollapsed ? "none" : "auto"}
         >
-          {/* Spacer holding the logo's old footprint so the text below
-              doesn't shift up now that the real logo lives outside this
-              fading panel. */}
-          <View style={s.pageLogoSpacer} />
-          <Text style={s.headerEyebrow}>{getGreeting()}</Text>
-          <View style={s.headerTopRow}>
-            <Text style={[s.headerGreeting, { flex: 1 }]} numberOfLines={1}>Hello, {firstName}</Text>
-            <TouchableOpacity ref={chatBtnRef} style={s.chatBtn} onPress={handleOpenChat} activeOpacity={0.8}>
-              <Ionicons name="chatbubble-ellipses-outline" size={18} color="#ffffff" />
-            </TouchableOpacity>
+          {/* Chat button moved up to its own top-right corner, separate
+              from the greeting row below — matching the reference layout's
+              bell icon placement. */}
+          <TouchableOpacity ref={chatBtnRef} style={s.chatBtnTopRight} onPress={handleOpenChat} activeOpacity={0.8}>
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#ffffff" />
+          </TouchableOpacity>
+
+          {/* All three text lines grouped in their own column, then that
+              column + the logo sit side by side with alignItems:"center" —
+              flexbox centers them against each other automatically instead
+              of guessing manual offsets that never quite lined up. */}
+          <View style={s.greetingRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.headerEyebrow}>{getGreeting()}</Text>
+              <Text style={s.headerGreeting} numberOfLines={1}>Hello, {firstName}</Text>
+              <Text style={s.headerQuestion}>What's your next pair?</Text>
+            </View>
+            <Image source={BRAND_LOGO} style={[s.miniLogo, { tintColor: "#ffffff" }]} resizeMode="contain" />
           </View>
         </Animated.View>
-        {/* Small persistent dark tab behind the logo — not just a naked
-            floating image once the greeting card fades away on scroll. */}
-        <View style={s.persistentLogoBar} pointerEvents="none">
-          <Image source={BRAND_LOGO} style={[s.pageLogo, { tintColor: "#ffffff" }]} resizeMode="contain" />
-        </View>
       </View>
 
       <Animated.ScrollView
@@ -475,45 +484,36 @@ export default function HomeScreen({ navigation }) {
         }
       >
 
-        {/* ── HERO — pure swipeable image carousel, no text overlay ── */}
-        <View style={s.heroCarouselWrap}>
-          <Text style={s.heroLabel}>BRANDS</Text>
-          <FlatList
-            ref={heroRef}
-            data={HERO_SLIDES}
-            keyExtractor={(slide) => slide.id}
-            horizontal
-            pagingEnabled={false}
-            showsHorizontalScrollIndicator={false}
-            snapToInterval={width - 32}
-            snapToAlignment="start"
-            decelerationRate="fast"
-            bounces={false}
-            scrollEventThrottle={16}
-            getItemLayout={(_, index) => ({ length: width - 32, offset: (width - 32) * index, index })}
-            onScroll={(e) => {
-              const idx = Math.round(e.nativeEvent.contentOffset.x / (width - 32));
-              if (idx !== heroIndex && idx >= 0 && idx < HERO_SLIDES.length) setHeroIndex(idx);
-            }}
-            renderItem={({ item }) => (
-              <View style={s.hero}>
-                <Image source={item.image} style={s.heroBgImage} resizeMode="cover" />
-              </View>
-            )}
+        {/* ── BRANDS ── */}
+        <View style={s.brandsSection}>
+          <SectionHeader
+            title="Brands"
+            onSeeAll={() => navigateToShopCategory("ShoesScreen")}
+            s={s}
           />
-          <View style={s.heroDots}>
-            {HERO_SLIDES.map((_, i) => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 18 }}
+          >
+            {BRANDS.map((b) => (
               <TouchableOpacity
-                key={i}
-                onPress={() => {
-                  heroRef.current?.scrollToOffset({ offset: (width - 32) * i, animated: true });
-                  setHeroIndex(i);
-                }}
+                key={b.value}
+                style={s.brandItem}
+                activeOpacity={0.7}
+                onPress={() => navigateToShopCategory("ShoesScreen", { selectedBrand: b.value })}
               >
-                <View style={[s.dot, i === heroIndex && s.dotActive]} />
+                <View style={s.brandCircle}>
+                  <Image
+                    source={b.logo}
+                    style={[s.brandLogo, isDark && { tintColor: "#fff" }]}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={s.brandLabel}>{b.label}</Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
         </View>
 
         {/* ── TRENDING NOW ── */}
@@ -561,20 +561,6 @@ export default function HomeScreen({ navigation }) {
           ))}
         </View>
 
-        {/* ── FEATURED EDITORIAL BANNER ── */}
-        <View style={s.editorialWrap}>
-          <View style={s.editorial}>
-            <Text style={s.editorialWatermark}>GS</Text>
-            <View style={s.editorialDecor} />
-            <View style={s.editorialDecor2} />
-            <Text style={s.editorialEye}>THE EDIT</Text>
-            <Text style={s.editorialTitle}>{"Crafted for\nthe streets."}</Text>
-            <TouchableOpacity style={s.editorialBtn} activeOpacity={0.8}>
-              <Text style={s.editorialBtnText}>EXPLORE THE EDIT →</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* ── JUST DROPPED ── */}
         {(loading || droppedProducts.length > 0) && (
           <View>
@@ -607,6 +593,35 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
+        {/* ── FEATURED — full-bleed video banner. contentFit="cover" needs
+            surfaceType="textureView" below — the default surfaceView is a
+            hardware overlay that ignores the rounded/clipped container and
+            resizes unreliably. */}
+        <SectionHeader title="Featured" onSeeAll={() => {}} s={s} />
+        <View style={s.heroFullBleed}>
+          <VideoView
+            player={featuredVideoPlayer}
+            style={{ width: "100%", height: "100%" }}
+            contentFit="cover"
+            nativeControls={false}
+            surfaceType="textureView"
+          />
+        </View>
+
+        {/* ── FEATURED EDITORIAL BANNER ── */}
+        <View style={s.editorialWrap}>
+          <View style={s.editorial}>
+            <Text style={s.editorialWatermark}>GS</Text>
+            <View style={s.editorialDecor} />
+            <View style={s.editorialDecor2} />
+            <Text style={s.editorialEye}>THE EDIT</Text>
+            <Text style={s.editorialTitle}>{"Crafted for\nthe streets."}</Text>
+            <TouchableOpacity style={s.editorialBtn} activeOpacity={0.8}>
+              <Text style={s.editorialBtnText}>EXPLORE THE EDIT →</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* ── STORE MAP SECTION (moved from ShopScreen.jsx) ── */}
         <StoreMapSection mapStyles={mapStyles} colors={colors} />
 
@@ -635,37 +650,26 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
     // the bottom nav pill's translucent grey actually reads once blended
     // over the page (not the same raw value, since this card is opaque).
     backgroundColor: isDark ? "#000000" : "#404040",
-    borderBottomLeftRadius: 48,
-    borderBottomRightRadius: 48,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
     paddingLeft: 22,
-    paddingRight: 30,
+    paddingRight: 24,
     // Was 48 to clear the logo that used to sit here — tightened now that
     // the row is just the chat button, so the card doesn't read oversized.
-    paddingTop: 34,
-    paddingBottom: 20,
+    paddingTop: 48,
+    paddingBottom: 28,
     ...shadows.sm,
   },
-  // A small always-visible dark tab (not tied to headerOpacity) behind the
-  // logo, so scrolling past the greeting card leaves this compact bar
-  // instead of a bare floating image with nothing behind it.
-  persistentLogoBar: {
-    position: "absolute",
-    top: 0, left: 0, right: 0,
+  // GSPH-removebg.png is roughly 594x420 (not square) — sized to a small
+  // icon box, contain-fit so it doesn't distort.
+  // Plain flex child now (not absolutely positioned) — sits inside
+  // greetingRow alongside the text column, centered against it by flexbox.
+  miniLogo: { width: 88, height: 88 },
+  greetingRow: {
+    flexDirection: "row",
     alignItems: "center",
-    backgroundColor: isDark ? "#000000" : "#404040",
-    paddingTop: 34,
-    paddingBottom: 16,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+    gap: 12,
   },
-  // logo_hero.png is a wide 665x71 wordmark, not a square icon — sized by
-  // explicit width+height (not aspectRatio, which isn't reliably respected
-  // in every layout context) instead of a fixed square box.
-  pageLogo: { width: 120, height: 13 },
-  // Clears the persistent logo bar above (paddingTop 34 + logo 13 +
-  // paddingBottom 16 ≈ 63) plus some breathing room, so the eyebrow/
-  // greeting/chat row sits comfortably below it instead of crowding it.
-  pageLogoSpacer: { height: 80 },
   headerTopRow: {
     // Greeting text + chat button side by side now (chat button used to be
     // its own row above the text, which cost extra vertical space).
@@ -678,33 +682,27 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.12)", borderWidth: 0.5, borderColor: "rgba(255,255,255,0.2)",
     justifyContent: "center", alignItems: "center",
   },
+  chatBtnTopRight: {
+    position: "absolute",
+    top: 14, right: 16,
+    width: 36, height: 36,
+    justifyContent: "center", alignItems: "center",
+  },
   // marginTop was 24 to clear the old logo/chat row above it — that row's
   // gone now (chat button moved inline with the greeting text below), so
   // this sits right under the card's own paddingTop instead.
-  headerEyebrow: { fontSize: 9, letterSpacing: 3, color: "rgba(255,255,255,0.6)", fontFamily: fonts.bodySemibold },
+  headerEyebrow: { fontSize: 9, letterSpacing: 3, color: "rgba(255,255,255,0.6)", fontFamily: fonts.bodySemibold, marginBottom: 4 },
   headerGreeting: { fontSize: 26, color: "#ffffff", letterSpacing: 0.5, fontFamily: fonts.display, marginTop: 0 },
+  headerQuestion: { fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 6, fontFamily: fonts.bodyRegular, letterSpacing: 0.3 },
 
   /* HERO — pure swipeable image carousel below the header */
-  heroCarouselWrap: { marginHorizontal: 16, marginTop: 16, marginBottom: 4 },
-  hero: {
-    width: width - 32,
-    // Fixed value, not colors.bgCard — kept isolated so tuning bgCard
-    // elsewhere (cart, orders, favorites, product cards) never moves this.
-    backgroundColor: isDark ? "#151515" : "#ffffff",
-    borderRadius: radius.xl, borderWidth: 0.5, borderColor: colors.borderLight,
-    overflow: "hidden", height: 200,
+  heroFullBleed: {
+    width,
+    height: HERO_VIDEO_HEIGHT,
+    backgroundColor: "#000",
+    overflow: "hidden",
+    borderRadius: 28,
   },
-  heroBgImage: { width: "100%", height: "100%" },
-  // Same font treatment as "Trending Now" — a heading above the carousel,
-  // not overlaid on the photo.
-  heroLabel: {
-    fontSize: 24, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display,
-    marginBottom: 12,
-  },
-  heroDots: { flexDirection: "row", gap: 4, marginTop: 12, justifyContent: "center", alignItems: "center" },
-  dot:       { width: 5, height: 3, borderRadius: 2, backgroundColor: colors.bgTertiary },
-  dotActive: { width: 22, backgroundColor: colors.accentGold },
-
   /* CATEGORY DROPDOWN (same as ShopScreen.jsx) */
   categoryList: { marginTop: 20, borderTopWidth: 1, borderTopColor: colors.bgTertiary },
 
@@ -728,6 +726,29 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
   sectionTitle:   { fontSize: 24, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display },
   seeAllBtn:      { paddingBottom: 2 },
   seeAll:         { fontSize: 9, color: colors.textSecondary, letterSpacing: 1.5, fontFamily: fonts.bodySemibold },
+
+  /* BRANDS */
+  brandsSection: { marginTop: 4 },
+  brandItem: { alignItems: "center", width: 72 },
+  brandCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.bgCard,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  brandLogo: { width: "62%", height: "62%" },
+  brandLabel: {
+    fontSize: 10,
+    letterSpacing: 0.5,
+    color: colors.textSecondary,
+    fontFamily: fonts.bodySemibold,
+    textAlign: "center",
+  },
 
   /* TRENDING */
   trendingSection: { marginTop: 4 },
@@ -790,20 +811,30 @@ const makeTileStyles = (colors) => StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 18,
-    backgroundColor: colors.bgPrimary,
+    paddingVertical: 28,
+    overflow: "hidden",
+  },
+  tileBgImage: { resizeMode: "cover" },
+  // Dark scrim under the label/chevron so they stay readable regardless of
+  // what the category photo looks like underneath.
+  tileScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   tileDisabled: { opacity: 0.4 },
+  // Fixed light-on-photo below, not theme colors — this tile always sits on
+  // a dark-scrimmed background image regardless of light/dark mode, same
+  // reasoning as other permanently-dark overlays elsewhere in the app.
   label: {
     fontSize: 22,
-    color: colors.textPrimary,
+    color: "#ffffff",
     letterSpacing: 0.5,
     fontFamily: fonts.display,
   },
-  labelDisabled: { color: colors.textMuted },
+  labelDisabled: { color: "rgba(255,255,255,0.5)" },
   chevron: {
     fontSize: 28,
-    color: colors.textSecondary,
+    color: "#ffffff",
     fontWeight: "300",
     lineHeight: 30,
     transform: [{ rotate: "90deg" }],

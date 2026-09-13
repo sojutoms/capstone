@@ -18,7 +18,7 @@ import {
   Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import ImageViewing from "react-native-image-viewing";
+import ImageViewing from "../components/ImageViewerModal";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCart }      from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
