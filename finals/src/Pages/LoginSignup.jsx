@@ -346,6 +346,7 @@ const LoginSignup = () => {
 
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
+  const [resetOtpVerified, setResetOtpVerified] = useState(false);
   const [errors, setErrors] = useState({});
   const [pwStrength, setPwStrength] = useState("");
 
@@ -392,7 +393,7 @@ const LoginSignup = () => {
       setTimeout(() => { setBrandLeft(toSignup); setMode(next); setAnimating(false); }, 500);
     } else { setMode(next); }
     setFormData({ firstName: "", lastName: "", email: "", phone: "+63", password: "", confirmPassword: "", newPassword: "" });
-    setOtpSent(false); setOtp(""); clearErrors();
+    setOtpSent(false); setOtp(""); setResetOtpVerified(false); clearErrors();
     setPwStrength("");
     setResendKey((k) => k + 1); // reset resend button
   };
@@ -471,6 +472,14 @@ const LoginSignup = () => {
     }
   };
 
+  const verifyResetOtp = async () => {
+    clearErrors();
+    if (!/^\d{6}$/.test(otp)) { setErr("otp", "Enter all 6 digits."); return; }
+    const data = await api("/verify-reset-otp", { email: formData.email.trim(), otp });
+    if (data.success) setResetOtpVerified(true);
+    else setErr("otp", data.errors || "OTP verification failed");
+  };
+
   const resetPassword = async () => {
     clearErrors();
     if (!/^\d{6}$/.test(otp)) { setErr("otp", "Enter all 6 digits."); return; }
@@ -493,7 +502,7 @@ const LoginSignup = () => {
   const handleLoginKey = (e) => { if (e.key === "Enter") login(); };
   const handleSignupKey = (e) => { if (e.key === "Enter") { if (!otpSent) sendOtp(); else verifyOtp(); } };
   const handleForgotKey = (e) => { if (e.key === "Enter") forgotPassword(); };
-  const handleResetKey = (e) => { if (e.key === "Enter") resetPassword(); };
+  const handleResetKey = (e) => { if (e.key === "Enter") { if (!resetOtpVerified) verifyResetOtp(); else resetPassword(); } };
 
   const getPwdChecks = (pwd) => passwordRules.map((r) => ({ ...r, passed: r.test(pwd) }));
   const signupPwdChecks = getPwdChecks(formData.password || "");
@@ -694,7 +703,7 @@ const LoginSignup = () => {
       <Field error={errors.email}>
         <input name="email" type="email" placeholder="Email address" value={formData.email} onChange={change} onKeyDown={handleForgotKey} />
       </Field>
-      <button className="ls-btn" onClick={forgotPassword}><span>Send Reset Code</span></button>
+      <button className="ls-btn" onClick={forgotPassword}><span>Send OTP</span></button>
     </div>
   );
 
@@ -704,58 +713,70 @@ const LoginSignup = () => {
         <button className="ls-link-btn ls-link-btn--back" onClick={() => switchMode("login")}>← Back to login</button>
         <p className="ls-form-eyebrow">Account Recovery</p>
         <h2 className="ls-form-heading">Reset Password</h2>
-        <p className="ls-form-subheading">Enter the code sent to your email and your new password</p>
+        <p className="ls-form-subheading">
+          {resetOtpVerified
+            ? "Enter your new password"
+            : <>Enter the 6-digit code sent to <strong>{formData.email}</strong></>}
+        </p>
       </div>
 
-      <div className="ls-field">
-        <div className="ls-field-inner">
-          <input name="newPassword" placeholder="New password" type={showResetNewPwd ? "text" : "password"}
-            value={formData.newPassword} onChange={change} onKeyDown={pwdKeyReset}
-            className="ls-input ls-input--with-icon"
-            onCopy={blockClipboard} onPaste={blockClipboard} onCut={blockClipboard}
-            onContextMenu={blockClipboard}
+      {!resetOtpVerified ? (
+        <>
+          <MultiOtpInput value={otp} onChange={setOtp} error={errors.otp} />
+          <button className="ls-btn" onClick={verifyResetOtp}><span>Verify OTP</span></button>
+
+          <ResendOtpButton
+            key={resendKey}
+            email={formData.email.trim()}
+            type="forgot"
+            initialCooldownSeconds={60}
+            onResendSuccess={() => { setOtp(""); setErrors((p) => ({ ...p, otp: "" })); }}
           />
-          <button type="button" className="ls-pwd-toggle" onClick={() => setShowResetNewPwd((s) => !s)} aria-label={showResetNewPwd ? "Hide" : "Show"}>
-            {showResetNewPwd ? <EyeOffIcon /> : <EyeIcon />}
-          </button>
-        </div>
-        {errors.newPassword && <p className="ls-error">{errors.newPassword}</p>}
-        {formData.newPassword && (
-          <ul className="ls-pwd-checklist">
-            {resetPwdChecks.map((c) => (
-              <li key={c.key} className={c.passed ? "check-pass" : "check-fail"}>
-                <span className="check-icon">{c.passed ? "✓" : "✗"}</span>{c.label}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+        </>
+      ) : (
+        <>
+          <div className="ls-field">
+            <div className="ls-field-inner">
+              <input name="newPassword" placeholder="New password" type={showResetNewPwd ? "text" : "password"}
+                value={formData.newPassword} onChange={change} onKeyDown={pwdKeyReset}
+                className="ls-input ls-input--with-icon"
+                onCopy={blockClipboard} onPaste={blockClipboard} onCut={blockClipboard}
+                onContextMenu={blockClipboard}
+              />
+              <button type="button" className="ls-pwd-toggle" onClick={() => setShowResetNewPwd((s) => !s)} aria-label={showResetNewPwd ? "Hide" : "Show"}>
+                {showResetNewPwd ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
+            {errors.newPassword && <p className="ls-error">{errors.newPassword}</p>}
+            {formData.newPassword && (
+              <ul className="ls-pwd-checklist">
+                {resetPwdChecks.map((c) => (
+                  <li key={c.key} className={c.passed ? "check-pass" : "check-fail"}>
+                    <span className="check-icon">{c.passed ? "✓" : "✗"}</span>{c.label}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
-      <div className="ls-field">
-        <div className="ls-field-inner">
-          <input name="confirmPassword" placeholder="Confirm new password" type={showResetConfirmPwd ? "text" : "password"}
-            value={formData.confirmPassword} onChange={change} onKeyDown={pwdKeyReset}
-            className="ls-input ls-input--with-icon"
-            onCopy={blockClipboard} onPaste={blockClipboard} onCut={blockClipboard}
-            onContextMenu={blockClipboard}
-          />
-          <button type="button" className="ls-pwd-toggle" onClick={() => setShowResetConfirmPwd((s) => !s)} aria-label={showResetConfirmPwd ? "Hide" : "Show"}>
-            {showResetConfirmPwd ? <EyeOffIcon /> : <EyeIcon />}
-          </button>
-        </div>
-        {errors.confirmPassword && <p className="ls-error">{errors.confirmPassword}</p>}
-      </div>
+          <div className="ls-field">
+            <div className="ls-field-inner">
+              <input name="confirmPassword" placeholder="Confirm new password" type={showResetConfirmPwd ? "text" : "password"}
+                value={formData.confirmPassword} onChange={change} onKeyDown={pwdKeyReset}
+                className="ls-input ls-input--with-icon"
+                onCopy={blockClipboard} onPaste={blockClipboard} onCut={blockClipboard}
+                onContextMenu={blockClipboard}
+              />
+              <button type="button" className="ls-pwd-toggle" onClick={() => setShowResetConfirmPwd((s) => !s)} aria-label={showResetConfirmPwd ? "Hide" : "Show"}>
+                {showResetConfirmPwd ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
+            {errors.confirmPassword && <p className="ls-error">{errors.confirmPassword}</p>}
+          </div>
 
-      <MultiOtpInput value={otp} onChange={setOtp} error={errors.otp} />
-      <button className="ls-btn" onClick={resetPassword}><span>Reset Password</span></button>
-
-      <ResendOtpButton
-        key={resendKey}
-        email={formData.email.trim()}
-        type="forgot"
-        initialCooldownSeconds={60}
-        onResendSuccess={() => { setOtp(""); setErrors((p) => ({ ...p, otp: "" })); }}
-      />
+          <button className="ls-btn" onClick={resetPassword}><span>Reset Password</span></button>
+        </>
+      )}
     </div>
   );
 

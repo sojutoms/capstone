@@ -303,6 +303,26 @@ const forgotPassword = async (req, res) => {
   }
 };
 
+// ─── POST /verify-reset-otp ────────────────────────────────────────────────────
+// Lets the forgot-password form confirm the code is correct *before* showing
+// the new-password fields, without consuming it — /reset-password still does
+// its own full check and is what actually deletes the OTP record.
+const verifyResetOtp = async (req, res) => {
+  const { email, otp } = req.body;
+  if (!/^\d{6}$/.test(otp || ""))
+    return res.status(400).json({ success: false, errors: "OTP must be a 6-digit number" });
+
+  try {
+    const record = await OtpModel.findOne({ email, otp });
+    if (!record) return res.json({ success: false, errors: "Invalid OTP" });
+    if (record.expiresAt < Date.now()) return res.json({ success: false, errors: "Expired OTP" });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Verify reset OTP error:", err);
+    res.status(500).json({ success: false, errors: "Server error" });
+  }
+};
+
 // ─── POST /reset-password ─────────────────────────────────────────────────────
 const resetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
@@ -875,6 +895,7 @@ module.exports = {
   verifyOtp,
   resendOtp,
   forgotPassword,
+  verifyResetOtp,
   resetPassword,
   getAllUsers,
   removeUser,

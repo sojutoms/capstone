@@ -7,6 +7,7 @@ const {
   signup,
   verifyOtp,
   forgotPassword,
+  verifyResetOtp,
   resetPassword,
   getAllUsers,
   removeUser,
@@ -37,6 +38,7 @@ router.post("/signup", signup);
 router.post("/verify-otp", verifyOtp);
 router.post("/resend-otp", resendOtp);
 router.post("/forgot-password", forgotPassword);
+router.post("/verify-reset-otp", verifyResetOtp);
 router.post("/reset-password", resetPassword);
 
 // User management (admin)
