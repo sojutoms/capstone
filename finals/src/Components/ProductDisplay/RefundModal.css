@@ -31,7 +31,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  /* Must clear header.navbar's z-index:9999 (position:fixed) — otherwise the
+     navbar renders on top of the modal's own header whenever the modal is
+     centered near the top of a short viewport, hiding the title/close button. */
+  z-index: 10005;
   padding: 16px;
 }
 

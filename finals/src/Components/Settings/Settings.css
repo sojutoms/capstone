@@ -567,7 +567,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 120;
+  /* Must clear header.navbar's z-index:9999 (position:fixed) — same fix as
+     RefundModal, otherwise the navbar can render on top of this modal. */
+  z-index: 10005;
   padding: 16px;
 }
 

@@ -107,7 +107,7 @@
 .form-input-luxe,
 .form-select-luxe {
   width: 100%;
-  background: var(--bg-secondary);
+  background: var(--bg-dark);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 12px 16px;
@@ -122,8 +122,8 @@
 .form-select-luxe:focus {
   outline: none;
   border-color: var(--accent-white);
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.05);
+  background: var(--glass-hover);
+  box-shadow: 0 0 0 4px var(--glass-bg);
 }
 
 .form-input-luxe.error { border-color: #ef4444; }
@@ -139,6 +139,28 @@
   font-size: 11px;
   color: #ef4444;
   font-weight: 600;
+}
+
+/* ── AR Try-On Effect Upload ── */
+.ar-effect-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ar-effect-btn {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ar-effect-filename {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.ar-effect-filename.ok {
+  color: #22c55e;
 }
 
 /* ── Sub Categories ── */
@@ -295,7 +317,7 @@
 .section-badge {
   font-size: 9px;
   font-weight: 800;
-  background: var(--bg-secondary);
+  background: var(--bg-dark);
   padding: 3px 10px;
   border-radius: 20px;
   border: 1px solid var(--border-subtle);

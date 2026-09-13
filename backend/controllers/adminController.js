@@ -294,12 +294,22 @@ const updateOrderStatus = async (req, res) => {
 const getStatsOverview = async (req, res) => {
   try {
     const startOfYear = new Date(`${new Date().getFullYear()}-01-01`);
-    const [onlineSalesAgg, storeSalesAgg, userCount, productCount, topSpenderAgg] = await Promise.all([
+
+    // posSale now creates a real "store" Orders document per POS sale, so
+    // the legacy ShoeSequence-based reconstruction below only needs to
+    // cover older store sales that predate that and have no order record —
+    // otherwise this total would double-count against the Orders sum.
+    const storeOrderNumbers = await Orders.distinct("orderNumber", {
+      channel: "store",
+      timestamp: { $gte: startOfYear },
+    });
+
+    const [onlineSalesAgg, legacyStoreSalesAgg, userCount, productCount, topSpenderAgg] = await Promise.all([
       Orders.aggregate([
         {
           $match: {
             status: { $nin: ["cancelled", "Cancelled"] },
-            timestamp: { $gte: startOfYear }
+            timestamp: { $gte: startOfYear },
           }
         },
         { $group: { _id: null, totalSales: { $sum: { $ifNull: ["$total", 0] } } } }
@@ -308,6 +318,7 @@ const getStatsOverview = async (req, res) => {
         {
           $match: {
             soldBy: { $exists: true, $nin: [null, ""] },
+            orderNumber: { $nin: storeOrderNumbers },
             $expr: {
               $and: [
                 { $gte: ["$soldDate", startOfYear.toISOString()] },
@@ -332,7 +343,11 @@ const getStatsOverview = async (req, res) => {
         {
           $match: {
             status: { $nin: ["cancelled", "Cancelled"] },
-            timestamp: { $gte: startOfYear }
+            timestamp: { $gte: startOfYear },
+            // Only registered-customer online purchases count toward "top
+            // spender" — store sales have no userId (walk-in, no account).
+            channel: { $ne: "store" },
+            userId: { $nin: ["", null] },
           }
         },
         { $group: { _id: "$userId", totalSpent: { $sum: { $ifNull: ["$total", 0] } } } },
@@ -341,9 +356,10 @@ const getStatsOverview = async (req, res) => {
       ]),
     ]);
 
-    const onlineTotal = onlineSalesAgg[0]?.totalSales || 0;
-    const storeTotal = storeSalesAgg[0]?.totalSales || 0;
-    const totalSales = onlineTotal + storeTotal;
+    // onlineSalesAgg now already includes "store" channel orders (it queries
+    // all Orders with no channel filter), so only the legacy ShoeSequence
+    // total for pre-migration store sales needs to be added on top.
+    const totalSales = (onlineSalesAgg[0]?.totalSales || 0) + (legacyStoreSalesAgg[0]?.totalSales || 0);
     const topSpenderId = topSpenderAgg[0]?._id;
     const topSpenderTotal = topSpenderAgg[0]?.totalSpent || 0;
     let topSpender = null;
@@ -457,10 +473,20 @@ const getSalesData = async (req, res) => {
       timestamp: { $gte: rangeStart, $lt: rangeEnd },
     };
 
+    // posSale now creates a real "store" Orders document per POS sale (already
+    // captured below via the item-level Orders aggregation, which has no
+    // channel filter), so exclude ShoeSequence records that already have a
+    // matching order — otherwise those sales would be counted twice.
+    const storeOrderNumbers = await Orders.distinct("orderNumber", {
+      channel: "store",
+      timestamp: { $gte: rangeStart, $lt: rangeEnd },
+    });
+
     // Store filter matching getStatsOverview logic
     const storeMatch = {
       soldBy: { $exists: true, $nin: [null, ""] },
       soldDate: { $gte: rangeStart.toISOString(), $lt: rangeEnd.toISOString() },
+      orderNumber: { $nin: storeOrderNumbers },
       $or: [
         { orderNumber: { $exists: false } },
         { orderNumber: "" },
@@ -771,6 +797,7 @@ const getSalesLog = async (req, res) => {
 
         const lineTotal = Math.max(0, Math.round((unitPrice * qty - lineDiscount) * 100) / 100);
 
+        const isStore = order.channel === "store";
         onlineLogs.push({
           id: `${String(order._id)}-${rowId++}`,
           orderId: order.orderNumber || String(order._id),
@@ -787,10 +814,10 @@ const getSalesLog = async (req, res) => {
           discount: lineDiscount,
           total: lineTotal,
           status,
-          channel: "online",
-          buyer: buyer?.name || "Guest",
-          buyerEmail: buyer?.email || null,
-          soldBy: null,
+          channel: isStore ? "store" : "online",
+          buyer: isStore ? null : (buyer?.name || "Guest"),
+          buyerEmail: isStore ? null : (buyer?.email || null),
+          soldBy: isStore ? (order.soldBy || null) : null,
           payment,
           soldAt: orderTs,
         });
@@ -812,8 +839,14 @@ const getSalesLog = async (req, res) => {
     });
 
 
+    // POS sales now create a real Orders document (see posSale) which is
+    // already represented via onlineLogs above — only reconstruct from
+    // ShoeSequence for older store sales that predate that and have no
+    // matching order record, so nothing gets double-counted.
+    const orderNumbersWithRecord = new Set(orders.map((o) => o.orderNumber).filter(Boolean));
     const storeSoldSeqs = candidateStoreSeqs.filter((s) => {
       const on = s.orderNumber;
+      if (on && orderNumbersWithRecord.has(on)) return false;
       if (on === undefined || on === null || on === "") return true;
       if (String(on).startsWith("STORE-")) return true;
       return false;
@@ -1091,11 +1124,15 @@ const deleteReview = async (req, res) => {
 };
 
 // ─── POST /admin/pos/sale ─────────────────────────────────────────────────────
+const POS_PAYMENT_METHODS = ["cash", "card", "gcash", "maya"];
+
 const posSale = async (req, res) => {
   try {
-    const { items, paymentMethod, total } = req.body;
+    const { items, paymentMethod, paymentReference, total } = req.body;
     if (!items || !Array.isArray(items) || items.length === 0)
       return res.status(400).json({ success: false, error: "No items provided" });
+    if (!POS_PAYMENT_METHODS.includes(String(paymentMethod || "").toLowerCase()))
+      return res.status(400).json({ success: false, error: "Invalid payment method" });
 
     const tokenHeader = req.header("auth-token") || req.header("Authorization") || "";
     const token = tokenHeader.startsWith("Bearer ") ? tokenHeader.slice(7) : tokenHeader;
@@ -1109,6 +1146,7 @@ const posSale = async (req, res) => {
     const soldDate = new Date();
     const errors = [];
     const results = [];
+    const orderItems = [];
 
     for (const item of items) {
       const numProductId = Number(item.productId);
@@ -1160,6 +1198,14 @@ const posSale = async (req, res) => {
         }
 
         results.push({ productId: numProductId, size, qty: numQty, skuMarked: availableSkus.length });
+        orderItems.push({
+          id: product.id,
+          name: product.name,
+          image: Array.isArray(product.image) ? product.image[0] : (product.image || ""),
+          price: Number(item.unitPrice) || 0,
+          quantity: numQty,
+          size: size && size !== "—" ? String(size) : "",
+        });
       } catch (itemErr) {
         errors.push(`Product ${numProductId}: ${itemErr.message}`);
       }
@@ -1167,6 +1213,29 @@ const posSale = async (req, res) => {
 
     if (results.length === 0 && errors.length > 0)
       return res.status(400).json({ success: false, error: errors.join("; ") });
+
+    // Stock is already committed above — a failure here shouldn't undo that
+    // (the physical sale already happened), so it's reported as a warning
+    // rather than failing the whole request.
+    try {
+      await Orders.create({
+        items: orderItems,
+        subtotal: Number(total) || 0,
+        total: Number(total) || 0,
+        paymentMethod,
+        paymentReference: paymentReference ? String(paymentReference).trim().slice(0, 100) : null,
+        orderNumber,
+        channel: "store",
+        soldBy,
+        status: "completed",
+        paymentStatus: "paid",
+        paidAt: soldDate,
+        inventoryCommitted: true,
+      });
+    } catch (orderErr) {
+      console.error("POST /admin/pos/sale order record error:", orderErr);
+      errors.push(`Sale completed but the order record failed to save: ${orderErr.message}`);
+    }
 
     return res.json({ success: true, orderNumber, soldDate, results, errors });
   } catch (err) {

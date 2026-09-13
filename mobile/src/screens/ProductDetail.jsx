@@ -132,6 +132,7 @@ export default function ProductDetailScreen({ route }) {
   // "bags"/"collectibles" (brand lives in its own product.brand field). That
   // mismatch meant this was always false, so the button never showed at all.
   const isShoe   = (product?.category || "").toLowerCase() === "shoes";
+  const hasArEffect = !!product?.model3d?.deeparEffect;
 
   if (!product) {
     return (
@@ -477,17 +478,24 @@ export default function ProductDetailScreen({ route }) {
           </PressScale>
         </View>
 
-        {/* ══ AR TRY ON BUTTON ══ */}
+        {/* ══ AR TRY ON BUTTON ══
+            Only enabled when this product has its own per-shoe .deepar
+            effect (set in the admin Edit/Add Product form) — there's no
+            generic fallback shoe to try on, so without one this is disabled
+            rather than silently opening an unrelated demo effect. */}
         {isShoe && (
           <View style={s.arWrapper}>
             <TouchableOpacity
-              style={s.arBtn}
+              style={[s.arBtn, !hasArEffect && s.arBtnDisabled]}
               onPress={() => navigation.navigate("ARTryOn", { product, selectedSize })}
-              activeOpacity={0.85}
+              activeOpacity={hasArEffect ? 0.85 : 1}
+              disabled={!hasArEffect}
             >
-              <Ionicons name="footsteps-outline" size={18} color={colors.accentGoldLight} />
-              <Text style={s.arBtnText}>TRY ON WITH AR</Text>
-              <Text style={s.arBtnChev}>›</Text>
+              <Ionicons name="footsteps-outline" size={18} color={hasArEffect ? colors.accentGoldLight : colors.textMuted} />
+              <Text style={[s.arBtnText, !hasArEffect && s.arBtnTextDisabled]}>
+                {hasArEffect ? "TRY ON WITH AR" : "AR TRY-ON NOT AVAILABLE FOR THIS ITEM"}
+              </Text>
+              {hasArEffect && <Text style={s.arBtnChev}>›</Text>}
             </TouchableOpacity>
           </View>
         )}
@@ -1036,6 +1044,13 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 18,
     color: colors.accentGoldLight,
     fontWeight: "300",
+  },
+  arBtnDisabled: {
+    backgroundColor: colors.bgSecondary,
+    borderColor: colors.borderSubtle,
+  },
+  arBtnTextDisabled: {
+    color: colors.textMuted,
   },
 
   /* ── sections (description / reviews) ── */

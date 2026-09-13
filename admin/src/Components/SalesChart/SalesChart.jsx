@@ -1,12 +1,17 @@
 import React, { useMemo } from "react";
 import { Doughnut } from "react-chartjs-2";
 import { Chart, ArcElement, Tooltip, Legend } from "chart.js";
+import { useTheme } from "../../Context/ThemeContext";
 
 Chart.register(ArcElement, Tooltip, Legend);
 
 const COLORS = ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#f43f5e", "#06b6d4", "#84cc16"];
 
 const SalesChart = React.memo(({ data }) => {
+  const { theme } = useTheme();
+  // Chart.js draws to <canvas>, which can't read CSS variables — resolve to
+  // a concrete color in JS so the legend text stays legible in both themes.
+  const legendColor = theme === "light" ? "rgba(0, 0, 0, 0.6)" : "rgba(255, 255, 255, 0.5)";
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return null;
     return {
@@ -29,7 +34,7 @@ const SalesChart = React.memo(({ data }) => {
     plugins: {
       legend: {
         position: "bottom",
-        labels: { boxWidth: 8, usePointStyle: true, padding: 20, color: "rgba(255,255,255,0.5)", font: { size: 11, weight: "600" } }
+        labels: { boxWidth: 8, usePointStyle: true, padding: 20, color: legendColor, font: { size: 11, weight: "600" } }
       },
       tooltip: {
         backgroundColor: "rgba(0, 0, 0, 0.8)",
@@ -45,7 +50,7 @@ const SalesChart = React.memo(({ data }) => {
         }
       }
     }
-  }), []);
+  }), [legendColor]);
 
   if (!chartData) return null;
 

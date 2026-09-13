@@ -59,12 +59,14 @@ const ARTryOnScreen = ({ route, navigation }) => {
     Toast.show({ type: 'success', text1: 'Added to cart', text2: product?.name });
   };
 
-  // Per-shoe .deepar effects haven't been exported from DeepAR Studio yet for
-  // individual products, so every product uses the same demo shoe effect for
-  // now. Once real per-product effects exist (e.g. stored as
-  // product.model3d.deeparEffect), swap this to reference that instead.
-  const effectFile = product?.model3d?.deeparEffect || 'Shoe_PBR.deepar';
-  const arUrl = `${BASE_URL}/artryon/index.html?effect=${encodeURIComponent(effectFile)}`;
+  // Each shoe needs its own .deepar effect exported from DeepAR Studio (set
+  // in the admin Edit/Add Product form) — there's no shared fallback model,
+  // since a generic demo shoe doesn't match what the customer is actually
+  // buying. The Product Details screen already disables the entry point
+  // when this is missing; this guard covers any other way the screen could
+  // be reached (deep link, back/forward nav, etc.).
+  const effectFile = product?.model3d?.deeparEffect || null;
+  const arUrl = effectFile ? `${BASE_URL}/artryon/index.html?effect=${encodeURIComponent(effectFile)}` : null;
 
   const handleMessage = useCallback((event) => {
     try {
@@ -73,6 +75,18 @@ const ARTryOnScreen = ({ route, navigation }) => {
       if (data.type === 'error') setArError(data.message);
     } catch {}
   }, []);
+
+  if (!effectFile) {
+    return (
+      <View style={s.center}>
+        <Text style={s.permTitle}>AR Try-On Not Available</Text>
+        <Text style={s.permText}>This item doesn't have an AR model yet.</Text>
+        <TouchableOpacity style={s.permBtn} onPress={() => navigation.goBack()}>
+          <Text style={s.permBtnText}>GO BACK</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   /* ── permission states ──
      Requested here (not just left to the WebView) because Android's

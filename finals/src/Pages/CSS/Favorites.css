@@ -65,6 +65,33 @@
   gap: 30px;
 }
 
+.favorite-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.remove-favorite-btn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.remove-favorite-btn:hover {
+  border-color: #ff4d4d;
+  color: #ff4d4d;
+  background: rgba(255, 77, 77, 0.05);
+}
+
 .favorites-pagination {
   display: flex;
   justify-content: center;

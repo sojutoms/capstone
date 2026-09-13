@@ -569,7 +569,6 @@ const ProductDisplay = ({ product, loading = false }) => {
               {t.type === "success" ? "✓" : t.type === "error" ? "!" : "i"}
               <span style={{ marginLeft: 8 }}>{t.message}</span>
             </div>
-            <button className="toast-close" onClick={() => removeToast(t.id)} aria-label="Dismiss">×</button>
           </div>
         ))}
       </div>

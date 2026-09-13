@@ -93,7 +93,19 @@
 }
 
 .transactions-left::-webkit-scrollbar { width: 4px; }
-.transactions-left::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+.transactions-left::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 10px; }
+
+/* This column is narrow (list + detail split), so the shared .sku-controls
+   row (search + status filter + results count) has too little space for all
+   three side by side — the search input was getting squeezed to ~65px.
+   Force it onto its own full-width row, wrapping the filter/badge below. */
+.transactions-left .sku-controls {
+  flex-wrap: wrap;
+}
+
+.transactions-left .search-wrapper-luxe {
+  flex: 1 1 100%;
+}
 
 .transactions-controls {
   position: sticky;
@@ -154,7 +166,7 @@
 }
 
 .transactions-right::-webkit-scrollbar { width: 4px; }
-.transactions-right::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+.transactions-right::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 10px; }
 
 .modal-close-btn {
   background: var(--bg-surface);

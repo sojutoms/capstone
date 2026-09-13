@@ -41,6 +41,11 @@ const model3dSchema = new mongoose.Schema(
     turntableFrames: { type: [String], default: [] }, // ordered, 24 frames @ 15° steps
     error:           { type: String, default: "" },
     generatedAt:     { type: Date, default: null },
+    // Filename of a per-product DeepAR .deepar effect file, saved under
+    // backend/public/artryon/effects/ (see uploadRoutes.js) and loaded by the
+    // mobile AR try-on WebView via ?effect=<this>. Optional — falls back to
+    // the shared demo effect (see ARTryOnScreen.jsx) when not set.
+    deeparEffect:    { type: String, default: null },
   },
   { _id: false }
 );

@@ -135,7 +135,7 @@ const EyeOffIcon = () => (
 const StarDisplay = ({ rating, max = 5 }) => (
   <div className="admin-review-stars" style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
     {Array.from({ length: max }, (_, i) => (
-      <span key={i} style={{ color: i < Math.round(rating || 0) ? "#f5a623" : "rgba(255,255,255,0.1)", fontSize: 14 }}>★</span>
+      <span key={i} style={{ color: i < Math.round(rating || 0) ? "#f5a623" : "var(--border-medium)", fontSize: 14 }}>★</span>
     ))}
     <span style={{ fontSize: 12, fontWeight: 800, marginLeft: 6, color: 'var(--text-secondary)' }}>{Number(rating || 0).toFixed(1)}</span>
   </div>
@@ -528,7 +528,7 @@ const UserManagement = () => {
                         return (
                           <button key={role}
                             className={`sp-btn ${hasRole ? "sp-btn--primary" : ""}`}
-                            style={{ flex: '0 0 calc(50% - 6px)', background: hasRole ? config.color : 'rgba(255,255,255,0.05)', color: hasRole ? '#000' : '#fff' }}
+                            style={{ flex: '0 0 calc(50% - 6px)', background: hasRole ? config.color : 'var(--bg-dark)', color: hasRole ? '#000' : 'var(--text-primary)' }}
                             onClick={() => handleRoleToggle(selectedStaff, role)}>
                             {config.label.toUpperCase()} {hasRole && "✓"}
                           </button>
@@ -578,8 +578,8 @@ const UserManagement = () => {
 
                 <div className="user-detail-body">
                   <div className="user-section-title">REVIEW CONTENT</div>
-                  <div style={{ background: 'rgba(255,255,255,0.02)', padding: 24, borderRadius: 16, border: '1px solid var(--border-subtle)', marginBottom: 32 }}>
-                    <h3 style={{ fontSize: 16, margin: '0 0 12px 0', color: '#fff' }}>"{selectedReview.title || "User Review"}"</h3>
+                  <div style={{ background: 'var(--glass-bg)', padding: 24, borderRadius: 16, border: '1px solid var(--border-subtle)', marginBottom: 32 }}>
+                    <h3 style={{ fontSize: 16, margin: '0 0 12px 0', color: 'var(--text-primary)' }}>"{selectedReview.title || "User Review"}"</h3>
                     <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>{selectedReview.review}</p>
                   </div>
 

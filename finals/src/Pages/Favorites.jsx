@@ -73,7 +73,7 @@ const resolveBestPrice = (item) => {
 
 
 const Favorites = () => {
-  const { favorites, clearFavorites } = useContext(FavoritesContext);
+  const { favorites, clearFavorites, removeFromFavorites } = useContext(FavoritesContext);
   const { all_product } = useContext(ShopContext);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -146,18 +146,25 @@ const Favorites = () => {
               {pageProducts.map((item) => {
                 const numericPrice = resolveBestPrice(item);
                 return (
-                  <Item
-                    key={item.id}
-                    id={item.id}
-                    name={item.name}
-                    image={item.image}
-                    sizes={item.sizes || item.variants || item.price_map}
-                    price={Number.isFinite(numericPrice) ? numericPrice : undefined}
-                    new_price={item.new_price}
-                    old_price={item.old_price}
-                    isNew={item.isNew}
-                    salesCount={item.salesCount || 0}
-                  />
+                  <div key={item.id} className="favorite-item">
+                    <Item
+                      id={item.id}
+                      name={item.name}
+                      image={item.image}
+                      sizes={item.sizes || item.variants || item.price_map}
+                      price={Number.isFinite(numericPrice) ? numericPrice : undefined}
+                      new_price={item.new_price}
+                      old_price={item.old_price}
+                      isNew={item.isNew}
+                      salesCount={item.salesCount || 0}
+                    />
+                    <button
+                      className="remove-favorite-btn"
+                      onClick={() => removeFromFavorites(item.id)}
+                    >
+                      Remove from Favorites
+                    </button>
+                  </div>
                 );
               })}
             </div>

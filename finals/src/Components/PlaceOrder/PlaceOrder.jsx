@@ -9,6 +9,20 @@ import { getShippingFee, getShippingTier } from '../../services/shippingFee';
 const NCR_REGION_CODE = '1300000000';
 const SIMPLE_CATEGORIES = ['bags', 'collectibles'];
 
+// Converts a legacy 09XXXXXXXXX number (still what older saved addresses
+// have) into the +63XXXXXXXXXX format this form now uses, so editing an old
+// saved address doesn't show a mismatched prefix. Leaves an already-+63
+// value alone, defaults an empty one to the bare prefix.
+const normalizePhone = (raw) => {
+  const value = (raw || '').trim();
+  if (value.startsWith('+63')) return value;
+  const digits = value.replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('0')) return '+63' + digits.slice(1);
+  if (digits.length === 10) return '+63' + digits;
+  if (!digits) return '+63';
+  return value;
+};
+
 const fixEncoding = (str) => {
   try {
     const bytes = Uint8Array.from(str, (c) => c.charCodeAt(0));
@@ -199,7 +213,7 @@ const PlaceOrder = () => {
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', street: '',
     region: '', province: '', cityOrMunicipality: '', barangay: '',
-    phone: '',
+    phone: '+63',
   });
 
   const cancelledOrderNumber = searchParams.get('paymentStatus') === 'cancelled' ? searchParams.get('orderNumber') : null;
@@ -428,10 +442,9 @@ const PlaceOrder = () => {
 
     if (name === 'phone') {
       let digits = value.replace(/\D/g, '');
-      if (digits.length >= 1 && digits[0] !== '0') digits = '0' + digits;
-      if (digits.length >= 2 && digits[1] !== '9') digits = '09' + digits.replace(/^0*/, '');
-      digits = digits.slice(0, 11);
-      setFormData((p) => ({ ...p, phone: digits }));
+      if (!digits.startsWith('63')) digits = '63' + digits.replace(/^6?3?/, '');
+      digits = digits.slice(0, 12);
+      setFormData((p) => ({ ...p, phone: '+' + digits }));
       return;
     }
 
@@ -486,6 +499,7 @@ const PlaceOrder = () => {
       setBarangays(brgyRes.sort((a, b) => a.name.localeCompare(b.name, 'fil')));
       setFormData((p) => ({
         ...p, ...address,
+        phone: normalizePhone(address.phone),
         region: rCode,
         province: isNCR ? NCR_REGION_CODE : pCode,
         cityOrMunicipality: cCode,
@@ -505,7 +519,7 @@ const PlaceOrder = () => {
     setEditingIndex(idx);
     setEditFormData({
       firstName: addr.firstName || '', lastName: addr.lastName || '', email: addr.email || '',
-      street: addr.street || '', phone: addr.phone || '',
+      street: addr.street || '', phone: normalizePhone(addr.phone),
       region: rCode, province: isNCR ? '' : pCode, cityOrMunicipality: cCode, barangay: addr.barangay?.code || '',
     });
     try {
@@ -541,10 +555,9 @@ const PlaceOrder = () => {
       setEditFormData((p) => ({ ...p, [name]: filtered }));
     } else if (name === 'phone') {
       let digits = value.replace(/\D/g, '');
-      if (digits.length >= 1 && digits[0] !== '0') digits = '0' + digits;
-      if (digits.length >= 2 && digits[1] !== '9') digits = '09' + digits.replace(/^0*/, '');
-      digits = digits.slice(0, 11);
-      setEditFormData((p) => ({ ...p, phone: digits }));
+      if (!digits.startsWith('63')) digits = '63' + digits.replace(/^6?3?/, '');
+      digits = digits.slice(0, 12);
+      setEditFormData((p) => ({ ...p, phone: '+' + digits }));
     } else {
       setEditFormData((p) => ({ ...p, [name]: value }));
     }
@@ -760,7 +773,7 @@ const PlaceOrder = () => {
                             <div className="field-group"><label>Last Name</label><input name="lastName" value={editFormData.lastName} onChange={handleEditChange} placeholder="SURNAME" /></div>
                           </div>
                           <div className="field-group"><label>Email</label><input name="email" type="email" value={editFormData.email} onChange={handleEditChange} placeholder="EMAIL ADDRESS" /></div>
-                          <div className="field-group"><label>Street</label><input name="street" value={editFormData.street} onChange={handleEditChange} placeholder="STREET / UNIT" /></div>
+                          <div className="field-group"><label>Street</label><input name="street" value={editFormData.street} onChange={handleEditChange} placeholder="STREET / UNIT" maxLength={64} /></div>
                           <div className="input-grid">
                             <div className="field-group">
                               <label>Region</label>
@@ -795,7 +808,7 @@ const PlaceOrder = () => {
                               </select>
                             </div>
                           </div>
-                          <div className="field-group"><label>Phone</label><input name="phone" value={editFormData.phone} onChange={handleEditChange} placeholder="09XXXXXXXXX" /></div>
+                          <div className="field-group"><label>Phone</label><input name="phone" type="text" inputMode="numeric" value={editFormData.phone} onChange={handleEditChange} placeholder="+639XXXXXXXXX" maxLength={13} /></div>
                           <div className="saved-address-edit-actions">
                             <button type="button" className="addr-save-btn" onClick={saveEditedAddress} disabled={editLoading.saving}>{editLoading.saving ? 'SAVING...' : 'SAVE CHANGES'}</button>
                             <button type="button" className="addr-cancel-btn" onClick={() => { setEditingIndex(null); setEditFormData(null); }}>CANCEL</button>
@@ -812,7 +825,7 @@ const PlaceOrder = () => {
                 <div className="field-group"><label>Last Name</label><input name="lastName" value={formData.lastName} onChange={handleInputChange} placeholder="SURNAME" required /></div>
               </div>
               <div className="field-group"><label>Email Address</label><input name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="AUTHORIZED EMAIL" required /></div>
-              <div className="field-group"><label>Street Address</label><input name="street" value={formData.street} onChange={handleInputChange} placeholder="RESIDENCE / UNIT / STREET" required /></div>
+              <div className="field-group"><label>Street Address</label><input name="street" value={formData.street} onChange={handleInputChange} placeholder="RESIDENCE / UNIT / STREET" maxLength={64} required /></div>
               <div className="input-grid">
                 <div className="field-group">
                   <label>Region</label>
@@ -847,7 +860,7 @@ const PlaceOrder = () => {
                   </select>
                 </div>
               </div>
-              <div className="field-group"><label>Phone Number</label><input name="phone" value={formData.phone} onChange={handleInputChange} placeholder="09XXXXXXXXX" required /></div>
+              <div className="field-group"><label>Phone Number</label><input name="phone" type="text" inputMode="numeric" value={formData.phone} onChange={handleInputChange} placeholder="+639XXXXXXXXX" maxLength={13} required /></div>
 
               <ShippingBanner regionCode={formData.region} />
 
