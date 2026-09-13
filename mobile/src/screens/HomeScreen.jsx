@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -21,7 +21,8 @@ import { CommonActions } from "@react-navigation/native";
 import { useFavorites } from "../context/FavoritesContext";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
-import { colors, fonts, radius, shadows, typography } from "../theme";
+import { fonts, radius, shadows, typography } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import FadeInItem from "../components/FadeInItem";
 import ProductCard from "../components/ProductCard";
 import ProductCardSkeleton from "../components/ProductCardSkeleton";
@@ -32,7 +33,7 @@ import { openChatWidget } from "../utils/chatWidgetBus";
 
 const { width } = Dimensions.get("window");
 
-const BRAND_LOGO = require("../../assets/GSPH-removebg.png");
+const BRAND_LOGO = require("../../assets/logo_hero.png");
 
 // Space reserved at the top of the ScrollView so its content starts below
 // the floating header panel (logo + greeting) instead of underneath it.
@@ -91,7 +92,7 @@ const CATEGORIES = [
   },
 ];
 
-const AccordionTile = ({ category, onBrandSelect, onDirectNav }) => {
+const AccordionTile = ({ category, onBrandSelect, onDirectNav, tileStyles }) => {
   const [open, setOpen] = useState(false);
   const animHeight = useRef(new Animated.Value(0)).current;
   const animRotate = useRef(new Animated.Value(0)).current;
@@ -198,7 +199,7 @@ const STORE = {
   phone: "+63 917 123 4567",
 };
 
-const StoreMapSection = () => {
+const StoreMapSection = ({ mapStyles, colors }) => {
   const openInMaps = () => {
     const url = `https://www.google.com/maps/search/?api=1&query=${STORE.lat},${STORE.lng}`;
     Linking.openURL(url);
@@ -258,7 +259,7 @@ const BASE_URL =
 
 /* ─────────────────── SECTION HEADER ─────────────────── */
 
-const SectionHeader = ({ eyebrow, title, onSeeAll }) => (
+const SectionHeader = ({ eyebrow, title, onSeeAll, s }) => (
   <View style={s.sectionHeader}>
     <View>
       {eyebrow ? <Text style={s.sectionEyebrow}>{eyebrow}</Text> : null}
@@ -278,6 +279,10 @@ export default function HomeScreen({ navigation }) {
   const { toggleFavorite, isFavorite, refreshFavorites } = useFavorites();
   const { addToCart, refreshCart } = useCart();
   const { userProfile, refreshUserProfile } = useAuth();
+  const { colors, isDark } = useTheme();
+  const s = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
+  const tileStyles = useMemo(() => makeTileStyles(colors), [colors]);
+  const mapStyles = useMemo(() => makeMapStyles(colors), [colors]);
 
   const handleAddToCart = (item) => {
     if (isOutOfStock(item)) {
@@ -416,30 +421,38 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       {/* ── FLOATING HEADER (logo + chat + greeting) ──
           Absolutely positioned above the ScrollView, not a flex sibling
           taking layout space — so once the panel fades to fully
           transparent, the content scrolling underneath just shows through.
-          Logo (top-left, where the profile icon used to be) and chat icon
-          (top-right) share one row, with the greeting text below — all one
-          group that fades together on scroll. Pill-shaped bottom edge. */}
+          The logo sits OUTSIDE the fading Animated.View (as its own
+          absolutely-positioned sibling matching the panel's old top-left
+          inset) so it stays put as a persistent "hero" mark even once the
+          rest of the card (eyebrow/greeting/chat) fades away on scroll. */}
       <View style={s.floatingHeaderOverlay} pointerEvents="box-none">
         <Animated.View
           style={[s.headerPanel, { opacity: headerOpacity }]}
           pointerEvents={headerCollapsed ? "none" : "auto"}
         >
+          {/* Spacer holding the logo's old footprint so the text below
+              doesn't shift up now that the real logo lives outside this
+              fading panel. */}
+          <View style={s.pageLogoSpacer} />
+          <Text style={s.headerEyebrow}>{getGreeting()}</Text>
           <View style={s.headerTopRow}>
-            <Image source={BRAND_LOGO} style={[s.pageLogo, { tintColor: colors.textPrimary }]} resizeMode="contain" />
+            <Text style={[s.headerGreeting, { flex: 1 }]} numberOfLines={1}>Hello, {firstName}</Text>
             <TouchableOpacity ref={chatBtnRef} style={s.chatBtn} onPress={handleOpenChat} activeOpacity={0.8}>
-              <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.textPrimary} />
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color="#ffffff" />
             </TouchableOpacity>
           </View>
-          <Text style={s.headerEyebrow}>{getGreeting()}</Text>
-          <Text style={s.headerGreeting} numberOfLines={1}>Hello, {firstName}</Text>
-          <Text style={s.headerQuestion}>What's your next pair?</Text>
         </Animated.View>
+        {/* Small persistent dark tab behind the logo — not just a naked
+            floating image once the greeting card fades away on scroll. */}
+        <View style={s.persistentLogoBar} pointerEvents="none">
+          <Image source={BRAND_LOGO} style={[s.pageLogo, { tintColor: "#ffffff" }]} resizeMode="contain" />
+        </View>
       </View>
 
       <Animated.ScrollView
@@ -510,6 +523,7 @@ export default function HomeScreen({ navigation }) {
               eyebrow="MOST WANTED THIS WEEK"
               title="Trending Now"
               onSeeAll={() => {}}
+              s={s}
             />
             <ScrollView
               horizontal
@@ -542,6 +556,7 @@ export default function HomeScreen({ navigation }) {
               category={cat}
               onBrandSelect={handleBrandSelect}
               onDirectNav={handleDirectNav}
+              tileStyles={tileStyles}
             />
           ))}
         </View>
@@ -567,6 +582,7 @@ export default function HomeScreen({ navigation }) {
               eyebrow="FRESH ARRIVALS"
               title="Just Dropped"
               onSeeAll={() => {}}
+              s={s}
             />
             <ScrollView
               horizontal
@@ -592,7 +608,7 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* ── STORE MAP SECTION (moved from ShopScreen.jsx) ── */}
-        <StoreMapSection />
+        <StoreMapSection mapStyles={mapStyles} colors={colors} />
 
       </Animated.ScrollView>
     </SafeAreaView>
@@ -601,7 +617,7 @@ export default function HomeScreen({ navigation }) {
 
 /* ─────────────────── STYLES ─────────────────── */
 
-const s = StyleSheet.create({
+const makeStyles = (colors, isDark) => StyleSheet.create({
   safe:       { flex: 1, backgroundColor: colors.bgPrimary },
   container:  { flex: 1, backgroundColor: colors.bgPrimary },
 
@@ -615,34 +631,66 @@ const s = StyleSheet.create({
     zIndex: 20,
   },
   headerPanel: {
-    backgroundColor: colors.bgTertiary,
+    // Dark mode: pure black, unchanged from before. Light mode: matches how
+    // the bottom nav pill's translucent grey actually reads once blended
+    // over the page (not the same raw value, since this card is opaque).
+    backgroundColor: isDark ? "#000000" : "#404040",
     borderBottomLeftRadius: 48,
     borderBottomRightRadius: 48,
-    paddingHorizontal: 30,
-    paddingTop: 48,
-    paddingBottom: 24,
+    paddingLeft: 22,
+    paddingRight: 30,
+    // Was 48 to clear the logo that used to sit here — tightened now that
+    // the row is just the chat button, so the card doesn't read oversized.
+    paddingTop: 34,
+    paddingBottom: 20,
     ...shadows.sm,
   },
-  headerTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  // A small always-visible dark tab (not tied to headerOpacity) behind the
+  // logo, so scrolling past the greeting card leaves this compact bar
+  // instead of a bare floating image with nothing behind it.
+  persistentLogoBar: {
+    position: "absolute",
+    top: 0, left: 0, right: 0,
     alignItems: "center",
+    backgroundColor: isDark ? "#000000" : "#404040",
+    paddingTop: 34,
+    paddingBottom: 16,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
   },
-  pageLogo: { width: 42, height: 42 },
+  // logo_hero.png is a wide 665x71 wordmark, not a square icon — sized by
+  // explicit width+height (not aspectRatio, which isn't reliably respected
+  // in every layout context) instead of a fixed square box.
+  pageLogo: { width: 120, height: 13 },
+  // Clears the persistent logo bar above (paddingTop 34 + logo 13 +
+  // paddingBottom 16 ≈ 63) plus some breathing room, so the eyebrow/
+  // greeting/chat row sits comfortably below it instead of crowding it.
+  pageLogoSpacer: { height: 80 },
+  headerTopRow: {
+    // Greeting text + chat button side by side now (chat button used to be
+    // its own row above the text, which cost extra vertical space).
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
   chatBtn: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.bgSurface, borderWidth: 0.5, borderColor: colors.borderLight,
+    backgroundColor: "rgba(255,255,255,0.12)", borderWidth: 0.5, borderColor: "rgba(255,255,255,0.2)",
     justifyContent: "center", alignItems: "center",
   },
-  headerEyebrow: { fontSize: 9, letterSpacing: 3, color: colors.textTertiary, fontFamily: fonts.bodySemibold, marginTop: 24 },
-  headerGreeting: { fontSize: 26, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display, marginTop: 12 },
-  headerQuestion: { fontSize: 12, color: colors.textSecondary, marginTop: 6, fontFamily: fonts.bodyRegular, letterSpacing: 0.3 },
+  // marginTop was 24 to clear the old logo/chat row above it — that row's
+  // gone now (chat button moved inline with the greeting text below), so
+  // this sits right under the card's own paddingTop instead.
+  headerEyebrow: { fontSize: 9, letterSpacing: 3, color: "rgba(255,255,255,0.6)", fontFamily: fonts.bodySemibold },
+  headerGreeting: { fontSize: 26, color: "#ffffff", letterSpacing: 0.5, fontFamily: fonts.display, marginTop: 0 },
 
   /* HERO — pure swipeable image carousel below the header */
   heroCarouselWrap: { marginHorizontal: 16, marginTop: 16, marginBottom: 4 },
   hero: {
     width: width - 32,
-    backgroundColor: colors.bgCard,
+    // Fixed value, not colors.bgCard — kept isolated so tuning bgCard
+    // elsewhere (cart, orders, favorites, product cards) never moves this.
+    backgroundColor: isDark ? "#151515" : "#ffffff",
     borderRadius: radius.xl, borderWidth: 0.5, borderColor: colors.borderLight,
     overflow: "hidden", height: 200,
   },
@@ -733,7 +781,7 @@ const s = StyleSheet.create({
 
 /* ─────────────────── TILE STYLES (copied from ShopScreen.jsx) ─────────────────── */
 
-const tileStyles = StyleSheet.create({
+const makeTileStyles = (colors) => StyleSheet.create({
   wrapper: {
     backgroundColor: colors.bgPrimary,
   },
@@ -801,7 +849,7 @@ const tileStyles = StyleSheet.create({
 
 /* ─────────────────── STORE MAP STYLES (moved from ShopScreen.jsx) ─────────────────── */
 
-const mapStyles = StyleSheet.create({
+const makeMapStyles = (colors) => StyleSheet.create({
   container:      { marginTop: 32, marginHorizontal: 4, paddingHorizontal: 12 },
   sectionHeader:  { marginBottom: 14, paddingHorizontal: 4 },
   sectionEyebrow: { fontSize: 9, letterSpacing: 3, color: colors.textMuted, fontFamily: fonts.bodyRegular, marginBottom: 2 },

@@ -73,3 +73,219 @@ Error: Brevo API error 401: {"message":"We have detected you are using an unreco
     at endReadableNT (node:internal/streams/readable:1698:12)
     at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
 
+[2026-09-11T15:11:21.162Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:11:24.765Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:11:44.010Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:11:45.517Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:11:47.060Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:11:48.312Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:11:49.529Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:11:50.888Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:11:51.967Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:11:53.163Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:11:54.622Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:11:55.755Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:11:57.289Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:11:58.607Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:12:00.933Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:12:13.701Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:12:16.130Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:12:19.536Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:12:27.173Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-11T15:16:33.457Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 124.106.132.136. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-13T06:36:08.715Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 112.211.112.73. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 112.211.112.73. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-13T06:38:44.741Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 112.211.112.73. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 112.211.112.73. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-13T06:42:20.729Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 112.211.112.73. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 112.211.112.73. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+
+[2026-09-13T06:42:21.406Z] Signup OTP error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 112.211.112.73. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+Error: Brevo API error 401: {"message":"We have detected you are using an unrecognised IP address 112.211.112.73. If you performed this action make sure to add the new IP address in this link: https://app.brevo.com/security/authorised_ips","code":"unauthorized"}
+
+    at IncomingMessage.<anonymous> (C:\Users\Cristian\Desktop\FinalProject\backend\config\mailer.js:35:23)
+    at IncomingMessage.emit (node:events:530:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+

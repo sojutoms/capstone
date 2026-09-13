@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,9 +9,12 @@ import {
 } from "react-native";
 import { Alert } from "../utils/customAlert";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { colors, fonts, typography } from "../theme";
+import { fonts, typography } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 
 export default function CameraScreen({ navigation }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState("back");
   const [capturing, setCapturing] = useState(false);
@@ -134,7 +137,7 @@ export default function CameraScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#000",

@@ -16,6 +16,14 @@ import {
 import { BASE_URL } from "../api/config";
 import { colors, fonts } from "../theme";
 
+// Matches web's ResendOtpButton formatTime exactly (m:ss once a minute or
+// more remains, otherwise just "Ns").
+const formatCountdown = (secs) => {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return m > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${s}s`;
+};
+
 export default function VerifyOTPScreen({ navigation, route }) {
   const email = route?.params?.email || "";
 
@@ -27,6 +35,10 @@ export default function VerifyOTPScreen({ navigation, route }) {
   const [countdown,   setCountdown]   = useState(60);
   const [canResend,   setCanResend]   = useState(false);
   const [focusOtp,    setFocusOtp]    = useState(false);
+  // Matches web's escalating resend cooldown (see ResendOtpButton in
+  // finals/src/Pages/LoginSignup.jsx): 60s → 120s → 180s, enforced
+  // server-side too (userController.js resendOtp) so this just mirrors it.
+  const [resendAttempts, setResendAttempts] = useState(0);
 
   const cardOpacity   = useRef(new Animated.Value(0)).current;
   const cardTranslateY = useRef(new Animated.Value(40)).current;
@@ -113,17 +125,25 @@ export default function VerifyOTPScreen({ navigation, route }) {
           "Content-Type": "application/json",
           "ngrok-skip-browser-warning": "true",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, type: "signup" }),
       });
       const data = await res.json();
       if (!data.success) {
+        // Still in cooldown (429) — sync the countdown to the server's
+        // actual remaining time instead of just showing an error.
+        if (data.remainingSeconds) {
+          setCanResend(false);
+          setCountdown(data.remainingSeconds);
+        }
         setError(data.errors || "Failed to resend code.");
         return;
       }
       setResendMsg("A new code has been sent.");
       setOtp("");
       setCanResend(false);
-      setCountdown(60);
+      const newAttempts = resendAttempts + 1;
+      setResendAttempts(newAttempts);
+      setCountdown(newAttempts === 1 ? 120 : 180);
     } catch {
       setError("Unable to reach the server.");
     } finally {
@@ -245,7 +265,7 @@ export default function VerifyOTPScreen({ navigation, route }) {
                     }
                   </TouchableOpacity>
                 ) : (
-                  <Text style={s.resendTimer}>Resend in {countdown}s</Text>
+                  <Text style={s.resendTimer}>Resend in {formatCountdown(countdown)}</Text>
                 )}
               </View>
 

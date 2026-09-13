@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,8 @@ import {
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
-import { colors, fonts, radius } from "../theme";
+import { fonts, radius } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 import FadeInItem from "../components/FadeInItem";
 import ProductCard from "../components/ProductCard";
@@ -103,7 +104,7 @@ const CATEGORIES = [
 
 /* ─────────────────── SECTION HEADER ─────────────────── */
 
-const SectionHeader = ({ title, onSeeAll }) => (
+const SectionHeader = ({ title, onSeeAll, styles }) => (
   <View style={styles.sectionHeader}>
     <Text style={styles.sectionTitle}>{title}</Text>
     {onSeeAll && (
@@ -119,6 +120,8 @@ const SectionHeader = ({ title, onSeeAll }) => (
 export default function ShopScreen({ navigation }) {
   const { addToCart, refreshCart } = useCart();
   const { favorites, toggleFavorite, isFavorite, refreshFavorites } = useFavorites();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -183,7 +186,7 @@ export default function ShopScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -266,6 +269,7 @@ export default function ShopScreen({ navigation }) {
                     <SectionHeader
                       title={cat.label}
                       onSeeAll={() => navigation.navigate(cat.screen)}
+                      styles={styles}
                     />
                     <ScrollView
                       horizontal
@@ -303,7 +307,7 @@ export default function ShopScreen({ navigation }) {
 
 /* ─────────────────── MAIN STYLES ─────────────────── */
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe:          { flex: 1, backgroundColor: colors.bgPrimary },
   scrollContent: { paddingBottom: TAB_BAR_CLEARANCE },
   topNav: {

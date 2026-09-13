@@ -9,7 +9,7 @@ import {
   Platform,
   Animated,
 } from "react-native";
-import { Video } from "expo-av";
+import { VideoView, useVideoPlayer } from "expo-video";
 import { useAuth } from "../context/AuthContext";
 import { colors, fonts, typography } from "../theme";
 
@@ -45,6 +45,11 @@ const slides = [
 export default function Onboarding({ navigation }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const { completeOnboarding } = useAuth();
+  const player = useVideoPlayer(require("../../assets/onboarding.mp4"), (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.play();
+  });
 
   const titleOpacity = useRef(new Animated.Value(1)).current;
   const titleTranslateY = useRef(new Animated.Value(0)).current;
@@ -134,13 +139,11 @@ export default function Onboarding({ navigation }) {
           style={styles.webVideo}
         />
       ) : (
-        <Video
-          source={require("../../assets/onboarding.mp4")}
+        <VideoView
+          player={player}
           style={styles.video}
-          resizeMode="cover"
-          shouldPlay
-          isLooping
-          isMuted
+          contentFit="cover"
+          nativeControls={false}
         />
       )}
 

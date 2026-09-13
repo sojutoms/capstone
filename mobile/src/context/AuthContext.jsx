@@ -7,6 +7,7 @@ import {
   verifyOtp,
   forgotPassword,
   resetPassword,
+  resendOtp as resendOtpApi,
 } from "../api/authApi";
 
 const BASE_URL =
@@ -93,6 +94,16 @@ export const AuthProvider = ({ children }) => {
     if (!res.success) throw new Error(res.errors || "Failed to send reset OTP");
   };
 
+  // ─── Resend OTP (signup or forgot-password code) ─────────────────────────────
+  const resendOtp = async (email, type) => {
+    const res = await resendOtpApi(email, type);
+    if (!res.success) {
+      const err = new Error(res.errors || "Failed to resend code");
+      err.remainingSeconds = res.remainingSeconds;
+      throw err;
+    }
+  };
+
   // ─── Reset password ───────────────────────────────────────────────────────────
   const confirmResetPassword = async (email, otp, newPassword) => {
     const res = await resetPassword(email, otp, newPassword);
@@ -124,6 +135,7 @@ export const AuthProvider = ({ children }) => {
         confirmOtp,
         sendForgotOtp,
         confirmResetPassword,
+        resendOtp,
         logout,
         completeOnboarding,
       }}

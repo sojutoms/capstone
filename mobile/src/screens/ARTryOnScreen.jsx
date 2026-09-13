@@ -1,119 +1,83 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
-  Image,
-  Animated,
-  Dimensions,
   Platform,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { colors, fonts, radius, typography } from '../theme';
-import { TAB_BAR_CLEARANCE } from '../navigation/tabBarMetrics';
+import { WebView } from 'react-native-webview';
+import { useCameraPermissions } from 'expo-camera';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import Toast from 'react-native-toast-message';
+import { fonts, radius, typography } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { useCart } from '../context/CartContext';
 
-const { width, height } = Dimensions.get('window');
+const BASE_URL =
+  Platform.OS === 'web'
+    ? 'http://localhost:4000'
+    : 'https://lifting-manpower-corral.ngrok-free.dev';
 
+// Real foot-tracked AR via DeepAR's Web SDK, loaded in a WebView — ported
+// from testing/shoetryon-web-js (a working DeepAR demo) and served as
+// static files from the backend (see backend/public/artryon). DeepAR has
+// no official React Native SDK, and the one community wrapper
+// (react-native-deepar) only supports face tracking, not feet — so rather
+// than build a native module from scratch for both platforms, this reuses
+// the proven-working web implementation inside a WebView. Works identically
+// on Android and iOS with the same code.
 const ARTryOnScreen = ({ route, navigation }) => {
   const product = route?.params?.product;
+  const selectedSize = route?.params?.selectedSize;
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
+  const { addToCart } = useCart();
 
-  // Prefer a 3/4-angle rendered turntable frame (from the same Tripo3D asset
-  // used by the 360° viewer) over the flat hero shot — reads far more
-  // dimensional floating over the camera feed. Falls back to product.image
-  // for products that don't have a generated 3D model yet.
-  // TODO: once a per-shoe .deepar effect is exported from DeepAR Studio
-  // (the `deepar` package is already a mobile dependency, just unused), swap
-  // this static overlay for real foot-tracked AR here.
-  const arFrame = product?.model3d?.turntableFrames?.[2] || product?.image;
   const [permission, requestPermission] = useCameraPermissions();
-  const [facing, setFacing]             = useState('back');
-  const [scanning, setScanning]         = useState(true);
-  const [placed, setPlaced]             = useState(false);
+  const [arReady, setArReady] = useState(false);
+  const [arError, setArError] = useState(null);
 
-  /* ── animations ── */
-  const scanLineAnim  = useRef(new Animated.Value(0)).current;
-  const shoeOpacity   = useRef(new Animated.Value(0)).current;
-  const shoeScale     = useRef(new Animated.Value(0.6)).current;
-  const shoeY         = useRef(new Animated.Value(0)).current;
-  const pulseAnim     = useRef(new Animated.Value(1)).current;
-  const overlayOpacity = useRef(new Animated.Value(1)).current;
+  const formatPrice = (p) => {
+    const n = typeof p === 'object' ? Math.min(...Object.values(p).map(Number).filter(isFinite)) : Number(p);
+    return isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '—';
+  };
 
-  /* ── scan line loop ── */
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(scanLineAnim, {
-          toValue: 1, duration: 1800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scanLineAnim, {
-          toValue: 0, duration: 1800,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    loop.start();
+  // Same "select a size first" gate as Product Details — if the user
+  // opened Try On without picking one there, bounce them back to pick one
+  // instead of adding a sizeless item.
+  const handleAddToCart = () => {
+    if (!selectedSize && product?.sizes) {
+      Toast.show({ type: 'error', text1: 'Select a size first' });
+      navigation.goBack();
+      return;
+    }
+    addToCart(product, selectedSize);
+    Toast.show({ type: 'success', text1: 'Added to cart', text2: product?.name });
+  };
 
-    /* auto-place after 3 seconds for demo feel */
-    const timer = setTimeout(() => placeshoe(), 3000);
-    return () => { loop.stop(); clearTimeout(timer); };
+  // Per-shoe .deepar effects haven't been exported from DeepAR Studio yet for
+  // individual products, so every product uses the same demo shoe effect for
+  // now. Once real per-product effects exist (e.g. stored as
+  // product.model3d.deeparEffect), swap this to reference that instead.
+  const effectFile = product?.model3d?.deeparEffect || 'Shoe_PBR.deepar';
+  const arUrl = `${BASE_URL}/artryon/index.html?effect=${encodeURIComponent(effectFile)}`;
+
+  const handleMessage = useCallback((event) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'effectLoaded') setArReady(true);
+      if (data.type === 'error') setArError(data.message);
+    } catch {}
   }, []);
 
-  /* ── pulse loop for placed shoe ── */
-  useEffect(() => {
-    if (!placed) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.04, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1,    duration: 900, useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [placed]);
-
-  /* ── float loop for placed shoe ── */
-  useEffect(() => {
-    if (!placed) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(shoeY, { toValue: -8, duration: 1200, useNativeDriver: true }),
-        Animated.timing(shoeY, { toValue:  8, duration: 1200, useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [placed]);
-
-  const placeshoe = () => {
-    setScanning(false);
-    setPlaced(true);
-
-    /* fade out scan overlay */
-    Animated.timing(overlayOpacity, {
-      toValue: 0, duration: 400, useNativeDriver: true,
-    }).start();
-
-    /* pop shoe in */
-    Animated.parallel([
-      Animated.spring(shoeOpacity, { toValue: 1,   useNativeDriver: true, bounciness: 12 }),
-      Animated.spring(shoeScale,   { toValue: 1,   useNativeDriver: true, bounciness: 14 }),
-    ]).start();
-  };
-
-  const resetTryOn = () => {
-    setPlaced(false);
-    setScanning(true);
-    shoeOpacity.setValue(0);
-    shoeScale.setValue(0.6);
-    overlayOpacity.setValue(1);
-    setTimeout(() => placeshoe(), 2500);
-  };
-
-  /* ── permission states ── */
+  /* ── permission states ──
+     Requested here (not just left to the WebView) because Android's
+     WebView camera permission prompt only auto-grants when the app itself
+     already holds the native CAMERA permission. */
   if (!permission) {
     return (
       <View style={s.center}>
@@ -134,268 +98,148 @@ const ARTryOnScreen = ({ route, navigation }) => {
     );
   }
 
-  /* ── derived ── */
-  const scanLineY = scanLineAnim.interpolate({
-    inputRange:  [0, 1],
-    outputRange: [height * 0.35, height * 0.72],
-  });
-
-  const formatPrice = (p) => {
-    const n = typeof p === 'object' ? Math.min(...Object.values(p).map(Number).filter(isFinite)) : Number(p);
-    return isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '—';
-  };
-
   /* ══════════════════════════════════════
      RENDER
   ══════════════════════════════════════ */
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.bgPrimary} />
+    // Plain View, not SafeAreaView — SafeAreaView pads in the safe-area
+    // insets as real layout space, which shrank the WebView below it and
+    // left a dead black strip above the camera feed. The camera should run
+    // edge-to-edge; only the back button below is nudged down manually to
+    // clear the status bar / notch.
+    <View style={s.safe}>
+      {/* Transparent + translucent so the camera reaches the true top edge
+          of the screen instead of leaving a solid status-bar-colored band
+          above it. */}
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      {/* ── CAMERA ── */}
-      <CameraView style={StyleSheet.absoluteFill} facing={facing} />
+      {/* ── REAL FOOT-TRACKED AR ── */}
+      <WebView
+        source={{ uri: arUrl }}
+        style={StyleSheet.absoluteFill}
+        onMessage={handleMessage}
+        javaScriptEnabled
+        domStorageEnabled
+        allowsInlineMediaPlayback
+        mediaPlaybackRequiresUserAction={false}
+        // iOS-only (15+): grants the page's getUserMedia request instead of
+        // prompting the user again on top of our own permission screen.
+        // Android needs no equivalent prop — react-native-webview's native
+        // WebChromeClient already auto-grants a WebView camera request
+        // whenever the app itself already holds the CAMERA runtime
+        // permission, which useCameraPermissions() above guarantees.
+        mediaCapturePermissionGrantType="grant"
+        originWhitelist={['*']}
+      />
 
-      {/* ── SCAN OVERLAY (fades out after placement) ── */}
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: overlayOpacity }]} pointerEvents="none">
-
-        {/* dark vignette edges */}
-        <View style={s.vigTop} />
-        <View style={s.vigBottom} />
-
-        {/* scan frame */}
-        <View style={s.scanFrame}>
-          <View style={[s.corner, s.cornerTL]} />
-          <View style={[s.corner, s.cornerTR]} />
-          <View style={[s.corner, s.cornerBL]} />
-          <View style={[s.corner, s.cornerBR]} />
+      {!arReady && !arError && (
+        <View style={s.loadingOverlay} pointerEvents="none">
+          <Ionicons name="footsteps-outline" size={36} color="#fff" style={s.loadingIcon} />
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={s.loadingText}>Loading AR…</Text>
         </View>
-
-        {/* animated scan line */}
-        <Animated.View style={[s.scanLine, { transform: [{ translateY: scanLineY }] }]} />
-
-        {/* instruction */}
-        <View style={s.instructionWrap}>
-          <Text style={s.instructionText}>👟  Point camera at your feet</Text>
-        </View>
-      </Animated.View>
-
-      {/* ── SHOE OVERLAY (appears after scan) ── */}
-      {arFrame && (
-        <Animated.View
-          style={[
-            s.shoeOverlay,
-            {
-              opacity: shoeOpacity,
-              transform: [
-                { scale: Animated.multiply(shoeScale, pulseAnim) },
-                { translateY: shoeY },
-              ],
-            },
-          ]}
-          pointerEvents="none"
-        >
-          <Image
-            source={{ uri: arFrame }}
-            style={s.shoeImage}
-            resizeMode="contain"
-          />
-
-          {/* glow under shoe */}
-          <View style={s.shoeGlow} />
-
-          {/* AR badge */}
-          <View style={s.arBadge}>
-            <Text style={s.arBadgeText}>AR LIVE</Text>
-            <View style={s.arDot} />
-          </View>
-        </Animated.View>
       )}
 
-      {/* ── TOP NAV ── */}
+      {arError && (
+        <View style={s.loadingOverlay}>
+          <Text style={s.permTitle}>AR failed to load</Text>
+          <Text style={s.permText}>{arError}</Text>
+        </View>
+      )}
+
+      {/* ── TOP LABEL ──
+          Back button dropped — the BACK button in the bottom card already
+          covers navigation, so this is just a floating pill label now. */}
       <View style={s.topBar}>
-        <TouchableOpacity style={s.navBtn} onPress={() => navigation.goBack()}>
-          <Text style={s.navArrow}>←</Text>
-        </TouchableOpacity>
         <Text style={s.topBarTitle}>TRY ON</Text>
-        <TouchableOpacity
-          style={s.navBtn}
-          onPress={() => setFacing(f => f === 'back' ? 'front' : 'back')}
-        >
-          <Text style={s.navIcon}>⇄</Text>
-        </TouchableOpacity>
       </View>
 
       {/* ── BOTTOM PRODUCT BAR ── */}
       <View style={s.bottomBar}>
-
-        {/* product info */}
         <View style={s.productRow}>
-          {product.image && (
+          {product?.image && (
             <Image source={{ uri: product.image }} style={s.thumbImg} resizeMode="contain" />
           )}
           <View style={s.productInfo}>
-            <Text style={s.productName} numberOfLines={1}>{product.name}</Text>
-            <Text style={s.productPrice}>₱{formatPrice(product.new_price || product.price)}</Text>
+            <Text style={s.productName} numberOfLines={1}>{product?.name}</Text>
+            <Text style={s.productPrice}>₱{formatPrice(product?.new_price || product?.price)}</Text>
           </View>
         </View>
 
-        {/* action buttons */}
         <View style={s.actionRow}>
-          <TouchableOpacity style={s.resetBtn} onPress={resetTryOn}>
-            <Text style={s.resetText}>↺  RESCAN</Text>
+          <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
+            <Text style={s.backText}>BACK</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={s.addBtn}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={s.addText}>ADD TO BAG</Text>
+          <TouchableOpacity style={s.addBtn} onPress={handleAddToCart}>
+            <Text style={s.addText}>ADD TO CART</Text>
           </TouchableOpacity>
         </View>
-
-        {/* disclaimer */}
-        <Text style={s.disclaimer}>
-          Simulated AR preview · Actual fit may vary
-        </Text>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 /* ══════════════════════════════════════
    STYLES
 ══════════════════════════════════════ */
-const s = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe:   { flex: 1, backgroundColor: colors.bgPrimary },
   center: { flex: 1, backgroundColor: colors.bgPrimary, justifyContent: 'center', alignItems: 'center', gap: 16, padding: 32 },
 
-  /* ── permission ── */
+  /* ── permission / loading ── */
   permTitle:   { color: colors.textPrimary, fontSize: 20, fontFamily: fonts.display, letterSpacing: 1 },
   permText:    { color: colors.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 22 },
   permBtn:     { marginTop: 8, backgroundColor: colors.accentGold, paddingVertical: 14, paddingHorizontal: 32, borderRadius: radius.lg },
   permBtnText: { ...typography.button, color: colors.textInverse, fontSize: 12 },
 
-  /* ── top bar ── */
-  topBar: {
-    position: 'absolute', top: Platform.OS === 'ios' ? 54 : 16,
-    left: 0, right: 0,
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  navBtn:      { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20 },
-  navArrow:    { color: colors.textPrimary, fontSize: 20 },
-  navIcon:     { color: colors.textPrimary, fontSize: 20 },
-  topBarTitle: { flex: 1, color: colors.textPrimary, fontSize: 13, fontFamily: fonts.display, letterSpacing: 2, textAlign: 'center' },
-
-  /* ── vignette ── */
-  vigTop: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    height: height * 0.28,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-  },
-  vigBottom: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    height: height * 0.32,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-  },
-
-  /* ── scan frame ── */
-  scanFrame: {
+  loadingOverlay: {
+    // Bounded above the bottom product card instead of the full screen —
+    // centering across the whole height (card included) made it sit
+    // visibly higher than the actual middle of the visible camera area.
     position: 'absolute',
-    top: height * 0.32,
-    left: width * 0.08,
-    right: width * 0.08,
-    height: height * 0.42,
-  },
-  corner: {
-    position: 'absolute',
-    width: 28, height: 28,
-    borderColor: colors.accentGold,
-  },
-  cornerTL: { top: 0, left: 0,  borderTopWidth: 3,    borderLeftWidth: 3  },
-  cornerTR: { top: 0, right: 0, borderTopWidth: 3,    borderRightWidth: 3 },
-  cornerBL: { bottom: 0, left: 0,  borderBottomWidth: 3, borderLeftWidth: 3  },
-  cornerBR: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3 },
-
-  /* ── scan line ── */
-  scanLine: {
-    position: 'absolute',
-    left: width * 0.08,
-    right: width * 0.08,
-    height: 2,
-    backgroundColor: colors.accentGold,
-    opacity: 0.8,
-    shadowColor: colors.accentGold,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-
-  /* ── instruction ── */
-  instructionWrap: {
-    position: 'absolute',
-    top: height * 0.28,
-    left: 0, right: 0,
+    top: 0, left: 0, right: 0,
+    bottom: Platform.OS === 'ios' ? 190 : 170,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 32,
   },
-  instructionText: {
-    color: colors.textPrimary,
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+  loadingIcon: { opacity: 0.9 },
+  loadingText: { color: '#fff', fontSize: 13, letterSpacing: 0.5 },
+
+  /* ── top label ──
+     Fixed light-grey/dark-text below, not theme colors — a small floating
+     pill over the live camera feed, like a native camera app's mode label,
+     regardless of the app's own light/dark mode setting. */
+  topBar: {
+    position: 'absolute',
+    // Now that the status bar is translucent (see the <StatusBar> above),
+    // this sits directly under the real system clock/battery icons unless
+    // we push it down by that reserved height ourselves.
+    top: Platform.OS === 'ios' ? 70 : (StatusBar.currentHeight || 24) + 26,
+    alignSelf: 'center',
     paddingVertical: 8,
     paddingHorizontal: 18,
-    borderRadius: 20,
-    overflow: 'hidden',
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(220,220,220,0.55)',
   },
+  topBarTitle: { color: '#222', fontSize: 11, fontFamily: fonts.display, fontWeight: 'bold', letterSpacing: 1.5, textAlign: 'center' },
 
-  /* ── shoe overlay ── */
-  shoeOverlay: {
-    position: 'absolute',
-    bottom: height * 0.28,
-    left: 0, right: 0,
-    alignItems: 'center',
-  },
-  shoeImage: {
-    width: width * 0.75,
-    height: width * 0.45,
-  },
-  shoeGlow: {
-    width: width * 0.55,
-    height: 18,
-    backgroundColor: colors.accentGoldWash,
-    borderRadius: 40,
-    marginTop: -6,
-    alignSelf: 'center',
-  },
-  arBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 10,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.accentGoldWash,
-  },
-  arBadgeText: { color: colors.accentGold, fontSize: 10, fontWeight: '800', letterSpacing: 2 },
-  arDot:       { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success },
-
-  /* ── bottom bar ── */
+  /* ── bottom bar ──
+     A rounded white card floating over the camera feed (like the order
+     summary card elsewhere in the app), not the flat dark strip it was —
+     black/white/gray only, no gold accent, to keep the palette minimal. */
   bottomBar: {
     position: 'absolute',
-    // Lifted above the floating pill nav, same as ProductDetail's sticky bar.
-    bottom: TAB_BAR_CLEARANCE, left: 0, right: 0,
-    backgroundColor: 'rgba(13,13,13,0.96)',
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
+    bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-    gap: 14,
+    paddingTop: 20,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    gap: 16,
   },
   productRow: {
     flexDirection: 'row',
@@ -405,42 +249,33 @@ const s = StyleSheet.create({
   thumbImg: {
     width: 52,
     height: 52,
-    borderRadius: radius.md,
-    backgroundColor: colors.bgCard,
+    borderRadius: radius.sm,
+    backgroundColor: '#f2f2f2',
   },
   productInfo: { flex: 1, gap: 3 },
-  productName:  { color: colors.textPrimary, fontSize: 15, fontFamily: fonts.bodyBold, letterSpacing: 0.3 },
-  productPrice: { color: colors.accentGold, fontSize: 14, fontWeight: '700' },
+  productName:  { color: '#111', fontSize: 15, fontFamily: fonts.bodyBold, letterSpacing: 0.3 },
+  productPrice: { color: '#111', fontSize: 14, fontWeight: '700' },
 
   actionRow: {
     flexDirection: 'row',
     gap: 10,
   },
-  resetBtn: {
+  backBtn: {
     flex: 1,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    backgroundColor: '#111',
     paddingVertical: 14,
-    borderRadius: radius.lg,
+    borderRadius: radius.sm,
     alignItems: 'center',
   },
-  resetText: { color: colors.textMuted, fontWeight: '700', fontSize: 11, letterSpacing: 1.5 },
+  backText: { ...typography.button, color: '#fff', fontSize: 12 },
   addBtn: {
-    flex: 2,
-    backgroundColor: colors.textPrimary,
+    flex: 1,
+    backgroundColor: '#111',
     paddingVertical: 14,
-    borderRadius: radius.lg,
+    borderRadius: radius.sm,
     alignItems: 'center',
   },
-  addText: { ...typography.button, color: colors.textInverse, fontSize: 12 },
-
-  disclaimer: {
-    color: colors.bgTertiary,
-    fontSize: 10,
-    textAlign: 'center',
-    letterSpacing: 0.3,
-  },
+  addText: { ...typography.button, color: '#fff', fontSize: 12 },
 });
 
 export default ARTryOnScreen;

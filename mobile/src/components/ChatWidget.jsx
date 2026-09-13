@@ -16,6 +16,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BASE_URL } from "../api/config";
 import { useAuth } from "../context/AuthContext";
+import { useChatSettings } from "../context/ChatSettingsContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 import { subscribeChatWidget } from "../utils/chatWidgetBus";
 import { getActiveRouteName, subscribeActiveRoute } from "../navigation/activeRoute";
@@ -33,9 +34,17 @@ const FALLBACK_ORIGIN = { x: SCREEN_W - 18 - 27, y: SCREEN_H - (TAB_BAR_CLEARANC
 // Screens that already have their own chat entry point (Home) or where the
 // FAB just crowds a fixed action row at the bottom (ProductDetail's Add to
 // Bag/Pay, Cart's checkout button) — the FAB stays hidden on these.
+// ARTryOn also hides it — it overlaps the live AR camera view/action bar,
+// and floats on top of the WebView regardless of what the AR page shows.
 const HIDE_FAB_ROUTES = new Set([
   "HomeScreen", "ProductDetail", "CartScreen", "PlaceOrder",
-  "ShopScreen", "ProfileScreen", "Camera",
+  "ShopScreen", "ProfileScreen", "Camera", "ARTryOn",
+  "ShoesScreen", "WatchesScreen", "BagsScreen", "CollectiblesScreen",
+  // Every screen under Profile — these are all focused settings/account
+  // flows (forms, lists, static content), same reasoning as ProfileScreen
+  // itself, so the "show on every screen" toggle actually means something.
+  "OrderHistory", "EditProfile", "Favorites", "MyReviews", "Vouchers",
+  "Privacy", "Terms", "FAQ", "Addresses", "ChangePassword", "SizeGuide",
 ]);
 
 const WELCOME_MESSAGE = {
@@ -87,6 +96,7 @@ function decodeUserId(token) {
 
 export default function ChatWidget() {
   const { userToken } = useAuth();
+  const { showEverywhere } = useChatSettings();
   const [open, setOpen] = useState(false);
   const [sessions, setSessions] = useState([makeSession()]);
   const [activeId, setActiveId] = useState(null);
@@ -261,7 +271,7 @@ export default function ChatWidget() {
 
   return (
     <>
-      {!HIDE_FAB_ROUTES.has(routeName) && (
+      {(showEverywhere || !HIDE_FAB_ROUTES.has(routeName)) && (
         <TouchableOpacity ref={fabRef} style={styles.fab} onPress={openFromFab} activeOpacity={0.85}>
           <View style={styles.fabBubble}>
             <View style={styles.fabBubbleTail} />

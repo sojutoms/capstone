@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -18,11 +18,13 @@ import {
 } from "react-native";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
-import { colors, fonts, radius, typography } from "../theme";
+import { fonts, radius, typography } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import FadeInItem from "../components/FadeInItem";
 import ProductCard from "../components/ProductCard";
 import { getLowestPrice, isOutOfStock } from "../utils/productHelpers";
 import Toast from "react-native-toast-message";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const { width } = Dimensions.get("window");
@@ -51,6 +53,8 @@ export default function ShoesScreen({ navigation, route }) {
   const initialBrand = route?.params?.selectedBrand || "all";
   const { addToCart, refreshCart } = useCart();
   const { toggleFavorite, isFavorite, refreshFavorites } = useFavorites();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const handleAddToCart = (item) => {
     if (isOutOfStock(item)) {
@@ -187,7 +191,7 @@ export default function ShoesScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       {/* ── TOP NAV ── */}
       <View style={styles.topNav}>
@@ -206,7 +210,7 @@ export default function ShoesScreen({ navigation, route }) {
         </View>
         <View style={styles.navIcons}>
           <TouchableOpacity style={styles.iconBtn} onPress={toggleSearch}>
-            <Text style={styles.iconText}>{showSearch ? "✕" : "🔍"}</Text>
+            <Ionicons name={showSearch ? "close" : "search-outline"} size={16} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -222,7 +226,7 @@ export default function ShoesScreen({ navigation, route }) {
         ]}
       >
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Ionicons name="search-outline" size={16} color={colors.textMuted} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search shoes, brands…"
@@ -234,7 +238,7 @@ export default function ShoesScreen({ navigation, route }) {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Text style={styles.searchClear}>✕</Text>
+              <Ionicons name="close" size={16} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
@@ -366,7 +370,7 @@ export default function ShoesScreen({ navigation, route }) {
 
 /* ─────────────────── STYLES ─────────────────── */
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe:       { flex: 1, backgroundColor: colors.bgPrimary },
   loader:     { flex: 1, backgroundColor: colors.bgPrimary, justifyContent: "center", alignItems: "center" },
   loaderText: { color: colors.textMuted, fontSize: 12, letterSpacing: 2, textTransform: "uppercase", marginTop: 12 },
@@ -395,17 +399,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgSurface, borderWidth: 1, borderColor: colors.borderLight,
     justifyContent: "center", alignItems: "center",
   },
-  iconText: { fontSize: 14 },
-
   searchBarWrap: { overflow: "hidden", backgroundColor: colors.bgPrimary, paddingHorizontal: 16 },
   searchBar: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.borderLight,
     borderRadius: radius.md, paddingHorizontal: 12, height: 42, marginBottom: 8, gap: 8,
   },
-  searchIcon:  { fontSize: 13 },
   searchInput: { flex: 1, color: colors.textPrimary, fontSize: 14 },
-  searchClear: { color: colors.textMuted, fontSize: 14, paddingLeft: 4 },
 
   stickyFilters: { backgroundColor: colors.bgPrimary, paddingTop: 4, paddingBottom: 0 },
 

@@ -13,6 +13,7 @@ import CommandPalette    from "../../Components/CommandPalette/CommandPalette";
 import OperationsPanel   from "../../Components/OperationsPanel/OperationsPanel";
 import SecurityPanel     from "../../Components/SecurityPanel/SecurityPanel";
 import POS               from "../../Components/POS/POS";
+import { isIdleGuardActive } from "../../utils/idleGuard";
 
 const IDLE_TIMEOUT_MS = 3 * 60 * 1000;
 const ACTIVITY_EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "click"];
@@ -23,7 +24,6 @@ const clearAdminSession = () => {
   sessionStorage.removeItem("admin-name");
 };
 
-/* ─── Toast ──────────────────────────────────────────────────────────────── */
 const Toast = ({ toast, onDismiss }) => {
   useEffect(() => {
     if (!toast) return;
@@ -60,7 +60,6 @@ const Toast = ({ toast, onDismiss }) => {
   );
 };
 
-/* ─── Idle Modal ─────────────────────────────────────────────────────────── */
 const IdleModal = ({ onLogout }) => (
   <div className="idle-overlay">
     <div className="idle-modal">
@@ -91,7 +90,6 @@ const IdleModal = ({ onLogout }) => (
   </div>
 );
 
-/* ─── Admin ──────────────────────────────────────────────────────────────── */
 const Admin = () => {
   const navigate     = useNavigate();
   const idleTimer    = useRef(null);
@@ -109,14 +107,22 @@ const Admin = () => {
     navigate("/login");
   }, [navigate]);
 
-  const resetIdleTimer = useCallback(() => {
-    if (showModalRef.current) return;
+  // A background job (e.g. 3D model generation) can run for minutes with zero
+  // mouse/keyboard activity — isIdleGuardActive() lets that suppress the
+  // auto-logout instead of kicking out an admin who's just waiting on it.
+  const scheduleIdleCheck = useCallback(() => {
     clearTimeout(idleTimer.current);
     idleTimer.current = setTimeout(() => {
+      if (isIdleGuardActive()) { scheduleIdleCheck(); return; }
       showModalRef.current = true;
       setShowModal(true);
     }, IDLE_TIMEOUT_MS);
   }, []);
+
+  const resetIdleTimer = useCallback(() => {
+    if (showModalRef.current) return;
+    scheduleIdleCheck();
+  }, [scheduleIdleCheck]);
 
   useEffect(() => {
     const token = sessionStorage.getItem("admin-token");
@@ -126,10 +132,7 @@ const Admin = () => {
     }
 
     ACTIVITY_EVENTS.forEach(ev => window.addEventListener(ev, resetIdleTimer));
-    idleTimer.current = setTimeout(() => {
-      showModalRef.current = true;
-      setShowModal(true);
-    }, IDLE_TIMEOUT_MS);
+    scheduleIdleCheck();
 
     return () => {
       ACTIVITY_EVENTS.forEach(ev => window.removeEventListener(ev, resetIdleTimer));

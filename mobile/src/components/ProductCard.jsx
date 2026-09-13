@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
-import { colors, fonts, radius, typography } from "../theme";
+import { fonts, radius, typography } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import { toNumber, getLowestPrice, getBadge } from "../utils/productHelpers";
 import PressScale from "./PressScale";
 import { triggerFlyToCart } from "../utils/flyToCartBus";
@@ -16,6 +17,8 @@ export const PRODUCT_CARD_WIDTH = (width - 48) / 2;
 // had no working heart/add-to-cart at all). One component now, so a style
 // or behavior fix lands everywhere at once.
 export default function ProductCard({ item, index = 0, onPress, onAddToCart, favorited, onToggleFavorite }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const price       = getLowestPrice(item);
   const hasMultiple = item.sizes && Object.keys(item.sizes).length > 1;
   const badge       = getBadge(item, index);
@@ -84,7 +87,7 @@ export default function ProductCard({ item, index = 0, onPress, onAddToCart, fav
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   card: {
     width: PRODUCT_CARD_WIDTH,
     backgroundColor: colors.bgCard,
@@ -102,7 +105,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     position: "relative",
   },
-  cardImage: { width: "80%", height: "80%" },
+  cardImage: { width: "100%", height: "100%" },
   heartBtn: {
     position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: 13,
     backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center",

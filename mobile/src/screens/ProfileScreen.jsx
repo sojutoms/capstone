@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -20,7 +20,9 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
-import { colors, fonts, radius, typography } from "../theme";
+import { fonts, radius, typography } from "../theme";
+import { useTheme } from "../context/ThemeContext";
+import { useChatSettings } from "../context/ChatSettingsContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const BASE_URL =
@@ -28,7 +30,7 @@ const BASE_URL =
     ? "http://localhost:4000"
     : "https://lifting-manpower-corral.ngrok-free.dev";
 
-function MenuItem({ icon, label, sublabel, onPress, rightElement, danger }) {
+function MenuItem({ icon, label, sublabel, onPress, rightElement, danger, styles, colors }) {
   return (
     <TouchableOpacity
       style={styles.menuItem}
@@ -51,7 +53,7 @@ function MenuItem({ icon, label, sublabel, onPress, rightElement, danger }) {
   );
 }
 
-function Section({ title, children }) {
+function Section({ title, children, styles }) {
   return (
     <View style={styles.section}>
       {title ? <Text style={styles.sectionTitle}>{title}</Text> : null}
@@ -64,6 +66,9 @@ export default function ProfileScreen({ navigation }) {
   const { logout, userToken, userProfile: user, refreshUserProfile } = useAuth();
   const { refreshCart } = useCart();
   const { favorites, refreshFavorites } = useFavorites();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const { showEverywhere, setShowEverywhere } = useChatSettings();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -210,7 +215,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -282,19 +287,36 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
-        <Section title="ACCOUNT">
-          
-         
+        <Section title="ACCOUNT" styles={styles}>
+          <MenuItem styles={styles} colors={colors} icon="home-outline" label="Delivery Addresses" sublabel="Manage saved addresses" onPress={() => navigation.navigate("Addresses")} />
           <View style={styles.itemDivider} />
-          <MenuItem icon="home-outline" label="Delivery Addresses" sublabel="Manage saved addresses" onPress={() => navigation.navigate("Addresses")} />
+          <MenuItem styles={styles} colors={colors} icon="pricetag-outline" label="Vouchers & Promos" sublabel="Apply discount codes" onPress={() => navigation.navigate("Vouchers")} />
           <View style={styles.itemDivider} />
-          <MenuItem icon="card-outline" label="Payment Methods" sublabel="Cards & wallets" onPress={() => navigation.navigate("PaymentMethods")} />
-          <View style={styles.itemDivider} />
-          <MenuItem icon="pricetag-outline" label="Vouchers & Promos" sublabel="Apply discount codes" onPress={() => navigation.navigate("Vouchers")} />
+          <MenuItem styles={styles} colors={colors} icon="key-outline" label="Change Password" sublabel="Update your account password" onPress={() => navigation.navigate("ChangePassword")} />
         </Section>
 
-        <Section title="PREFERENCES">
+        <Section title="PREFERENCES" styles={styles}>
           <MenuItem
+            styles={styles}
+            colors={colors}
+            icon="moon-outline"
+            label="Dark Mode"
+            sublabel={isDark ? "On" : "Off"}
+            onPress={toggleTheme}
+            rightElement={
+              <Switch
+                value={isDark}
+                onValueChange={toggleTheme}
+                trackColor={{ false: colors.borderLight, true: colors.accentGold }}
+                thumbColor={isDark ? colors.textPrimary : colors.textSecondary}
+                ios_backgroundColor={colors.borderLight}
+              />
+            }
+          />
+          <View style={styles.itemDivider} />
+          <MenuItem
+            styles={styles}
+            colors={colors}
             icon="notifications-outline"
             label="Notifications"
             sublabel={notificationsEnabled ? "Enabled" : "Disabled"}
@@ -310,23 +332,37 @@ export default function ProfileScreen({ navigation }) {
             }
           />
           <View style={styles.itemDivider} />
-          <MenuItem icon="footsteps-outline" label="Size Preferences" sublabel="Set your default shoe size" onPress={() => navigation.navigate("SizePreferences")} />
+          <MenuItem
+            styles={styles}
+            colors={colors}
+            icon="chatbubble-ellipses-outline"
+            label="Chat Widget on Every Screen"
+            sublabel={showEverywhere ? "Always visible" : "Hidden on some screens"}
+            onPress={() => setShowEverywhere((v) => !v)}
+            rightElement={
+              <Switch
+                value={showEverywhere}
+                onValueChange={setShowEverywhere}
+                trackColor={{ false: colors.borderLight, true: colors.accentGold }}
+                thumbColor={showEverywhere ? colors.textPrimary : colors.textSecondary}
+                ios_backgroundColor={colors.borderLight}
+              />
+            }
+          />
           <View style={styles.itemDivider} />
-          <MenuItem icon="globe-outline" label="Language & Region" sublabel="English · Philippines" onPress={() => navigation.navigate("Language")} />
+          <MenuItem styles={styles} colors={colors} icon="resize-outline" label="Size Guide" sublabel="Find your perfect fit" onPress={() => navigation.navigate("SizeGuide")} />
         </Section>
 
-        <Section title="SUPPORT">
-          <MenuItem icon="help-circle-outline" label="Help Center" onPress={() => navigation.navigate("HelpCenter")} />
+        <Section title="SUPPORT" styles={styles}>
+          <MenuItem styles={styles} colors={colors} icon="chatbox-ellipses-outline" label="FAQ" onPress={() => navigation.navigate("FAQ")} />
           <View style={styles.itemDivider} />
-          <MenuItem icon="star-outline" label="Rate the App" onPress={() => Alert.alert("Thanks!", "Redirecting to app store…")} />
+          <MenuItem styles={styles} colors={colors} icon="lock-closed-outline" label="Privacy Policy" onPress={() => navigation.navigate("Privacy")} />
           <View style={styles.itemDivider} />
-          <MenuItem icon="lock-closed-outline" label="Privacy Policy" onPress={() => navigation.navigate("Privacy")} />
-          <View style={styles.itemDivider} />
-          <MenuItem icon="document-text-outline" label="Terms of Service" onPress={() => navigation.navigate("Terms")} />
+          <MenuItem styles={styles} colors={colors} icon="document-text-outline" label="Terms of Service" onPress={() => navigation.navigate("Terms")} />
         </Section>
 
-        <Section>
-          <MenuItem icon="log-out-outline" label="Log Out" onPress={handleLogout} danger />
+        <Section styles={styles}>
+          <MenuItem styles={styles} colors={colors} icon="log-out-outline" label="Log Out" onPress={handleLogout} danger />
         </Section>
 
         <Text style={styles.version}>Version 1.0.0 · Built for Sneakerheads</Text>
@@ -354,7 +390,7 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgPrimary },
   scroll: { paddingBottom: TAB_BAR_CLEARANCE },
   heroSection: {

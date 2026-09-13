@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,8 @@ import {
 } from "react-native";
 import { Alert } from "../utils/customAlert";
 import { useAuth } from "../context/AuthContext";
-import { colors, fonts, radius, typography } from "../theme";
+import { fonts, radius, typography } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const BASE_URL =
@@ -19,11 +20,13 @@ const BASE_URL =
     ? "http://localhost:4000"
     : "https://lifting-manpower-corral.ngrok-free.dev";
 
-const Label = ({ text }) => <Text style={s.label}>{text}</Text>;
-const FieldError = ({ msg }) => (msg ? <Text style={s.errorText}>⚠ {msg}</Text> : null);
+const Label = ({ text, s }) => <Text style={s.label}>{text}</Text>;
+const FieldError = ({ msg, s }) => (msg ? <Text style={s.errorText}>⚠ {msg}</Text> : null);
 
 export default function EditProfileScreen({ navigation }) {
   const { userToken, refreshUserProfile } = useAuth();
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
 
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", place: "", bio: "" });
   const [errors, setErrors] = useState({});
@@ -130,7 +133,7 @@ export default function EditProfileScreen({ navigation }) {
 
       <View style={s.row}>
         <View style={[s.fieldGroup, { flex: 1 }]}>
-          <Label text="First Name" />
+          <Label text="First Name" s={s} />
           <TextInput
             style={[s.input, errors.firstName && s.inputError]}
             value={form.firstName}
@@ -139,10 +142,10 @@ export default function EditProfileScreen({ navigation }) {
             placeholderTextColor={colors.bgTertiary}
             maxLength={54}
           />
-          <FieldError msg={errors.firstName} />
+          <FieldError msg={errors.firstName} s={s} />
         </View>
         <View style={[s.fieldGroup, { flex: 1 }]}>
-          <Label text="Last Name" />
+          <Label text="Last Name" s={s} />
           <TextInput
             style={[s.input, errors.lastName && s.inputError]}
             value={form.lastName}
@@ -151,13 +154,13 @@ export default function EditProfileScreen({ navigation }) {
             placeholderTextColor={colors.bgTertiary}
             maxLength={54}
           />
-          <FieldError msg={errors.lastName} />
+          <FieldError msg={errors.lastName} s={s} />
         </View>
       </View>
 
       <View style={s.fieldGroup}>
         <View style={s.labelRow}>
-          <Label text="Contact Email" />
+          <Label text="Contact Email" s={s} />
           <View style={s.lockedBadge}>
             <Text style={s.lockedBadgeText}>LOCKED</Text>
           </View>
@@ -173,7 +176,7 @@ export default function EditProfileScreen({ navigation }) {
       </View>
 
       <View style={s.fieldGroup}>
-        <Label text="Phone" />
+        <Label text="Phone" s={s} />
         <TextInput
           style={[s.input, errors.phone && s.inputError]}
           value={form.phone}
@@ -183,11 +186,11 @@ export default function EditProfileScreen({ navigation }) {
           keyboardType="number-pad"
           maxLength={11}
         />
-        <FieldError msg={errors.phone} />
+        <FieldError msg={errors.phone} s={s} />
       </View>
 
       <View style={s.fieldGroup}>
-        <Label text="Place (City / Province)" />
+        <Label text="Place (City / Province)" s={s} />
         <TextInput
           style={s.input}
           value={form.place}
@@ -200,7 +203,7 @@ export default function EditProfileScreen({ navigation }) {
 
       <View style={s.fieldGroup}>
         <View style={s.bioLabelRow}>
-          <Label text="Bio" />
+          <Label text="Bio" s={s} />
           <Text style={[s.wordCount, countWords(form.bio) > 15 && s.wordCountLow]}>
             {countWords(form.bio)}/15 words
           </Text>
@@ -214,7 +217,7 @@ export default function EditProfileScreen({ navigation }) {
           multiline
           textAlignVertical="top"
         />
-        <FieldError msg={errors.bio} />
+        <FieldError msg={errors.bio} s={s} />
       </View>
 
       <TouchableOpacity
@@ -231,7 +234,7 @@ export default function EditProfileScreen({ navigation }) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgPrimary },
   center: { flex: 1, backgroundColor: colors.bgPrimary, alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: TAB_BAR_CLEARANCE },

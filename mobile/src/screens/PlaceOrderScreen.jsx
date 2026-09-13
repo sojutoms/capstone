@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -20,7 +20,8 @@ import { Picker } from "@react-native-picker/picker";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { getShippingFee, getShippingTier } from "../services/shippingFee";
-import { colors, fonts, radius, shadows, typography } from "../theme";
+import { fonts, radius, shadows, typography } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const NCR_REGION_CODE = "1300000000";
@@ -35,20 +36,28 @@ const BASE_URL =
 
 /* ─── tiny helpers ─────────────────────────────────────────────────────────── */
 
-const Label = ({ text }) => <Text style={s.label}>{text}</Text>;
+const Label = ({ text, s }) => <Text style={s.label}>{text}</Text>;
 
-const FieldError = ({ msg }) =>
+const FieldError = ({ msg, s }) =>
   msg ? <Text style={s.errorText}>⚠ {msg}</Text> : null;
 
-const Divider = () => <View style={s.divider} />;
+const Divider = ({ s }) => <View style={s.divider} />;
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MAIN SCREEN
 ═══════════════════════════════════════════════════════════════════════════ */
 
-export default function PlaceOrderScreen({ navigation }) {
+export default function PlaceOrderScreen({ navigation, route }) {
   const { cart, clearCart } = useCart();
   const { userToken }       = useAuth();
+  const { colors }  = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
+
+  // "Buy Now" from ProductDetail passes a single item here directly,
+  // bypassing the cart entirely — checkout works off that instead of the
+  // real cart, and clearCart() never runs since nothing was added to it.
+  const buyNowItem = route?.params?.buyNowItem || null;
+  const items = buyNowItem ? [buyNowItem] : cart;
 
   const [method, setMethod] = useState("online");
 
@@ -76,6 +85,13 @@ export default function PlaceOrderScreen({ navigation }) {
     });
     return () => sub.remove();
   }, []);
+
+  const [appliedVoucher,     setAppliedVoucher]     = useState(null);
+  const [voucherOpen,        setVoucherOpen]        = useState(false);
+  const [vouchers,           setVouchers]           = useState([]);
+  const [loadingVouchers,    setLoadingVouchers]    = useState(false);
+  const [applyingCode,       setApplyingCode]       = useState(null);
+  const [voucherError,       setVoucherError]       = useState("");
 
   const [errors,             setErrors]             = useState({});
   const [saveAddress,        setSaveAddress]        = useState(false);
@@ -110,12 +126,66 @@ export default function PlaceOrderScreen({ navigation }) {
   };
 
   const calculateSubtotal = () =>
-    cart.reduce((total, item) => total + getSizePrice(item) * item.quantity, 0);
+    items.reduce((total, item) => total + getSizePrice(item) * item.quantity, 0);
 
   const shippingFee  = getShippingFee(form.region);
   const shippingTier = getShippingTier(form.region);
 
-  const calculateTotal = () => calculateSubtotal() + shippingFee;
+  const calculateTotal = () =>
+    Math.max(0, calculateSubtotal() - (appliedVoucher?.discountAmount || 0)) + shippingFee;
+
+  /* ── vouchers ── */
+  const fetchVouchers = async () => {
+    if (!userToken) return;
+    setLoadingVouchers(true);
+    try {
+      const res  = await fetch(`${BASE_URL}/my-vouchers`, { headers: { "auth-token": userToken } });
+      const data = await res.json();
+      if (data.success) setVouchers(data.vouchers || []);
+    } catch {} finally {
+      setLoadingVouchers(false);
+    }
+  };
+
+  const toggleVoucherPanel = () => {
+    const next = !voucherOpen;
+    setVoucherOpen(next);
+    if (next) fetchVouchers();
+  };
+
+  const handleApplyVoucher = async (code) => {
+    if (applyingCode) return;
+    setVoucherError("");
+    setApplyingCode(code);
+    try {
+      const res  = await fetch(`${BASE_URL}/apply-voucher`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "auth-token": userToken || "" },
+        body: JSON.stringify({ code, subtotal: calculateSubtotal() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAppliedVoucher({
+          code,
+          discountAmount: data.discountAmount,
+          discountPercent: data.discountPercent,
+          voucher: data.voucher,
+        });
+        setVoucherOpen(false);
+      } else {
+        setVoucherError(data.error || "Could not apply voucher.");
+      }
+    } catch {
+      setVoucherError("Network error. Please try again.");
+    } finally {
+      setApplyingCode(null);
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+    setVoucherError("");
+    setAppliedVoucher(null);
+  };
 
   /* ── mount ── */
   useEffect(() => {
@@ -234,29 +304,47 @@ export default function PlaceOrderScreen({ navigation }) {
     }
   };
 
-  const goToOrders = (orderNumber) => {
+  const goToOrders = (orderNumber, purchasedItems = []) => {
     navigation.reset({ index: 0, routes: [{ name: "CartScreen", params: undefined }] });
-    navigation.navigate("Orders", { orderNumber });
+    navigation.navigate("Orders", { orderNumber, purchasedItems });
   };
 
   const finalizePayment = async (orderNumber) => {
     setPendingOrderNumber(null);
     setVerifying(true);
+    let paid = false;
+    let purchasedItems = [];
     try {
       await fetch(`${BASE_URL}/payment/verify/${orderNumber}`, {
         headers: { "auth-token": userToken || "" },
       });
+
+      const orderRes = await fetch(`${BASE_URL}/order/${orderNumber}`, {
+        headers: { "auth-token": userToken || "" },
+      });
+      const orderData = await orderRes.json();
+      if (orderData.success) {
+        paid = orderData.order.paymentStatus === "paid";
+        purchasedItems = orderData.order.items || [];
+      }
     } catch {}
     setVerifying(false);
-    goToOrders(orderNumber);
+
+    if (paid) {
+      goToOrders(orderNumber, purchasedItems);
+    } else {
+      Alert.alert("Payment Not Completed", "We couldn't confirm your payment. You can retry from Order History.");
+      navigation.reset({ index: 0, routes: [{ name: "CartScreen", params: undefined }] });
+      navigation.navigate("Profile", { screen: "OrderHistory" });
+    }
   };
 
   /* ── place order ── */
   const handlePlaceOrder = async () => {
     if (!validate()) { Alert.alert("Incomplete", "Please fill in all required fields correctly."); return; }
-    if (!cart.length) { Alert.alert("Empty Cart", "Your cart is empty!"); return; }
+    if (!items.length) { Alert.alert("Empty Cart", "Your cart is empty!"); return; }
 
-    const payload = cart.filter((i) => i.quantity > 0).map((item) => ({
+    const payload = items.filter((i) => i.quantity > 0).map((item) => ({
       id: item.id, name: item.name, image: item.image,
       price: getSizePrice(item), quantity: item.quantity,
       size: item.selectedSize || item.size || "N/A",
@@ -290,7 +378,10 @@ export default function PlaceOrderScreen({ navigation }) {
       const res          = await fetch(`${BASE_URL}/placeorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "auth-token": userToken || "" },
-        body: JSON.stringify({ items: payload, total, deliveryInfo, paymentMethod: method, shippingFee }),
+        body: JSON.stringify({
+          items: payload, total, deliveryInfo, paymentMethod: method, shippingFee,
+          voucherCode: appliedVoucher?.code || null,
+        }),
       });
       const responseText = await res.text();
       let data;
@@ -298,7 +389,7 @@ export default function PlaceOrderScreen({ navigation }) {
         Alert.alert("Server Error", `Status ${res.status}: ${responseText}`); return;
       }
       if (data.success) {
-        clearCart();
+        if (!buyNowItem) clearCart();
         if (method === "online") {
           await startPayMongoCheckout(data.orderNumber);
         } else {
@@ -370,7 +461,7 @@ export default function PlaceOrderScreen({ navigation }) {
   /* ── picker field component ── */
   const PickerField = ({ label, field, items, loading, enabled = true }) => (
     <View style={s.fieldGroup}>
-      <Label text={label} />
+      <Label text={label} s={s} />
       <View style={[s.pickerWrapper, (!enabled || loading) && s.pickerDisabled]}>
         {loading ? (
           <View style={s.pickerLoading}>
@@ -404,7 +495,7 @@ export default function PlaceOrderScreen({ navigation }) {
           </Picker>
         )}
       </View>
-      <FieldError msg={errors[field]} />
+      <FieldError msg={errors[field]} s={s} />
     </View>
   );
 
@@ -468,7 +559,7 @@ export default function PlaceOrderScreen({ navigation }) {
         {/* Name row */}
         <View style={s.row}>
           <View style={[s.fieldGroup, { flex: 1 }]}>
-            <Label text="First Name" />
+            <Label text="First Name" s={s} />
             <TextInput
               style={[s.input, errors.firstName && s.inputError]}
               value={form.firstName}
@@ -477,10 +568,10 @@ export default function PlaceOrderScreen({ navigation }) {
               placeholderTextColor={colors.bgTertiary}
               maxLength={54}
             />
-            <FieldError msg={errors.firstName} />
+            <FieldError msg={errors.firstName} s={s} />
           </View>
           <View style={[s.fieldGroup, { flex: 1 }]}>
-            <Label text="Last Name" />
+            <Label text="Last Name" s={s} />
             <TextInput
               style={[s.input, errors.lastName && s.inputError]}
               value={form.lastName}
@@ -489,13 +580,13 @@ export default function PlaceOrderScreen({ navigation }) {
               placeholderTextColor={colors.bgTertiary}
               maxLength={54}
             />
-            <FieldError msg={errors.lastName} />
+            <FieldError msg={errors.lastName} s={s} />
           </View>
         </View>
 
         {/* Email */}
         <View style={s.fieldGroup}>
-          <Label text="Email" />
+          <Label text="Email" s={s} />
           <TextInput
             style={[s.input, errors.email && s.inputError]}
             value={form.email}
@@ -505,12 +596,12 @@ export default function PlaceOrderScreen({ navigation }) {
             keyboardType="email-address"
             autoCapitalize="none"
           />
-          <FieldError msg={errors.email} />
+          <FieldError msg={errors.email} s={s} />
         </View>
 
         {/* Street */}
         <View style={s.fieldGroup}>
-          <Label text="Street Address" />
+          <Label text="Street Address" s={s} />
           <TextInput
             style={[s.input, errors.street && s.inputError]}
             value={form.street}
@@ -518,7 +609,7 @@ export default function PlaceOrderScreen({ navigation }) {
             placeholder="House no., Street, Subdivision"
             placeholderTextColor={colors.bgTertiary}
           />
-          <FieldError msg={errors.street} />
+          <FieldError msg={errors.street} s={s} />
         </View>
 
         {/* Region */}
@@ -526,7 +617,7 @@ export default function PlaceOrderScreen({ navigation }) {
 
         {/* Province */}
         <View style={s.fieldGroup}>
-          <Label text="Province" />
+          <Label text="Province" s={s} />
           <View style={[s.pickerWrapper, (!hasProvinces || !form.region) && s.pickerDisabled]}>
             {!hasProvinces ? (
               <Picker
@@ -575,7 +666,7 @@ export default function PlaceOrderScreen({ navigation }) {
               </Picker>
             )}
           </View>
-          <FieldError msg={errors.province} />
+          <FieldError msg={errors.province} s={s} />
         </View>
 
         {/* City */}
@@ -598,7 +689,7 @@ export default function PlaceOrderScreen({ navigation }) {
 
         {/* Phone */}
         <View style={s.fieldGroup}>
-          <Label text="Phone" />
+          <Label text="Phone" s={s} />
           <TextInput
             style={[s.input, errors.phone && s.inputError]}
             value={form.phone}
@@ -608,7 +699,7 @@ export default function PlaceOrderScreen({ navigation }) {
             keyboardType="number-pad"
             maxLength={11}
           />
-          <FieldError msg={errors.phone} />
+          <FieldError msg={errors.phone} s={s} />
         </View>
 
         {/* Save address checkbox */}
@@ -619,6 +710,63 @@ export default function PlaceOrderScreen({ navigation }) {
           <Text style={s.checkLabel}>Save this address for future orders</Text>
         </TouchableOpacity>
       </View>
+
+      {/* ════════════════════════════════
+          VOUCHERS
+      ════════════════════════════════ */}
+      {!!userToken && (
+        <View style={s.sectionCard}>
+          <View style={s.sectionHeadRow}>
+            <Ionicons name="pricetag-outline" size={16} color={colors.textMuted} />
+            <Text style={s.sectionTitle}>Vouchers</Text>
+          </View>
+
+          <TouchableOpacity style={[s.voucherTrigger, appliedVoucher && s.voucherTriggerApplied]} onPress={toggleVoucherPanel} activeOpacity={0.8}>
+            <Text style={s.voucherTriggerLabel}>{appliedVoucher ? "Voucher Applied" : "Available Vouchers"}</Text>
+            <Text style={s.voucherTriggerValue}>
+              {appliedVoucher ? appliedVoucher.code : loadingVouchers ? "Loading…" : voucherOpen ? `${vouchers.length} available` : "Tap to view"}
+            </Text>
+          </TouchableOpacity>
+
+          {voucherOpen && (
+            <View style={s.voucherDropdown}>
+              {loadingVouchers ? (
+                <ActivityIndicator size="small" color={colors.textMuted} style={{ paddingVertical: 14 }} />
+              ) : voucherError ? (
+                <Text style={s.voucherEmptyText}>{voucherError}</Text>
+              ) : vouchers.length === 0 ? (
+                <Text style={s.voucherEmptyText}>You don't have any vouchers yet.</Text>
+              ) : (
+                vouchers.map((v) => (
+                  <TouchableOpacity
+                    key={v._id}
+                    style={[s.voucherItem, appliedVoucher?.code === v.code && s.voucherItemActive, v.used && s.voucherItemUsed]}
+                    onPress={() => !v.used && handleApplyVoucher(v.code)}
+                    disabled={v.used}
+                    activeOpacity={0.8}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.voucherItemDiscount}>
+                        {v.discountPercent > 0 ? `${v.discountPercent}% OFF` : `₱${v.maxDiscount} OFF`}
+                      </Text>
+                      <Text style={s.voucherItemTitle}>{v.title}</Text>
+                    </View>
+                    <Text style={s.voucherItemAction}>
+                      {applyingCode === v.code ? "…" : appliedVoucher?.code === v.code ? "Applied" : "Apply"}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+          )}
+
+          {appliedVoucher && (
+            <TouchableOpacity onPress={handleRemoveVoucher} style={{ marginTop: 10 }}>
+              <Text style={s.voucherRemoveText}>Remove Applied Voucher</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {/* ════════════════════════════════
           PAYMENT METHOD
@@ -668,7 +816,7 @@ export default function PlaceOrderScreen({ navigation }) {
           <Text style={s.sectionTitle}>Order Summary</Text>
         </View>
 
-        {cart.map((item, idx) => (
+        {items.map((item, idx) => (
           <View key={`${item.id}_${item.selectedSize}_${idx}`} style={s.summaryItem}>
             <View style={s.summaryLeft}>
               <Text style={s.summaryName} numberOfLines={2}>
@@ -687,7 +835,7 @@ export default function PlaceOrderScreen({ navigation }) {
           </View>
         ))}
 
-        <Divider />
+        <Divider s={s} />
 
         <View style={s.subRow}>
           <Text style={s.subLabel}>Subtotal</Text>
@@ -701,8 +849,18 @@ export default function PlaceOrderScreen({ navigation }) {
             {form.region ? (shippingFee > 0 ? `₱${shippingFee.toLocaleString()}` : "FREE") : "Select a region"}
           </Text>
         </View>
+        {appliedVoucher && (
+          <View style={s.subRow}>
+            <Text style={s.subLabel}>
+              Voucher discount{appliedVoucher.discountPercent > 0 ? ` (${appliedVoucher.discountPercent}% off)` : ""}
+            </Text>
+            <Text style={s.discountValue}>
+              −₱{appliedVoucher.discountAmount.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+            </Text>
+          </View>
+        )}
 
-        <Divider />
+        <Divider s={s} />
 
         <View style={s.totalRow}>
           <Text style={s.totalLabel}>Total</Text>
@@ -758,7 +916,7 @@ export default function PlaceOrderScreen({ navigation }) {
    STYLES  — dark premium matching ProductDetailScreen vibe
 ═══════════════════════════════════════════════════════════════════════════ */
 
-const s = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   root:    { flex: 1, backgroundColor: colors.bgPrimary },
   // No SafeAreaView on this screen — paddingTop covers the status bar/notch
   // clearance that used to come "for free" from the Back button sitting
@@ -949,6 +1107,39 @@ const s = StyleSheet.create({
   },
   subLabel: { fontSize: 12, color: colors.textSecondary },
   subValue: { fontSize: 13, fontFamily: fonts.bodySemibold, color: colors.textSecondary },
+  discountValue: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.danger },
+
+  /* ── vouchers ── */
+  voucherTrigger: {
+    backgroundColor: colors.bgTertiary,
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  voucherTriggerApplied: { borderWidth: 1, borderColor: colors.accentGold, backgroundColor: colors.accentGoldWash },
+  voucherTriggerLabel: { fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: colors.textMuted },
+  voucherTriggerValue: { fontSize: 14, fontFamily: fonts.bodyBold, color: colors.textPrimary, marginTop: 3 },
+  voucherDropdown: {
+    marginTop: 10,
+    borderRadius: radius.md,
+    overflow: "hidden",
+    backgroundColor: colors.bgTertiary,
+  },
+  voucherEmptyText: { fontSize: 12, color: colors.textMuted, padding: 14, textAlign: "center" },
+  voucherItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  voucherItemActive: { backgroundColor: colors.accentGoldWash },
+  voucherItemUsed: { opacity: 0.4 },
+  voucherItemDiscount: { fontSize: 13, fontFamily: fonts.display, color: colors.accentGoldLight, letterSpacing: 0.5 },
+  voucherItemTitle: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  voucherItemAction: { fontSize: 11, fontFamily: fonts.bodyBold, color: colors.textMuted, letterSpacing: 0.5 },
+  voucherRemoveText: { fontSize: 12, color: colors.danger, textAlign: "center", fontFamily: fonts.bodyBold },
 
   totalRow: {
     flexDirection: "row",

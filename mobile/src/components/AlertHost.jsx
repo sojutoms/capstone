@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { subscribeAlert } from "../utils/alertBus";
-import { colors, fonts } from "../theme";
+import { fonts } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 
 // Renders whatever gets published on alertBus as the app's own styled
 // modal, instead of the native OS Alert.alert dialog. Mounted once at the
@@ -13,6 +14,8 @@ import { colors, fonts } from "../theme";
 // theme colors instead of San Francisco/iOS blue, so it stays uniform with
 // the rest of the app.
 export default function AlertHost() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const [config, setConfig] = useState(null);
 
   useEffect(() => subscribeAlert(setConfig), []);
@@ -73,9 +76,10 @@ export default function AlertHost() {
   );
 }
 
+const makeStyles = (colors) => {
 const DIVIDER = colors.borderLight;
 
-const s = StyleSheet.create({
+return StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -150,3 +154,4 @@ const s = StyleSheet.create({
     color: colors.danger,
   },
 });
+};

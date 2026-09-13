@@ -412,7 +412,7 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-in { animation: spFadeIn 0.4s ease-out forwards; }
+.animate-in { animation: spFadeIn 0.4s ease-out backwards; }
 
 /* ── Empty States ── */
 .empty-selection {

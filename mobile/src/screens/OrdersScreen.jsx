@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   Dimensions,
   Platform,
 } from "react-native";
-import { colors, fonts, radius, typography } from "../theme";
+import { fonts, radius, typography } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const { width } = Dimensions.get("window");
@@ -19,6 +20,8 @@ const isTablet = width > 768;
 export default function OrdersScreen({ navigation, route }) {
   // Receive params passed from PlaceOrderScreen via navigation.navigate("Orders", {...})
   const { orderNumber = "N/A", purchasedItems = [] } = route?.params || {};
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const grandTotal = purchasedItems.reduce(
     (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
@@ -123,7 +126,7 @@ export default function OrdersScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgPrimary },
   contentContainer: { padding: isSmall ? 16 : 20, paddingBottom: TAB_BAR_CLEARANCE },
 

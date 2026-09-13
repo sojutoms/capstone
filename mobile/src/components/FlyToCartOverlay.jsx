@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { Animated, StyleSheet, Dimensions, Platform } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
-import { colors, radius, shadows } from "../theme";
+import { radius, shadows } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import { onFlyToCart } from "../utils/flyToCartBus";
 
 // Approximates where the Cart tab icon sits in the floating pill nav
@@ -30,6 +31,8 @@ function getCartTargetPoint() {
 }
 
 export default function FlyToCartOverlay() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [flight, setFlight] = useState(null);
   const progress = useRef(new Animated.Value(0)).current;
 
@@ -87,7 +90,7 @@ export default function FlyToCartOverlay() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   dot: {
     position: "absolute",
     top: 0,

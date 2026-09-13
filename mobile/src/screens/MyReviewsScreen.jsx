@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
-import { colors, fonts, radius } from "../theme";
+import { fonts, radius } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const BASE_URL =
@@ -21,7 +22,7 @@ const BASE_URL =
     ? "http://localhost:4000"
     : "https://lifting-manpower-corral.ngrok-free.dev";
 
-const Stars = ({ rating }) => (
+const Stars = ({ rating, colors }) => (
   <View style={{ flexDirection: "row", gap: 2 }}>
     {[1, 2, 3, 4, 5].map((i) => (
       <Text key={i} style={{ fontSize: 14, color: i <= rating ? colors.accentGold : colors.bgTertiary }}>★</Text>
@@ -31,6 +32,8 @@ const Stars = ({ rating }) => (
 
 export default function MyReviewsScreen({ navigation }) {
   const { userToken } = useAuth();
+  const { colors, isDark } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const [reviews, setReviews]   = useState([]);
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -64,7 +67,7 @@ export default function MyReviewsScreen({ navigation }) {
         <Image source={{ uri: item.productImage }} style={s.thumb} />
         <View style={{ flex: 1 }}>
           <Text style={s.productName} numberOfLines={1}>{item.productName}</Text>
-          <Stars rating={item.rating} />
+          <Stars rating={item.rating} colors={colors} />
         </View>
         <Text style={s.date}>
           {new Date(item.date).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
@@ -86,7 +89,7 @@ export default function MyReviewsScreen({ navigation }) {
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       <View style={s.header}>
         <TouchableOpacity
@@ -127,7 +130,7 @@ export default function MyReviewsScreen({ navigation }) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgPrimary },
 
   header: {

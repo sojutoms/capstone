@@ -8,7 +8,7 @@ import {
   Platform,
 } from "react-native";
 import { useEffect, useRef } from "react";
-import { Video } from "expo-av";
+import { VideoView, useVideoPlayer } from "expo-video";
 import { useFonts, BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
 import { BlurView } from "expo-blur";
 import { colors, fonts } from "../theme";
@@ -102,6 +102,11 @@ const AuthChoice = ({ navigation }) => {
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const cardTranslateY = useRef(new Animated.Value(40)).current;
   const [fontsLoaded] = useFonts({ BebasNeue_400Regular });
+  const player = useVideoPlayer(require("../../assets/authchoice.mp4"), (p) => {
+    p.loop = true;
+    p.muted = true;
+    p.play();
+  });
 
   useEffect(() => {
     Animated.parallel([
@@ -176,19 +181,15 @@ const AuthChoice = ({ navigation }) => {
             position: "absolute",
           }}
         >
-          <Video
-            source={require("../../assets/authchoice.mp4")}
+          <VideoView
+            player={player}
             style={{
               width: videoWidth,
               height: height,
               transform: [{ translateX: -(videoWidth - width) / 2 }],
             }}
-            resizeMode="cover"
-            shouldPlay
-            isLooping
-            isMuted
-            useNativeControls={false}
-            playsInSilentModeIOS
+            contentFit="cover"
+            nativeControls={false}
           />
         </Animated.View>
       )}

@@ -23,7 +23,8 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCart }      from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import Toast            from "react-native-toast-message";
-import { colors, fonts, radius, shadows, typography } from "../theme";
+import { fonts, radius, shadows, typography } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import PressScale from "../components/PressScale";
 import Shoe360Viewer from "../components/Shoe360Viewer";
 import ProductCard from "../components/ProductCard";
@@ -80,7 +81,7 @@ const formatReviewDate = (dateStr) => {
 
 /* ─────────────────── STAR ROW ─────────────────── */
 
-const StarRow = ({ rating, size = 13, onPress }) => (
+const StarRow = ({ rating, size = 13, onPress, colors }) => (
   <View style={{ flexDirection: "row", gap: 1 }}>
     {[1, 2, 3, 4, 5].map((i) => {
       const filled = i <= Math.floor(rating);
@@ -100,16 +101,17 @@ const StarRow = ({ rating, size = 13, onPress }) => (
    MAIN COMPONENT
 ═══════════════════════════════════════════════ */
 
-const SHOE_CATEGORIES = ["nike", "adidas", "puma", "nb"];
-
 export default function ProductDetailScreen({ route }) {
   const navigation                     = useNavigation();
   const { addToCart, refreshCart }               = useCart();
   const { toggleFavorite, isFavorite, refreshFavorites } = useFavorites();
   const { product }                    = route.params || {};
+  const { colors, isDark } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
 
   const [selectedSize,     setSelectedSize]     = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [show360, setShow360] = useState(false);
   const [reviews,          setReviews]          = useState([]);
   const [loadingReviews,   setLoadingReviews]   = useState(true);
   const [sizeGuideVisible, setSizeGuideVisible] = useState(false);
@@ -125,7 +127,11 @@ export default function ProductDetailScreen({ route }) {
   const addBtnRef      = useRef(null);
 
   const favorite = isFavorite(product?.id);
-  const isShoe   = SHOE_CATEGORIES.includes((product?.category || "").toLowerCase());
+  // Was comparing category against a brand-name list ("nike"/"adidas"/…),
+  // which product.category never actually holds — it's "shoes"/"watch"/
+  // "bags"/"collectibles" (brand lives in its own product.brand field). That
+  // mismatch meant this was always false, so the button never showed at all.
+  const isShoe   = (product?.category || "").toLowerCase() === "shoes";
 
   if (!product) {
     return (
@@ -218,23 +224,31 @@ export default function ProductDetailScreen({ route }) {
   const getSizePrice = (size) => {
     const d = product.sizes?.[size];
     if (typeof d === "object" && d.price !== undefined) return toNumber(d.price);
-    return extractPrice(product.new_price);
+    // Non-shoe categories (watches/bags/collectibles) have no per-size
+    // pricing at all (sizes: {}) — their real price lives in product.price,
+    // not new_price, which those categories never populate.
+    return extractPrice(product.new_price ?? product.price);
   };
   const sortedSizes = useMemo(() => {
     if (!product.sizes) return [];
     return Object.keys(product.sizes).sort((a, b) => parseFloat(a) - parseFloat(b));
   }, [product]);
+  // Non-shoe categories (watches/bags/collectibles) send sizes: {} — an
+  // empty but still-truthy object — so checking product.sizes directly
+  // treated them as "has sizes, none picked yet" and permanently blocked
+  // Add to Bag behind an unreachable "SELECT SIZE" state.
+  const hasSizes = sortedSizes.length > 0;
   const lowestPrice = useMemo(() => {
     const prices = sortedSizes
       .map((sz) => (getSizeStock(sz) > 0 ? getSizePrice(sz) : NaN))
       .filter(Number.isFinite);
-    return prices.length ? Math.min(...prices) : extractPrice(product.new_price);
+    return prices.length ? Math.min(...prices) : extractPrice(product.new_price ?? product.price);
   }, [product]);
   const displayPrice = selectedSize ? getSizePrice(selectedSize) : lowestPrice;
 
   /* ── add to cart ── */
   const handleAddToCart = () => {
-    if (!selectedSize && product.sizes) {
+    if (!selectedSize && hasSizes) {
       Toast.show({ type: "error", text1: "Select a size first" });
       return;
     }
@@ -244,6 +258,17 @@ export default function ProductDetailScreen({ route }) {
     });
     addToCart(product, selectedSize);
     Toast.show({ type: "success", text1: "Added to cart", text2: product.name });
+  };
+
+  /* ── buy now — skips the cart entirely, straight to checkout for just this item ── */
+  const handleBuyNow = () => {
+    if (!selectedSize && hasSizes) {
+      Toast.show({ type: "error", text1: "Select a size first" });
+      return;
+    }
+    navigation.navigate("PlaceOrder", {
+      buyNowItem: { ...product, selectedSize, quantity: 1 },
+    });
   };
 
   /* ── heart press ── */
@@ -267,7 +292,7 @@ export default function ProductDetailScreen({ route }) {
   ═══════════════════════════════════════════════ */
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       {/* ══ TOP NAV BAR ══ */}
       <View style={s.topBar}>
@@ -299,9 +324,11 @@ export default function ProductDetailScreen({ route }) {
         }
       >
 
-        {/* ══ IMAGE HERO — 360° spin viewer when a 3D model exists, static slider otherwise ══ */}
+        {/* ══ IMAGE HERO — same STUDIO/360° toggle as web, not an automatic
+            switch, so users can still browse the regular photos even when
+            a 3D model exists ══ */}
         <View style={s.heroWrapper}>
-          {has3D ? (
+          {has3D && show360 ? (
             <Shoe360Viewer frames={product.model3d.turntableFrames} height={HERO_H} />
           ) : (
             <>
@@ -343,6 +370,28 @@ export default function ProductDetailScreen({ route }) {
               )}
             </>
           )}
+
+          {/* Rendered after the image/slider (not before) so it actually
+              receives touches instead of the slider's TouchableOpacity
+              swallowing them underneath — zIndex alone wasn't enough here.
+              pointerEvents="box-none" so this row only catches taps
+              directly on its two buttons, not the whole bounding box —
+              otherwise it silently blocked the slider's swipe gesture. */}
+          <View style={s.viewToggleRow} pointerEvents="box-none">
+            <TouchableOpacity
+              style={[s.viewToggleBtn, !show360 && s.viewToggleBtnActive]}
+              onPress={() => setShow360(false)}
+            >
+              <Text style={[s.viewToggleText, !show360 && s.viewToggleTextActive]}>STUDIO</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.viewToggleBtn, show360 && s.viewToggleBtnActive, !has3D && s.viewToggleBtnDisabled]}
+              onPress={() => has3D && setShow360(true)}
+              disabled={!has3D}
+            >
+              <Text style={[s.viewToggleText, show360 && s.viewToggleTextActive]}>360°</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ══ PRODUCT INFO BLOCK ══ */}
@@ -415,15 +464,15 @@ export default function ProductDetailScreen({ route }) {
         <View style={s.actionsRow}>
           <PressScale
             ref={addBtnRef}
-            style={[s.addBtn, !selectedSize && product.sizes && s.addBtnDim]}
+            style={[s.addBtn, !selectedSize && hasSizes && s.addBtnDim]}
             onPress={handleAddToCart}
           >
-            <Text style={[s.addBtnText, !selectedSize && product.sizes && s.addBtnTextDim]}>
-              {selectedSize || !product.sizes ? "ADD TO BAG" : "SELECT SIZE"}
+            <Text style={[s.addBtnText, !selectedSize && hasSizes && s.addBtnTextDim]}>
+              {selectedSize || !hasSizes ? "ADD TO BAG" : "SELECT SIZE"}
             </Text>
           </PressScale>
 
-          <PressScale style={s.payBtn} onPress={handleAddToCart}>
+          <PressScale style={s.payBtn} onPress={handleBuyNow}>
             <Text style={s.payText}>PAY</Text>
           </PressScale>
         </View>
@@ -433,10 +482,10 @@ export default function ProductDetailScreen({ route }) {
           <View style={s.arWrapper}>
             <TouchableOpacity
               style={s.arBtn}
-              onPress={() => navigation.navigate("ARTryOn", { product })}
+              onPress={() => navigation.navigate("ARTryOn", { product, selectedSize })}
               activeOpacity={0.85}
             >
-              <Text style={s.arBtnEmoji}>👟</Text>
+              <Ionicons name="footsteps-outline" size={18} color={colors.accentGoldLight} />
               <Text style={s.arBtnText}>TRY ON WITH AR</Text>
               <Text style={s.arBtnChev}>›</Text>
             </TouchableOpacity>
@@ -663,7 +712,7 @@ export default function ProductDetailScreen({ route }) {
               <View>
                 <Text style={s.sgTitle}>CUSTOMER REVIEWS</Text>
                 <View style={s.reviewsSubRow}>
-                  {averageRating > 0 && <StarRow rating={averageRating} size={12} />}
+                  {averageRating > 0 && <StarRow rating={averageRating} size={12} colors={colors} />}
                   <Text style={s.sgSubtitle}>
                     {averageRating > 0
                       ? `${averageRating.toFixed(1)} · ${reviews.length} reviews`
@@ -697,7 +746,7 @@ export default function ProductDetailScreen({ route }) {
                         </Text>
                         {r.date && <Text style={s.reviewDate}>{formatReviewDate(r.date)}</Text>}
                       </View>
-                      <StarRow rating={r.rating || 0} size={11} />
+                      <StarRow rating={r.rating || 0} size={11} colors={colors} />
                       <Text style={s.reviewText}>{r.review}</Text>
                     </View>
                   ))
@@ -726,7 +775,7 @@ export default function ProductDetailScreen({ route }) {
 
 const HERO_H = width * 1.0;
 
-const s = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe:   { flex: 1, backgroundColor: colors.bgPrimary },
   center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.bgPrimary },
 
@@ -778,6 +827,28 @@ const s = StyleSheet.create({
     backgroundColor: colors.bgCard,
     position: "relative",
   },
+  /* ── STUDIO / 360° toggle — overlays the top of the hero image, same
+     pattern as the web app's lifestyle-toggle ── */
+  viewToggleRow: {
+    position: "absolute",
+    top: 14,
+    right: 14,
+    zIndex: 5,
+    flexDirection: "row",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: radius.full,
+    padding: 3,
+    gap: 3,
+  },
+  viewToggleBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: radius.full,
+  },
+  viewToggleBtnActive: { backgroundColor: "#fff" },
+  viewToggleBtnDisabled: { opacity: 0.35 },
+  viewToggleText: { color: "#fff", fontSize: 10, fontFamily: fonts.bodyBold, letterSpacing: 1 },
+  viewToggleTextActive: { color: "#000" },
   slideItem: {
     width,
     height: HERO_H,
@@ -786,8 +857,8 @@ const s = StyleSheet.create({
     backgroundColor: colors.bgCard,
   },
   slideImage: {
-    width: "86%",
-    height: "82%",
+    width: "100%",
+    height: "100%",
   },
 
   /* ── dots ── */
@@ -955,15 +1026,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 10,
   },
-  arBtnEmoji: {
-    fontSize: 20,
-    lineHeight: 24,
-  },
   arBtnText: {
+    ...typography.button,
     flex: 1,
     fontSize: 12,
-    fontFamily: fonts.bodyBold,
-    letterSpacing: 2,
     color: colors.accentGoldLight,
   },
   arBtnChev: {

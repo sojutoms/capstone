@@ -1,6 +1,6 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { View, Image, StyleSheet, PanResponder, Text, Animated, Dimensions } from 'react-native';
-import { colors } from '../theme';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -14,6 +14,8 @@ const PX_PER_FRAME = 8;
  * of image URLs spanning a full rotation.
  */
 const Shoe360Viewer = ({ frames, height }) => {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const [index, setIndex] = useState(0);
   const [interacted, setInteracted] = useState(false);
   const hintOpacity = useRef(new Animated.Value(1)).current;
@@ -63,7 +65,7 @@ const Shoe360Viewer = ({ frames, height }) => {
   );
 };
 
-const s = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   wrap: {
     width,
     justifyContent: 'center',

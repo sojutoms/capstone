@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,19 +9,20 @@ import {
   Animated,
 } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { getFocusedRouteNameFromRoute, CommonActions } from "@react-navigation/native";
 import { BlurView } from "expo-blur";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import HomeStack from "./HomeStack";
 import CartStack from "./CartStack";
-import CameraScreen from "../screens/CameraScreen";
 import ProfileStack from "./ProfileStack";
 
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { useAuth } from "../context/AuthContext";
 import ShopStack from "./ShopStack";
-import { colors, radius, shadows, typography } from "../theme";
+import { radius, shadows, typography } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import { TAB_BAR_CLEARANCE } from "./tabBarMetrics";
 
 const Tab = createBottomTabNavigator();
@@ -36,14 +37,13 @@ const Tab = createBottomTabNavigator();
 const TABS = [
   { name: "Home", label: "Home", iconOutline: "home-outline", iconFilled: "home", component: HomeStack },
   { name: "Shop", label: "Shop", iconOutline: "bag-outline", iconFilled: "bag", component: ShopStack },
-  { name: "Camera", label: "Try-On", iconOutline: "camera-outline", iconFilled: "camera", component: CameraScreen },
   { name: "Cart", label: "Bag", iconOutline: "cart-outline", iconFilled: "cart", component: CartStack },
   { name: "Profile", label: "Profile", iconOutline: "person-outline", iconFilled: "person", component: ProfileStack, isProfile: true },
 ];
 
 /* ══════════════════════════════════════ */
 
-const Badge = ({ count }) =>
+const Badge = ({ count, styles }) =>
   count > 0 ? (
     <View style={styles.badge}>
       <Text style={styles.badgeText}>{count > 9 ? "9+" : count}</Text>
@@ -60,7 +60,8 @@ const Badge = ({ count }) =>
 ══════════════════════════════════════ */
 
 function ElegantTabBar({ state, navigation }) {
-  if (state.index === 2) return null;
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
 
   const { cart, refreshCart } = useCart();
   const { refreshFavorites } = useFavorites();
@@ -87,6 +88,14 @@ function ElegantTabBar({ state, navigation }) {
       }).start()
     );
   }, [state.index]);
+
+  // ARTryOnScreen is pushed as a stack screen on top of Home or Shop — need
+  // the deepest focused route name inside whichever tab is active to catch
+  // it (full-screen AR UI, no floating nav overlapping it). Placed after
+  // every hook above so the hook count/order stays identical across
+  // renders regardless of route.
+  const focusedRouteName = getFocusedRouteNameFromRoute(state.routes[state.index]);
+  if (focusedRouteName === "ARTryOn") return null;
 
   const pressTab = (i) => {
     const route = state.routes[i];
@@ -131,9 +140,9 @@ function ElegantTabBar({ state, navigation }) {
         {/* Muted outline icon, always rendered; the gold filled version
             fades in on top via opacity — animating the icon's own
             color/name prop directly isn't supported on this component. */}
-        <Ionicons name={tab.iconOutline} size={21} color={colors.textTertiary} />
+        <Ionicons name={tab.iconOutline} size={21} color="rgba(255,255,255,0.5)" />
         <Animated.View style={[styles.iconOverlay, { opacity: ops[i] }]}>
-          <Ionicons name={tab.iconFilled} size={21} color={colors.accentGold} />
+          <Ionicons name={tab.iconFilled} size={21} color="#ffffff" />
         </Animated.View>
       </>
     );
@@ -148,7 +157,7 @@ function ElegantTabBar({ state, navigation }) {
             live on this plain wrapping View instead, with BlurView just
             filling it edge-to-edge underneath. */}
         <View style={styles.pillClip}>
-          <BlurView intensity={45} tint="light" style={styles.pill}>
+          <BlurView intensity={45} tint={isDark ? "dark" : "light"} style={styles.pill}>
           {TABS.map((tab, i) => {
             const count = counts[tab.name] || 0;
 
@@ -162,7 +171,7 @@ function ElegantTabBar({ state, navigation }) {
                 <Animated.View style={[styles.tabInner, { transform: [{ scale: scales[i] }] }]}>
                   <View style={styles.iconSlot}>
                     {renderIcon(tab, i)}
-                    <Badge count={count} />
+                    <Badge count={count} styles={styles} />
                   </View>
 
                   <View style={styles.labelSlot}>
@@ -218,15 +227,32 @@ export default function MainTabs() {
           key={tab.name}
           name={tab.name}
           component={tab.component}
-          // Shop's stack gets fully unmounted (and re-mounted fresh at
-          // ShopScreen) every time you leave the tab — otherwise, jumping
-          // into it from Home's category dropdown (a cross-tab navigate)
-          // lands on top of whatever screen was left over from the last
-          // time you visited Shop, so the back button goes to that stale
-          // screen instead of somewhere sensible. Shop's own screens don't
-          // hold state worth preserving (it's a category menu + product
-          // grids), so resetting on every visit is a safe, simple fix.
-          options={tab.name === "Shop" ? { unmountOnBlur: true } : undefined}
+          // Home and Shop reset their nested stack back to its root screen
+          // on every tab press — otherwise, opening a product from either
+          // one, switching tabs, and coming back leaves that ProductDetail
+          // screen sitting on top instead of the tab's actual home screen.
+          // Dispatched directly (rather than relying on unmountOnBlur,
+          // which didn't reliably fire with this custom tab bar) so it's
+          // guaranteed to reset regardless of how the tab press is wired.
+          listeners={
+            tab.name === "Shop" || tab.name === "Home"
+              ? ({ navigation }) => ({
+                  tabPress: () => {
+                    const tabState = navigation.getState();
+                    const target = tabState.routes.find((r) => r.name === tab.name);
+                    if (target?.state && target.state.routes.length > 1) {
+                      navigation.dispatch({
+                        ...CommonActions.reset({
+                          index: 0,
+                          routes: [{ name: target.state.routes[0].name }],
+                        }),
+                        target: target.state.key,
+                      });
+                    }
+                  },
+                })
+              : undefined
+          }
         />
       ))}
     </Tab.Navigator>
@@ -235,7 +261,7 @@ export default function MainTabs() {
 
 /* ══════════════════════════════════════ */
 
-const styles = StyleSheet.create({
+const makeStyles = (colors, isDark) => StyleSheet.create({
   bar: {
     position: "absolute",
     left: 0,
@@ -267,10 +293,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: 60,
     paddingHorizontal: 6,
-    // Tuned close to the app's actual light-grey surface color so the pill
-    // reads as "the same surface, slightly elevated" rather than a
-    // mismatched patch.
-    backgroundColor: "rgba(238,238,238,0.92)",
+    // Dark mode: pure black, unchanged from before. Light mode: translucent
+    // dark grey — kept as the reference tone; the greeting card's opaque
+    // color is matched to how this looks once blended over the page below.
+    backgroundColor: isDark ? "rgba(0,0,0,0.85)" : "rgba(30,30,30,0.85)",
   },
 
   tab: { flex: 1, height: "100%", alignItems: "center", justifyContent: "center" },
@@ -284,15 +310,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  // Fixed light-on-dark below — the pill is now solid black in both light
+  // and dark mode (dark mode was already this way; light mode used to
+  // follow colors.textTertiary/accentGold, which is black in light mode
+  // and would go invisible against this background).
   avatarRing: {
     width: 21,
     height: 21,
     borderRadius: 11,
     borderWidth: 1.5,
-    borderColor: colors.textTertiary,
+    borderColor: "rgba(255,255,255,0.4)",
     overflow: "hidden",
   },
-  avatarRingActive: { borderColor: colors.accentGold },
+  avatarRingActive: { borderColor: "#ffffff" },
   avatarImg: { width: "100%", height: "100%" },
 
   labelSlot: { position: "relative" },
@@ -301,8 +331,8 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 0.4,
   },
-  labelMuted: { color: colors.textTertiary },
-  labelGold: { color: colors.accentGold },
+  labelMuted: { color: "rgba(255,255,255,0.5)" },
+  labelGold: { color: "#ffffff" },
   labelOverlay: { position: "absolute", top: 0, left: 0, right: 0 },
 
   badge: {

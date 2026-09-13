@@ -1,12 +1,15 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, StyleSheet } from "react-native";
 import Skeleton from "./Skeleton";
-import { colors, radius } from "../theme";
+import { radius } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import { PRODUCT_CARD_WIDTH } from "./ProductCard";
 
 // Placeholder matching ProductCard's own dimensions, so swapping between
 // the two while products load doesn't jump the layout around.
 export default function ProductCardSkeleton() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.card}>
       <Skeleton width="100%" height={PRODUCT_CARD_WIDTH} borderRadius={0} />
@@ -20,7 +23,7 @@ export default function ProductCardSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   card: {
     width: PRODUCT_CARD_WIDTH,
     backgroundColor: colors.bgCard,

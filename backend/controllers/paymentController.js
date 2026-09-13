@@ -135,6 +135,22 @@ const createCheckoutSession = async (req, res) => {
       lineItems[0].amount += amountCentavos - lineItemsSum;
     }
 
+    // Requests from the mobile app carry no Origin header (see server.js's
+    // CORS config — "Allow requests with no origin (Postman, mobile apps,
+    // server-to-server)"), unlike every browser-based request from the web
+    // app. There's no localhost:3000 for a phone to return to after paying,
+    // so native clients get sent back to a plain confirmation page served
+    // by this same backend (reachable over its own tunnel/public URL,
+    // derived from the request instead of hardcoded) instead of FRONTEND_URL.
+    const isNativeClient = !req.headers.origin;
+    const backendPublicUrl = `${req.headers["x-forwarded-proto"] || req.protocol}://${req.get("host")}`;
+    const successUrl = isNativeClient
+      ? `${backendPublicUrl}/payment-return?status=success&orderNumber=${encodeURIComponent(order.orderNumber)}`
+      : `${FRONTEND_URL}/orders?paymentStatus=success&orderNumber=${encodeURIComponent(order.orderNumber)}`;
+    const cancelUrl = isNativeClient
+      ? `${backendPublicUrl}/payment-return?status=cancelled&orderNumber=${encodeURIComponent(order.orderNumber)}`
+      : `${FRONTEND_URL}/placeorder?paymentStatus=cancelled&orderNumber=${encodeURIComponent(order.orderNumber)}`;
+
     const response = await paymongo.post("/checkout_sessions", {
       data: {
         attributes: {
@@ -144,8 +160,8 @@ const createCheckoutSession = async (req, res) => {
           description: `GoodSoles Order ${order.orderNumber}`,
           line_items: lineItems,
           payment_method_types: ["card", "gcash", "paymaya"],
-          success_url: `${FRONTEND_URL}/orders?paymentStatus=success&orderNumber=${encodeURIComponent(order.orderNumber)}`,
-          cancel_url: `${FRONTEND_URL}/placeorder?paymentStatus=cancelled&orderNumber=${encodeURIComponent(order.orderNumber)}`,
+          success_url: successUrl,
+          cancel_url: cancelUrl,
         },
       },
     });
@@ -160,6 +176,37 @@ const createCheckoutSession = async (req, res) => {
     console.error("createCheckoutSession error:", err.response?.data || err.message);
     return res.status(500).json({ success: false, error: "Could not start payment" });
   }
+};
+
+// ─── GET /payment-return — where PayMongo sends native-app checkouts back to,
+// since there's no localhost:3000 a phone can reach. The app itself already
+// detects payment completion via an AppState listener when the user returns
+// from the browser (see OrderHistoryScreen.jsx), so this page only needs to
+// tell the person it's safe to switch back, not do anything functional.
+const paymentReturnPage = (req, res) => {
+  const status = req.query.status === "success" ? "success" : "cancelled";
+  const orderNumber = String(req.query.orderNumber || "");
+  const heading = status === "success" ? "Payment received" : "Payment cancelled";
+  const message =
+    status === "success"
+      ? "You can close this tab and return to the GoodSoles app."
+      : "No charge was made. You can close this tab and return to the GoodSoles app.";
+
+  res.set("Content-Type", "text/html").send(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${heading}</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a0a;color:#fff;font-family:-apple-system,Roboto,Arial,sans-serif;text-align:center;padding:24px;box-sizing:border-box;}
+  .card{max-width:360px;}
+  h1{font-size:20px;margin:0 0 10px;}
+  p{font-size:14px;color:#a0a0a0;line-height:1.5;margin:0;}
+  .order{font-size:12px;color:#666;margin-top:16px;letter-spacing:0.5px;}
+</style></head>
+<body><div class="card">
+  <h1>${heading}</h1>
+  <p>${message}</p>
+  ${orderNumber ? `<div class="order">ORDER #${orderNumber}</div>` : ""}
+</div></body></html>`);
 };
 
 // ─── Shared: pull paid/failed state out of a PayMongo checkout session ────────
@@ -245,4 +292,4 @@ const handlePaymongoWebhook = async (req, res) => {
   }
 };
 
-module.exports = { createCheckoutSession, verifyPayment, handlePaymongoWebhook };
+module.exports = { createCheckoutSession, verifyPayment, handlePaymongoWebhook, paymentReturnPage };

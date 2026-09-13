@@ -86,6 +86,22 @@ export async function forgotPassword(email) {
   return { success: true };
 }
 
+// ─── RESEND OTP ────────────────────────────────────────────────────────────────
+export async function resendOtp(email, type) {
+  console.log("🔁 RESEND OTP:", { email, type });
+
+  const { ok, data } = await post("/resend-otp", { email, type });
+
+  if (!ok) {
+    return {
+      success: false,
+      errors: data.message || data.errors || "Failed to resend code",
+      remainingSeconds: data.remainingSeconds,
+    };
+  }
+  return { success: true };
+}
+
 // ─── RESET PASSWORD ────────────────────────────────────────────────────────────
 export async function resetPassword(email, otp, newPassword) {
   console.log("🔄 RESET PASSWORD:", { email, otp });

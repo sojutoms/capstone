@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en-us">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+  <title>GoodSoles AR Try-On</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      background: black;
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #loader-wrapper {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-family: -apple-system, Arial, sans-serif;
+      font-size: 16px;
+      z-index: 999;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="deepar-canvas"></canvas>
+  <!-- No visible text here on purpose — the React Native side (see
+       ARTryOnScreen.jsx) already shows its own icon + spinner + "Loading
+       AR…" overlay on top of this WebView, so this just needs to stay
+       solid black underneath until the camera feed is ready. -->
+  <div id="loader-wrapper"></div>
+
+  <script src="./lib/deepar.js"></script>
+  <script>
+    // Ported from the shoetryon-web-js reference project — same DeepAR
+    // Web SDK, same foot-tracking config, same effect files. Loaded here
+    // inside a React Native WebView (see mobile/src/screens/ARTryOnScreen.jsx)
+    // instead of a standalone browser tab, since DeepAR has no official
+    // React Native SDK and the one community wrapper doesn't support foot
+    // tracking at all — this reuses the proven-working web implementation
+    // as-is rather than reimplementing foot tracking natively.
+
+    // Lets the RN side pick which shoe's effect to load per-product, e.g.
+    // .../index.html?effect=Shoe_PBR.deepar — falls back to the demo effect
+    // when no per-shoe .deepar has been exported yet for that product.
+    const params = new URLSearchParams(window.location.search);
+    const effectFile = params.get('effect') || 'Shoe_PBR.deepar';
+
+    // Native RN WebView bridge — no-ops harmlessly if opened in a plain
+    // browser tab (e.g. while testing this page directly) instead of the app.
+    const notifyApp = (payload) => {
+      if (window.ReactNativeWebView?.postMessage) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+      }
+    };
+
+    // Starts DeepAR pinned to a specific camera deviceId (instead of letting
+    // facingMode:'environment' pick whichever back lens it wants — that was
+    // landing on an ultra-wide/zoomed lens). The deviceId was identified via
+    // a one-off on-device camera picker: this phone's normal 1x back camera
+    // is always the 4th device (index 3) enumerateDevices() returns.
+    async function startDeepAR(deviceId) {
+      try {
+        const canvas = document.getElementById('deepar-canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        canvas.style.width = window.innerWidth + 'px';
+        canvas.style.height = window.innerHeight + 'px';
+
+        const deepAR = await deepar.initialize({
+          licenseKey: '7fbfb676accb4e6003998ba79daf641c5b68823701e0f577fd7f3d7c770511c09d959970830dfe3c',
+          canvas: canvas,
+          additionalOptions: {
+            cameraConfig: { disableDefaultCamera: true },
+            footTrackingConfig: {
+              poseEstimationWasmPath: './lib/libxzimgPoseEstimation.wasm',
+              detectorPath: './lib/foot-detector-96x96x6-q8.bin',
+              trackerPath: './lib/foot-keyps-superfast-23JUN2024.bin',
+              objPath: './lib/foot-right-200.obj',
+              tfjsBackendWasmPath: './lib/tfjs-backend-wasm.wasm',
+              tfjsBackendWasmSimdPath: './lib/tfjs-backend-wasm-simd.wasm',
+              tfjsBackendWasmThreadedSimdPath: './lib/tfjs-backend-wasm-threaded-simd.wasm',
+            },
+            hint: 'enableFootTracking',
+          },
+        });
+
+        notifyApp({ type: 'initialized' });
+
+        await deepAR.startCamera({
+          mirror: false,
+          mediaStreamConstraints: {
+            video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' },
+          },
+        });
+
+        await deepAR.switchEffect(`./effects/${effectFile}`);
+        notifyApp({ type: 'effectLoaded', effect: effectFile });
+        document.getElementById('loader-wrapper').style.display = 'none';
+
+      } catch (e) {
+        const message = e?.message || JSON.stringify(e);
+        notifyApp({ type: 'error', message });
+        document.getElementById('loader-wrapper').innerHTML =
+          '<div style="padding:20px;color:#ff6b6b;text-align:center;">Error: ' + message + '</div>';
+      }
+    }
+
+    (async function () {
+      try {
+        // Device labels are blank until permission is granted for this page
+        // session — grab then immediately release a throwaway stream first,
+        // otherwise enumerateDevices() below can't tell the cameras apart.
+        const primer = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        primer.getTracks().forEach((t) => t.stop());
+        // Android needs a beat to actually release the camera hardware before
+        // a second getUserMedia can open a different physical lens — without
+        // this, startCamera below intermittently fails with
+        // "Could not start video source".
+        await new Promise((r) => setTimeout(r, 500));
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cams = devices.filter((d) => d.kind === 'videoinput');
+        if (!cams.length) throw new Error('No cameras found');
+
+        const NORMAL_BACK_CAMERA_INDEX = 3; // identified via on-device picker
+        const chosen = cams[NORMAL_BACK_CAMERA_INDEX] || cams[0];
+        await startDeepAR(chosen.deviceId);
+
+      } catch (e) {
+        const message = e?.message || JSON.stringify(e);
+        notifyApp({ type: 'error', message });
+        document.getElementById('loader-wrapper').innerHTML =
+          '<div style="padding:20px;color:#ff6b6b;text-align:center;">Error: ' + message + '</div>';
+      }
+    })();
+  </script>
+</body>
+
+</html>

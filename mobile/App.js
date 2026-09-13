@@ -15,15 +15,26 @@ import AppNavigator from "./src/navigation/AppNavigator";
 import { AuthProvider } from "./src/context/AuthContext";
 import { CartProvider } from "./src/context/CartContext";
 import { FavoritesProvider } from "./src/context/FavoritesContext";
+import { ThemeProvider, useTheme } from "./src/context/ThemeContext";
+import { ChatSettingsProvider } from "./src/context/ChatSettingsContext";
 import Toast from "react-native-toast-message";
 import ChatWidget from "./src/components/ChatWidget";
 import FlyToCartOverlay from "./src/components/FlyToCartOverlay";
 import AlertHost from "./src/components/AlertHost";
 import { toastConfig } from "./src/components/toastConfig";
-import { colors } from "./src/theme";
+import { colors as fallbackColors } from "./src/theme";
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
+function AppContent() {
   const navigationRef = useRef(null);
+  const { colors } = useTheme();
 
   // Loaded once here (not per-screen) so every screen can use the web's
   // actual typefaces — Bebas Neue for headings/buttons, Outfit for body —
@@ -41,7 +52,7 @@ export default function App() {
   if (!fontsLoaded) {
     // Matches SplashScreen's background so there's no white flash before
     // the real splash animation takes over.
-    return <View style={{ flex: 1, backgroundColor: colors.black }} />;
+    return <View style={{ flex: 1, backgroundColor: fallbackColors.black }} />;
   }
 
   // React Navigation's own DefaultTheme has a white `background` — without
@@ -65,17 +76,19 @@ export default function App() {
       <AuthProvider>
         <FavoritesProvider>
           <CartProvider>
-            <NavigationContainer
-              ref={navigationRef}
-              theme={navTheme}
-              onReady={() => setActiveRouteName(navigationRef.current?.getCurrentRoute()?.name ?? null)}
-              onStateChange={() => setActiveRouteName(navigationRef.current?.getCurrentRoute()?.name ?? null)}
-            >
-              <AppNavigator />
-            </NavigationContainer>
-            <ChatWidget />
-            <FlyToCartOverlay />
-            <AlertHost />
+            <ChatSettingsProvider>
+              <NavigationContainer
+                ref={navigationRef}
+                theme={navTheme}
+                onReady={() => setActiveRouteName(navigationRef.current?.getCurrentRoute()?.name ?? null)}
+                onStateChange={() => setActiveRouteName(navigationRef.current?.getCurrentRoute()?.name ?? null)}
+              >
+                <AppNavigator />
+              </NavigationContainer>
+              <ChatWidget />
+              <FlyToCartOverlay />
+              <AlertHost />
+            </ChatSettingsProvider>
           </CartProvider>
         </FavoritesProvider>
       </AuthProvider>

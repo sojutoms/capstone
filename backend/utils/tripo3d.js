@@ -38,6 +38,37 @@ const createMultiviewTask = async ({ front, left, back, right }) => {
   return taskId;
 };
 
+// Best-effort content type from the URL's extension — Tripo3D's image_to_model
+// requires `file.type`, unlike multiview_to_model which accepts a bare url.
+// Falls back to "jpg" since nearly every product photo here is Cloudinary JPEGs.
+const guessFileType = (url) => {
+  const match = /\.([a-z0-9]+)(?:\?|$)/i.exec(url || "");
+  const ext = (match?.[1] || "jpg").toLowerCase();
+  return ext === "jpeg" ? "jpg" : ext;
+};
+
+/**
+ * Kicks off a genuine single-image reconstruction (Tripo3D's image_to_model
+ * task type) — distinct from multiview_to_model above. Used when only one
+ * trustworthy photo exists, since combining unrelated/inconsistent photos
+ * into a multiview task produces warped geometry (see Model3DPanel.jsx).
+ */
+const createImageToModelTask = async (imageUrl) => {
+  if (!imageUrl) throw new Error("createImageToModelTask requires an image URL");
+
+  const { data } = await client().post("/task", {
+    type: "image_to_model",
+    file: { type: guessFileType(imageUrl), url: imageUrl },
+    model_version: MODEL_VERSION,
+    texture: true,
+    pbr: true,
+  });
+
+  const taskId = data?.data?.task_id || data?.task_id;
+  if (!taskId) throw new Error(`Tripo3D task creation returned no task_id: ${JSON.stringify(data)}`);
+  return taskId;
+};
+
 const getTask = async (taskId) => {
   const { data } = await client().get(`/task/${taskId}`);
   return data?.data || data;
@@ -47,8 +78,14 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Polls a task until it finishes. Resolves with the model URL on success.
+ * image_to_model tasks routinely sit at 99% progress for several minutes
+ * longer than multiview_to_model before actually finishing (observed
+ * ~7-8+ minutes total) — 5 minutes was cutting it off mid-flight and
+ * marking a task "failed" that Tripo3D itself went on to complete
+ * successfully seconds later. This only affects how long our own pipeline
+ * waits before giving up; it doesn't slow down a task that finishes early.
  */
-const pollTaskUntilDone = async (taskId, { intervalMs = 4000, timeoutMs = 5 * 60 * 1000 } = {}) => {
+const pollTaskUntilDone = async (taskId, { intervalMs = 4000, timeoutMs = 12 * 60 * 1000 } = {}) => {
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
@@ -74,4 +111,4 @@ const pollTaskUntilDone = async (taskId, { intervalMs = 4000, timeoutMs = 5 * 60
   throw new Error(`Tripo3D task ${taskId} timed out after ${timeoutMs}ms`);
 };
 
-module.exports = { createMultiviewTask, getTask, pollTaskUntilDone };
+module.exports = { createMultiviewTask, createImageToModelTask, getTask, pollTaskUntilDone };

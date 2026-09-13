@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import "./productManagement.css";
-import cross_icon from "../../assets/cross_icon.png";
-import edit_icon from "../../assets/edit_icon.png";
 import AddProduct from "../AddProduct/AddProduct";
 import CategoryBrandManager from "../CategoryBrandManager/CategoryBrandManager";
 import upload_area from "../../assets/upload_area.svg";
@@ -12,8 +11,20 @@ import ColorwayTab from "./ColorwayTab";
 import StockTab from "./StockTab";
 import Model3DPanel from "../Model3D/Model3DPanel";
 
+const EditIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+  </svg>
+);
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+const CloseIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+);
+
 const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 const SHOE_SUBCATEGORIES = ["lifestyle", "running", "football", "basketball"];
 const FALLBACK_SHOE_SIZES = ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13"];
@@ -467,9 +478,9 @@ const ProductManagement = () => {
           </span>
         </div>
         <div className="row-cell cell-actions">
-          <button onClick={() => startEdit(product)} className="action-btn"><img src={edit_icon} alt="Edit" /></button>
+          <button onClick={() => startEdit(product)} className="action-btn"><EditIcon /></button>
           {!product.isDeleted ? (
-            <button onClick={() => remove_product(product.id)} className="action-btn"><img src={cross_icon} alt="Remove" /></button>
+            <button onClick={() => remove_product(product.id)} className="action-btn"><CloseIcon /></button>
           ) : (
             <button onClick={() => restore_product(product.id)} className="restore-link">Restore</button>
           )}
@@ -543,8 +554,8 @@ const ProductManagement = () => {
           )}
           {!product.isDeleted && CAN.editProducts && (
             <div className="listproduct-action-icons">
-              <img onClick={() => startEdit(product)} className="listproduct-edit-icon" src={edit_icon} alt="Edit" />
-              <img onClick={() => remove_product(product.id)} className="listproduct-remove-icon" src={cross_icon} alt="Remove" />
+              <span onClick={() => startEdit(product)} className="listproduct-edit-icon" role="button" aria-label="Edit"><EditIcon /></span>
+              <span onClick={() => remove_product(product.id)} className="listproduct-remove-icon" role="button" aria-label="Remove"><CloseIcon /></span>
             </div>
           )}
           {product.isDeleted && CAN.editProducts && <button className="restore-btn" onClick={() => restore_product(product.id)}>Restore Product</button>}
@@ -682,7 +693,7 @@ const ProductManagement = () => {
       )}
 
       {/* ── Edit Modal ──────────────────────────────────────────────────────── */}
-      {editingProduct && editedDetails && CAN.editProducts && (
+      {editingProduct && editedDetails && CAN.editProducts && createPortal(
         <div className="edit-modal-overlay" onClick={() => { setEditingProduct(null); setEditedDetails(null); }}>
           <div className="edit-modal-content glass-strong" onClick={e => e.stopPropagation()}>
             <div className="edit-modal-header">
@@ -852,7 +863,8 @@ const ProductManagement = () => {
               <button type="submit" form="product-edit-form" className="footer-btn-primary">Update Product</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <Toasts toasts={toasts} removeToast={removeToast} />

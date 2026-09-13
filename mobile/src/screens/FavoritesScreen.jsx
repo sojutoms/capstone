@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,12 +15,15 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useFavorites } from "../context/FavoritesContext";
 import { useCart }      from "../context/CartContext";
 import Toast            from "react-native-toast-message";
-import { colors, fonts, radius, typography } from "../theme";
+import { fonts, radius, typography } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import { triggerFlyToCart } from "../utils/flyToCartBus";
 
 export default function FavoritesScreen({ navigation }) {
   const { favorites, removeFromFavorites, clearFavorites, refreshFavorites } = useFavorites();
   const { addToCart, refreshCart } = useCart();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [refreshing, setRefreshing] = useState(false);
 
   // Picks up anything favorited/unfavorited from the web app while this tab
@@ -89,7 +92,7 @@ export default function FavoritesScreen({ navigation }) {
   if (!favorites.length) {
     return (
       <SafeAreaView style={styles.safe}>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
         <ScrollView
           contentContainerStyle={styles.emptyWrap}
           refreshControl={
@@ -112,7 +115,7 @@ export default function FavoritesScreen({ navigation }) {
   /* ── Main ── */
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#0A0A0A" />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       {/* ── HEADER ── */}
       <View style={styles.header}>
@@ -225,7 +228,7 @@ export default function FavoritesScreen({ navigation }) {
    STYLES
 ══════════════════════════════════════ */
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.bgPrimary,

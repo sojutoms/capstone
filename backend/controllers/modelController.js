@@ -10,30 +10,43 @@ const { renderAndUploadTurntable } = require("../utils/turntableRenderer");
 // raw GLB — only the rendered frame images, which are small and permanent on
 // Cloudinary. We render straight from Tripo3D's own model URL and store that
 // URL as a best-effort reference (it will eventually expire).
-const runGenerationPipeline = async (productId, imageSelection) => {
+// Uses targeted updateOne writes (not findOne + save) throughout, because this
+// pipeline runs for minutes across multiple awaited steps (task creation,
+// Tripo3D polling, turntable rendering). A document held in memory that long
+// goes stale the moment anything else touches the same product (an admin
+// edit, a stock decrement from an order) — save() then throws a VersionError
+// and the whole run gets marked "failed", discarding already-rendered frames.
+// updateOne bypasses document versioning and only ever touches the model3d.*
+// paths, so unrelated concurrent writes can't collide with it.
+// `createTask` is an async () => taskId thunk — the caller decides whether
+// that's a multiview_to_model task (admin-curated 4 angles) or an
+// image_to_model task (single trusted photo, see productController.js's
+// auto-generate-on-add), so this pipeline stays agnostic to which.
+const runGenerationPipeline = async (productId, createTask) => {
   try {
-    const product = await Product.findOne({ id: productId });
-    if (!product) return;
-
-    const { front, left, back, right } = imageSelection;
-
-    const taskId = await createMultiviewTask({ front, left, back, right });
-    product.model3d.taskId = taskId;
-    await product.save();
+    const taskId = await createTask();
+    await Product.updateOne({ id: productId }, { $set: { "model3d.taskId": taskId } });
 
     const tripoModelUrl = await pollTaskUntilDone(taskId);
 
-    product.model3d.glbUrl = tripoModelUrl;
-    product.model3d.status = "rendering";
-    await product.save();
+    await Product.updateOne(
+      { id: productId },
+      { $set: { "model3d.glbUrl": tripoModelUrl, "model3d.status": "rendering" } }
+    );
 
     const turntableFrames = await renderAndUploadTurntable(productId, tripoModelUrl);
 
-    product.model3d.turntableFrames = turntableFrames;
-    product.model3d.status = "ready";
-    product.model3d.generatedAt = new Date();
-    product.model3d.error = "";
-    await product.save();
+    await Product.updateOne(
+      { id: productId },
+      {
+        $set: {
+          "model3d.turntableFrames": turntableFrames,
+          "model3d.status": "ready",
+          "model3d.generatedAt": new Date(),
+          "model3d.error": "",
+        },
+      }
+    );
   } catch (err) {
     console.error(`3D generation failed for product ${productId}:`, err.message);
     await Product.updateOne(
@@ -70,11 +83,13 @@ const generateModel = async (req, res) => {
           right: product.subImages?.[2] || "",
         };
 
-    product.model3d = { status: "processing", taskId: null, glbUrl: "", turntableFrames: [], error: "", generatedAt: null };
-    await product.save();
+    await Product.updateOne(
+      { id: productId },
+      { $set: { model3d: { status: "processing", taskId: null, glbUrl: "", turntableFrames: [], error: "", generatedAt: null } } }
+    );
 
     // Fire-and-forget — the admin polls /model-status/:productId for progress.
-    runGenerationPipeline(productId, imageSelection);
+    runGenerationPipeline(productId, () => createMultiviewTask(imageSelection));
 
     res.json({ success: true, status: "processing" });
   } catch (err) {
@@ -95,4 +110,4 @@ const getModelStatus = async (req, res) => {
   }
 };
 
-module.exports = { generateModel, getModelStatus };
+module.exports = { generateModel, getModelStatus, runGenerationPipeline };

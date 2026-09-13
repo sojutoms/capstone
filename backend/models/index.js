@@ -119,4 +119,13 @@ const SavedAddressCollectionSchema = new mongoose.Schema(
 );
 const SavedAddress = mongoose.model("SavedAddress", SavedAddressCollectionSchema);
 
-module.exports = { OtpModel, Review, SequenceCounter, ShoeSequence, SavedAddress };
+// ─── NewsletterSubscriber ─────────────────────────────────────────────────────
+const newsletterSubscriberSchema = new mongoose.Schema(
+  {
+    email: { type: String, required: true, trim: true, lowercase: true, unique: true },
+  },
+  { timestamps: true }
+);
+const NewsletterSubscriber = mongoose.model("NewsletterSubscriber", newsletterSubscriberSchema);
+
+module.exports = { OtpModel, Review, SequenceCounter, ShoeSequence, SavedAddress, NewsletterSubscriber };

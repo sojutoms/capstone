@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,13 +15,16 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
-import { colors, fonts, radius, shadows, spacing, typography } from "../theme";
+import { fonts, radius, shadows, spacing, typography } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import PressScale from "../components/PressScale";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 export default function CartScreen({ navigation }) {
   const { cart, addToCart, decreaseQuantity, removeFromCart, refreshCart } = useCart();
   const { refreshFavorites } = useFavorites();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [refreshing, setRefreshing] = useState(false);
 
   // Picks up anything added/removed from the web app while this tab wasn't
@@ -52,7 +55,7 @@ export default function CartScreen({ navigation }) {
   if (!cart.length) {
     return (
       <SafeAreaView style={styles.root}>
-        <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
+        <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
         <ScrollView
           contentContainerStyle={styles.emptyContainer}
           refreshControl={
@@ -77,7 +80,7 @@ export default function CartScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.root}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.bgPrimary} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       {/* ── HEADER ── */}
       <View style={styles.header}>
@@ -227,7 +230,7 @@ export default function CartScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bgPrimary,

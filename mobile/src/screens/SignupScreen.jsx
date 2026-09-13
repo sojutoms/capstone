@@ -17,6 +17,7 @@ import {
 import { BlurView } from "expo-blur";
 import { BASE_URL, API_HEADERS } from "../api/config";
 import { colors, fonts } from "../theme";
+import { TERMS_CONTENT } from "../constants/legalContent";
 
 // ─── Floating Label Input ────────────────────────────────────────────────────
 function FloatingInput({
@@ -438,40 +439,6 @@ const rvStyles = StyleSheet.create({
   key: { fontSize: 10, color: "#383838", letterSpacing: 1 },
   val: { fontSize: 11, color: "#666", maxWidth: 160 },
 });
-
-// ─── Terms & Privacy content ──────────────────────────────────────────────────
-const TERMS_CONTENT = {
-  terms: {
-    title: "Terms of Use",
-    sections: [
-      { heading: "1. Acceptance of Terms", body: "By accessing and using GoodSoles PH, you accept and agree to be bound by the terms and provision of this agreement. In addition, when using GoodSoles PH's particular services, you shall be subject to any posted guidelines or rules applicable to such services." },
-      { heading: "2. Description of Service", body: "GoodSoles PH provides users with access to an online marketplace for authentic sneakers and streetwear products. You understand and agree that the service is provided 'as-is' and that GoodSoles PH assumes no responsibility for the timeliness, deletion, mis-delivery, or failure to store any user communications or personalization settings." },
-      { heading: "3. Registration & Account", body: "To access certain features of the service, you will need to register for an account. You agree to provide accurate, current, and complete information during registration and to update such information to keep it accurate, current, and complete. GoodSoles PH reserves the right to suspend or terminate your account if any information provided proves inaccurate, not current, or incomplete." },
-      { heading: "4. User Conduct", body: "You agree not to use the service to: (a) upload, post, or transmit any content that is unlawful, harmful, threatening, abusive, harassing, defamatory, or otherwise objectionable; (b) impersonate any person or entity; (c) forge or manipulate identifiers to disguise the origin of any content; (d) upload or transmit any material that infringes any patent, trademark, copyright, or other proprietary rights." },
-      { heading: "5. Product Authenticity", body: "GoodSoles PH is committed to selling only 100% authentic products. Every item undergoes a rigorous verification process before being listed or shipped. Any item found to be inauthentic will be immediately removed, and the seller will be permanently banned from the platform." },
-      { heading: "6. Payments & Pricing", body: "All prices displayed are in Philippine Pesos (PHP) unless otherwise stated. GoodSoles PH reserves the right to modify pricing at any time. Transactions are processed through secure payment gateways. You agree to pay all charges incurred by you or any users of your account at the price(s) in effect when such charges are incurred." },
-      { heading: "7. Shipping & Delivery", body: "GoodSoles PH ships nationwide across the Philippines. Delivery times are estimates and are not guaranteed. GoodSoles PH shall not be liable for delays caused by the shipping carrier, natural disasters, or other circumstances beyond our reasonable control." },
-      { heading: "8. Returns & Refunds", body: "Returns are accepted within 7 days of receipt for items that are defective or not as described. Items must be returned in their original, unworn condition with all original packaging and tags. Refunds will be processed within 5–10 business days after we receive and inspect the returned item." },
-      { heading: "9. Limitation of Liability", body: "GoodSoles PH shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your access to or use of (or inability to access or use) the service." },
-      { heading: "10. Changes to Terms", body: "GoodSoles PH reserves the right to modify these terms at any time. We will provide notice of significant changes by updating the date at the top of this page. Your continued use of the service after such modifications constitutes your acceptance of the revised terms." },
-    ],
-  },
-  privacy: {
-    title: "Privacy Policy",
-    sections: [
-      { heading: "1. Information We Collect", body: "We collect information you provide directly to us, such as when you create an account, make a purchase, or contact us for support. This includes your name, email address, phone number, shipping address, and payment information." },
-      { heading: "2. How We Use Your Information", body: "We use the information we collect to process transactions, send transactional and promotional communications, provide customer support, and improve our services. We may also use your information to personalize your experience and send you relevant product recommendations." },
-      { heading: "3. Information Sharing", body: "We do not sell, trade, or otherwise transfer your personally identifiable information to third parties without your consent, except to trusted third parties who assist us in operating our website, conducting our business, or servicing you, so long as those parties agree to keep this information confidential." },
-      { heading: "4. Data Security", body: "We implement a variety of security measures to maintain the safety of your personal information. Your personal information is contained behind secured networks and is only accessible by a limited number of persons who have special access rights to such systems." },
-      { heading: "5. Cookies", body: "GoodSoles PH uses cookies to enhance your experience, gather general visitor information, and track visits to our website. You can choose to have your computer warn you each time a cookie is being sent, or you can choose to turn off all cookies via your browser settings." },
-      { heading: "6. Third-Party Links", body: "Occasionally, at our discretion, we may include or offer third-party products or services on our website. These third-party sites have separate and independent privacy policies. We have no responsibility or liability for the content and activities of these linked sites." },
-      { heading: "7. Children's Privacy", body: "Our service is not directed to individuals under the age of 13. We do not knowingly collect personal information from children under 13. If we become aware that a child under 13 has provided us with personal information, we will take steps to delete such information." },
-      { heading: "8. Your Rights", body: "You have the right to access, correct, or delete your personal information at any time. You may also object to or restrict the processing of your personal information. To exercise these rights, please contact us at privacy@goodsolesph.com." },
-      { heading: "9. Data Retention", body: "We retain your personal information for as long as necessary to fulfill the purposes outlined in this Privacy Policy, unless a longer retention period is required or permitted by law. When we no longer need your information, we will securely delete or anonymize it." },
-      { heading: "10. Contact Us", body: "If you have any questions about this Privacy Policy or our data practices, please contact us at privacy@goodsolesph.com or write to us at GoodSoles PH, Manila, Philippines. We will respond to your inquiry within 30 days." },
-    ],
-  },
-};
 
 // ─── Legal Modal (scroll-to-unlock, same style as old modal) ─────────────────
 const LegalModal = ({ type, visible, onClose, onAgree, alreadyAgreed }) => {

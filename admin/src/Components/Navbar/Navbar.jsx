@@ -29,14 +29,6 @@ const MoonIcon = () => (
   </svg>
 );
 
-const MonitorIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-    <line x1="8" y1="21" x2="16" y2="21"></line>
-    <line x1="12" y1="17" x2="12" y2="21"></line>
-  </svg>
-);
-
 const Navbar = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [adminName, setAdminName] = useState("Admin");
@@ -109,27 +101,21 @@ const Navbar = () => {
             aria-expanded={themeDropdownOpen}
             title="Appearance"
           >
-            {theme === 'light' ? <SunIcon /> : theme === 'dark' ? <MoonIcon /> : <MonitorIcon />}
+            {theme === 'light' ? <SunIcon /> : <MoonIcon />}
           </button>
           {themeDropdownOpen && (
             <div className="nav-theme-dropdown">
-              <button 
-                className={`nav-theme-item ${theme === 'light' ? 'active' : ''}`} 
+              <button
+                className={`nav-theme-item ${theme === 'light' ? 'active' : ''}`}
                 onClick={() => { setTheme('light'); setThemeDropdownOpen(false); }}
               >
                 <SunIcon /> Light
               </button>
-              <button 
-                className={`nav-theme-item ${theme === 'dark' ? 'active' : ''}`} 
+              <button
+                className={`nav-theme-item ${theme === 'dark' ? 'active' : ''}`}
                 onClick={() => { setTheme('dark'); setThemeDropdownOpen(false); }}
               >
                 <MoonIcon /> Dark
-              </button>
-              <button 
-                className={`nav-theme-item ${theme === 'system' ? 'active' : ''}`} 
-                onClick={() => { setTheme('system'); setThemeDropdownOpen(false); }}
-              >
-                <MonitorIcon /> System
               </button>
             </div>
           )}

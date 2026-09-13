@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -22,7 +22,8 @@ import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
-import { colors, fonts, radius, typography } from "../theme";
+import { fonts, radius, typography } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const { width } = Dimensions.get("window");
@@ -100,7 +101,7 @@ const canRequestRefund = (order) => {
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
-function ToastItem({ toast, onRemove }) {
+function ToastItem({ toast, onRemove, styles }) {
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -126,7 +127,7 @@ function ToastItem({ toast, onRemove }) {
 
 // ─── Status Pill ──────────────────────────────────────────────────────────────
 
-function StatusPill({ status }) {
+function StatusPill({ status, styles }) {
   const normalized = normalizeStatus(status);
   const statusColors = STATUS_COLORS[normalized] || STATUS_COLORS.pending;
   return (
@@ -156,7 +157,7 @@ const formatCountdown = (order, nowTick) => {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 };
 
-function PaymentPendingPill({ order, nowTick }) {
+function PaymentPendingPill({ order, nowTick, styles }) {
   if (!isAwaitingPayment(order)) return null;
   const countdown = formatCountdown(order, nowTick);
   return (
@@ -168,7 +169,7 @@ function PaymentPendingPill({ order, nowTick }) {
   );
 }
 
-function PaymentPendingBanner({ order, nowTick, onRetry, retrying }) {
+function PaymentPendingBanner({ order, nowTick, onRetry, retrying, styles, colors }) {
   if (!isAwaitingPayment(order)) return null;
   const countdown = formatCountdown(order, nowTick);
   const expired = countdown === "0:00";
@@ -198,7 +199,7 @@ function PaymentPendingBanner({ order, nowTick, onRetry, retrying }) {
 
 // ─── Timeline ─────────────────────────────────────────────────────────────────
 
-function Timeline({ status }) {
+function Timeline({ status, styles }) {
   const normalized = normalizeStatus(status);
   if (normalized === "cancelled") {
     return (
@@ -207,11 +208,16 @@ function Timeline({ status }) {
       </View>
     );
   }
-  const activeIdx = STATUS_STEPS.indexOf(normalized);
+  // Refund steps only matter (and only render) once an order actually
+  // enters that flow — showing them on every normal order just pushed
+  // "Completed" off the edge for no reason.
+  const isRefundFlow = normalized === "refund_requested" || normalized === "refunded";
+  const steps = isRefundFlow ? STATUS_STEPS : STATUS_STEPS.slice(0, 4);
+  const activeIdx = steps.indexOf(normalized);
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.timelineScroll}>
       <View style={styles.timeline}>
-        {STATUS_STEPS.map((step, i) => {
+        {steps.map((step, i) => {
           const isActive = i <= activeIdx;
           const isCurrent = i === activeIdx;
           return (
@@ -249,7 +255,7 @@ const REFUND_REASONS = [
 
 const MAX_REFUND_MEDIA = 6;
 
-function RefundModal({ visible, order, onClose, onSubmit, submitting }) {
+function RefundModal({ visible, order, onClose, onSubmit, submitting, styles, colors }) {
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [media, setMedia] = useState([]);
@@ -361,7 +367,7 @@ function RefundModal({ visible, order, onClose, onSubmit, submitting }) {
 const REVIEW_FIT_OPTIONS = ["Runs Small", "True to Size", "Runs Big"];
 const REVIEW_COMFORT_OPTIONS = ["Uncomfortable", "Average", "Very Comfortable"];
 
-function RadioGroup({ options, value, onChange }) {
+function RadioGroup({ options, value, onChange, styles }) {
   return (
     <View style={styles.radioGroupRow}>
       {options.map((opt) => (
@@ -374,7 +380,7 @@ function RadioGroup({ options, value, onChange }) {
   );
 }
 
-function ReviewModal({ visible, product, onClose, onSubmit, submitting }) {
+function ReviewModal({ visible, product, onClose, onSubmit, submitting, styles, colors }) {
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState("");
   const [title, setTitle] = useState("");
@@ -438,13 +444,13 @@ function ReviewModal({ visible, product, onClose, onSubmit, submitting }) {
             />
 
             <Text style={[styles.inputLabel, { marginTop: 14 }]}>HOW DID THIS PRODUCT FIT?</Text>
-            <RadioGroup options={REVIEW_FIT_OPTIONS} value={fit} onChange={setFit} />
+            <RadioGroup options={REVIEW_FIT_OPTIONS} value={fit} onChange={setFit} styles={styles} />
 
             <Text style={[styles.inputLabel, { marginTop: 14 }]}>HOW COMFORTABLE WAS IT?</Text>
-            <RadioGroup options={REVIEW_COMFORT_OPTIONS} value={comfort} onChange={setComfort} />
+            <RadioGroup options={REVIEW_COMFORT_OPTIONS} value={comfort} onChange={setComfort} styles={styles} />
 
             <Text style={[styles.inputLabel, { marginTop: 14 }]}>WOULD YOU RECOMMEND IT?</Text>
-            <RadioGroup options={["Yes", "No"]} value={recommend} onChange={setRecommend} />
+            <RadioGroup options={["Yes", "No"]} value={recommend} onChange={setRecommend} styles={styles} />
 
             <TouchableOpacity style={styles.agreeRow} onPress={() => setAgreed(!agreed)}>
               <View style={[styles.radioCircle, agreed && styles.radioCircleFilled, { borderRadius: 4 }]} />
@@ -479,12 +485,13 @@ function ReviewModal({ visible, product, onClose, onSubmit, submitting }) {
 
 function DetailModal({
   order, visible, onClose, onRefund, onReviewItem, onConfirmReceived,
-  confirmingReceived, nowTick, onRetryPayment, retryingId,
+  confirmingReceived, nowTick, onRetryPayment, retryingId, onCancel, cancelling, styles, colors,
 }) {
   if (!order) return null;
   const rawIsDelivered = normalizeStatus(order.status) === "delivered";
   const canReview = effectiveStatus(order) === "completed";
   const canRefund = canRequestRefund(order);
+  const isCancellable = normalizeStatus(order.status) === "pending";
   const alreadyRefunded = !!(order.refundStatus || order.refundReason);
 
   return (
@@ -498,7 +505,7 @@ function DetailModal({
               {new Date(order.timestamp).toLocaleString()}
             </Text>
             <View style={{ marginBottom: 12 }}>
-              <StatusPill status={order.status} />
+              <StatusPill status={order.status} styles={styles} />
             </View>
 
             <PaymentPendingBanner
@@ -506,6 +513,8 @@ function DetailModal({
               nowTick={nowTick}
               onRetry={onRetryPayment}
               retrying={retryingId === order.orderNumber}
+              styles={styles}
+              colors={colors}
             />
 
             {rawIsDelivered && (
@@ -563,6 +572,21 @@ function DetailModal({
                 </TouchableOpacity>
               </View>
             )}
+
+            {isCancellable && (
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.modalBtnDanger, cancelling && styles.btnDisabled]}
+                  onPress={() => onCancel(order)}
+                  disabled={cancelling}
+                >
+                  {cancelling
+                    ? <ActivityIndicator size="small" color="#ef5350" />
+                    : <Text style={styles.modalBtnDangerText}>CANCEL ORDER</Text>
+                  }
+                </TouchableOpacity>
+              </View>
+            )}
           </ScrollView>
 
           <TouchableOpacity style={styles.modalClose} onPress={onClose}>
@@ -580,6 +604,8 @@ export default function OrderHistoryScreen({ navigation }) {
   const { userToken } = useAuth();
   const { refreshCart } = useCart();
   const { refreshFavorites } = useFavorites();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const [reviewVisible, setReviewVisible]       = useState(false);
   const [reviewProduct, setReviewProduct]       = useState(null);
@@ -711,12 +737,27 @@ export default function OrderHistoryScreen({ navigation }) {
   const finalizePayment = async (orderNumber) => {
     setPendingOrderNumber(null);
     setVerifying(true);
+    let paid = false;
+    let purchasedItems = [];
     try {
       await fetch(`${BASE_URL}/payment/verify/${orderNumber}`, {
         headers: { "auth-token": userToken },
       });
+
+      const orderRes = await fetch(`${BASE_URL}/order/${orderNumber}`, {
+        headers: { "auth-token": userToken },
+      });
+      const orderData = await orderRes.json();
+      if (orderData.success) {
+        paid = orderData.order.paymentStatus === "paid";
+        purchasedItems = orderData.order.items || [];
+      }
     } catch {}
     setVerifying(false);
+
+    if (paid) {
+      navigation.navigate("Cart", { screen: "Orders", params: { orderNumber, purchasedItems } });
+    }
     fetchOrders(currentPage, statusFilter);
   };
 
@@ -864,53 +905,58 @@ export default function OrderHistoryScreen({ navigation }) {
     const isLoading    = loadingIds.includes(order.orderNumber);
 
     return (
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.85}
-        onPress={() => { setSelected(order); setDetailVisible(true); }}
-      >
-        {/* Card header */}
-        <View style={styles.cardHeader}>
-          <View>
-            <Text style={styles.cardOrderNum}>#{order.orderNumber}</Text>
-            <Text style={styles.cardDate}>
-              {new Date(order.timestamp).toLocaleDateString("en-PH", {
-                year: "numeric", month: "short", day: "numeric",
-              })}
-            </Text>
-          </View>
-          <StatusPill status={order.status} />
-        </View>
-
-        <PaymentPendingPill order={order} nowTick={nowTick} />
-
-        {/* Items preview */}
-        <View style={styles.itemsPreview}>
-          {order.items.slice(0, 3).map((item, idx) => (
-            <View key={idx} style={styles.itemRow}>
-              <Image source={{ uri: item.image }} style={styles.itemThumb} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.itemMeta}>Size {item.size}  ×{item.quantity}</Text>
-              </View>
-              <Text style={styles.itemPrice}>
-                ₱{(Number(item.price) * item.quantity).toLocaleString()}
+      <View style={styles.card}>
+        {/* Everything that opens the details modal lives in its own
+            TouchableOpacity — the Timeline below is a plain sibling, not
+            nested inside it, so swiping the status steps can never get
+            mistaken for a tap that pops the modal open. */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => { setSelected(order); setDetailVisible(true); }}
+        >
+          {/* Card header */}
+          <View style={styles.cardHeader}>
+            <View>
+              <Text style={styles.cardOrderNum}>#{order.orderNumber}</Text>
+              <Text style={styles.cardDate}>
+                {new Date(order.timestamp).toLocaleDateString("en-PH", {
+                  year: "numeric", month: "short", day: "numeric",
+                })}
               </Text>
             </View>
-          ))}
-          {order.items.length > 3 && (
-            <Text style={styles.moreItems}>+{order.items.length - 3} more item{order.items.length - 3 !== 1 ? "s" : ""}</Text>
-          )}
-        </View>
+            <StatusPill status={order.status} styles={styles} />
+          </View>
 
-        {/* Total */}
-        <View style={styles.cardTotalRow}>
-          <Text style={styles.cardTotalLabel}>ORDER TOTAL</Text>
-          <Text style={styles.cardTotalAmount}>₱{Number(order.total).toLocaleString()}</Text>
-        </View>
+          <PaymentPendingPill order={order} nowTick={nowTick} styles={styles} />
 
-        {/* Timeline */}
-        <Timeline status={order.status} />
+          {/* Items preview */}
+          <View style={styles.itemsPreview}>
+            {order.items.slice(0, 3).map((item, idx) => (
+              <View key={idx} style={styles.itemRow}>
+                <Image source={{ uri: item.image }} style={styles.itemThumb} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+                  <Text style={styles.itemMeta}>Size {item.size}  ×{item.quantity}</Text>
+                </View>
+                <Text style={styles.itemPrice}>
+                  ₱{(Number(item.price) * item.quantity).toLocaleString()}
+                </Text>
+              </View>
+            ))}
+            {order.items.length > 3 && (
+              <Text style={styles.moreItems}>+{order.items.length - 3} more item{order.items.length - 3 !== 1 ? "s" : ""}</Text>
+            )}
+          </View>
+
+          {/* Total */}
+          <View style={styles.cardTotalRow}>
+            <Text style={styles.cardTotalLabel}>ORDER TOTAL</Text>
+            <Text style={styles.cardTotalAmount}>₱{Number(order.total).toLocaleString()}</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Timeline — swipeable, sits outside the tap-to-open-details area */}
+        <Timeline status={order.status} styles={styles} />
 
         {/* Actions */}
         <View style={styles.cardActions}>
@@ -939,7 +985,7 @@ export default function OrderHistoryScreen({ navigation }) {
             </TouchableOpacity>
           )}
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -987,7 +1033,7 @@ export default function OrderHistoryScreen({ navigation }) {
       {/* Toast stack */}
       <View style={styles.toastStack} pointerEvents="none">
         {toasts.map((t) => (
-          <ToastItem key={t.id} toast={t} onRemove={removeToast} />
+          <ToastItem key={t.id} toast={t} onRemove={removeToast} styles={styles} />
         ))}
       </View>
 
@@ -1035,6 +1081,7 @@ export default function OrderHistoryScreen({ navigation }) {
         </View>
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={orders}
           keyExtractor={(o) => o._id || o.orderNumber}
           renderItem={renderOrder}
@@ -1067,6 +1114,10 @@ export default function OrderHistoryScreen({ navigation }) {
         nowTick={nowTick}
         onRetryPayment={retryPayment}
         retryingId={retryingId}
+        onCancel={cancelOrder}
+        cancelling={!!selected && loadingIds.includes(selected.orderNumber)}
+        styles={styles}
+        colors={colors}
       />
 
       {/* Refund Modal */}
@@ -1076,6 +1127,8 @@ export default function OrderHistoryScreen({ navigation }) {
         onClose={() => { setRefundVisible(false); setRefundOrder(null); }}
         onSubmit={submitRefund}
         submitting={refundSubmitting}
+        styles={styles}
+        colors={colors}
       />
 
       {/* Review Modal */}
@@ -1085,6 +1138,8 @@ export default function OrderHistoryScreen({ navigation }) {
         onClose={() => { setReviewVisible(false); setReviewProduct(null); }}
         onSubmit={submitReviewForm}
         submitting={reviewSubmitting}
+        styles={styles}
+        colors={colors}
       />
 
       {/* Waiting on external browser payment */}
@@ -1108,7 +1163,7 @@ export default function OrderHistoryScreen({ navigation }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgPrimary },
 
   // ── Toast ──
@@ -1417,6 +1472,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   modalBtnSecondaryText: { color: colors.textMuted, fontSize: 12, fontWeight: "800", letterSpacing: 1.5 },
+  modalBtnDanger: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ef5350",
+    paddingVertical: 14,
+    alignItems: "center",
+    borderRadius: radius.sm,
+  },
+  modalBtnDangerText: { color: "#ef5350", fontSize: 12, fontWeight: "800", letterSpacing: 1.5 },
   modalBtnPrimary: {
     flex: 1,
     backgroundColor: colors.textPrimary,
@@ -1484,7 +1548,11 @@ btnReview: {
 btnReviewText: { color: colors.success, fontSize: 10, fontWeight: "800", letterSpacing: 1.5 },
 
   // ── Status filter ──
-  filterScroll: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle },
+  // No border here anymore — the header right above already has a
+  // bottom border, so this row was sandwiched between two divider lines
+  // barely 18px apart, which read as a cramped clipped box rather than
+  // a normal row with room to breathe.
+  filterScroll: { flexGrow: 0 },
   filterRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
   filterBtn: {
     borderWidth: 1,

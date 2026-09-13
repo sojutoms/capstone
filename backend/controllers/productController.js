@@ -27,6 +27,31 @@ const {
 } = require("../utils/migrations");
 
 const { getActiveReservationsMap } = require("../utils/reservations");
+const { runGenerationPipeline } = require("./modelController");
+const { createImageToModelTask } = require("../utils/tripo3d");
+
+// Auto-starts 3D generation for a just-created product. Uses Tripo3D's
+// genuine single-image reconstruction (image_to_model) on just the main
+// photo — NOT the 4-photo multiview heuristic the manual "GENERATE 3D
+// MODEL" button uses. A catalog's image + subImages often mix single-shoe
+// and paired-shoe shots (see Model3DPanel.jsx); blindly combining 4
+// positionally-assumed photos into one multiview task produces warped,
+// merged geometry when they don't actually agree with each other. A single
+// trusted photo can't collide with anything else, so it faithfully
+// reproduces whatever that one photo shows — a single shoe or a pair —
+// just from one fixed angle rather than a full 360 reconstruction. Needs at
+// least a main image — matches Model3DPanel's own `disabled={!image}` guard.
+// Fire-and-forget: the admin's add-product response doesn't wait on a
+// multi-minute Tripo3D run.
+const autoGenerate3DModel = (product) => {
+  if (!product.image) return;
+  Product.updateOne(
+    { id: product.id },
+    { $set: { model3d: { status: "processing", taskId: null, glbUrl: "", turntableFrames: [], error: "", generatedAt: null } } }
+  )
+    .then(() => runGenerationPipeline(product.id, () => createImageToModelTask(product.image)))
+    .catch((err) => console.error(`Auto 3D generation kickoff failed for product ${product.id}:`, err.message));
+};
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret_ecom";
 
@@ -145,6 +170,7 @@ const addProduct = async (req, res) => {
       }));
       await ShoeSequence.insertMany(inserts);
 
+      autoGenerate3DModel(productDoc);
       writeAudit("product_add", req, { productId: productDoc.id, skuNumber, category });
       return res.json({ success: true, id: productDoc.id, skuNumber });
     }
@@ -171,6 +197,7 @@ const addProduct = async (req, res) => {
     await product.save();
     await createSkusForProduct(product.id, { sizesOverride: sizesArray, consignedBy: adminEmail });
 
+    autoGenerate3DModel(product);
     writeAudit("product_add", req, { productId: product.id, skuNumber, category, brand });
     return res.json({ success: true, id: product.id, skuNumber });
 
@@ -350,25 +377,6 @@ const getNewCollections = async (req, res) => {
   } catch (err) { res.status(500).json({ success: false }); }
 };
 
-const toggleNew = async (req, res) => {
-  try {
-    const { id, isNew } = req.body;
-    await Product.updateOne({ id }, { $set: { isNew } });
-    writeAudit("toggle_new", req, { id, isNew });
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ success: false }); }
-};
-
-const bulkUpdateNew = async (req, res) => {
-  try {
-    const { ids, isNew } = req.body;
-    await Product.updateMany({ id: { $in: ids } }, { $set: { isNew } });
-    writeAudit("bulk_update_new", req, { ids, isNew });
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ success: false }); }
-};
-
-
 const addColorway = async (req, res) => {
   try {
     const { parentId, name, description, image, subImages, sizes } = req.body;
@@ -408,7 +416,7 @@ const addColorway = async (req, res) => {
 
 module.exports = {
   getAllProducts, addProduct, editProduct, removeProduct, restoreProduct, getFeatured,
-  getNewCollections, toggleNew, bulkUpdateNew, addColorway,
+  getNewCollections, addColorway,
   fixSizes, fixAllSizes, migrateSizesWithPrices, migrateSkuNumbers,
   addReview, getReviews, getMyReviews
 };

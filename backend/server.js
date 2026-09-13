@@ -1,4 +1,5 @@
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, ".env") });
 
 const express = require("express");
 const cors = require("cors");
@@ -20,6 +21,7 @@ const categoryBrandRoutes = require("./routes/categoryBrandRoutes")
 const paymentRoutes = require("./routes/paymentRoutes");
 const chatbotRoutes = require("./routes/chatbotRoutes");
 const modelRoutes    = require("./routes/modelRoutes");
+const newsletterRoutes = require("./routes/newsletterRoutes");
 const { handlePaymongoWebhook } = require("./controllers/paymentController");
 const { seedCategoryBrand } = require("./utils/seedCategoryBrand");
 const seedSizesSubcategories = require("./utils/seedSizesSubcategories");
@@ -71,6 +73,12 @@ connectDB();
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.get("/", (req, res) => res.send("Express App is Running"));
 
+// AR try-on (DeepAR web SDK, foot tracking) — loaded inside a WebView by
+// mobile's ARTryOnScreen.jsx, since DeepAR has no React Native SDK with
+// foot-tracking support. Needs to be served over HTTPS (not file://) for
+// the page's getUserMedia camera call to work in a WebView.
+app.use("/artryon", express.static(path.join(__dirname, "public/artryon")));
+
 app.use("/", uploadRoutes);
 app.use("/", productRoutes);
 app.use("/", orderRoutes);
@@ -83,6 +91,7 @@ app.use("/", categoryBrandRoutes);
 app.use("/", paymentRoutes);
 app.use("/", chatbotRoutes);
 app.use("/", modelRoutes);
+app.use("/", newsletterRoutes);
 // ─── Init & background jobs ───────────────────────────────────────────────────
 initializeSequenceCounter();
 seedCategoryBrand();

@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { colors, fonts, shadows } from "../theme";
+import { fonts, shadows } from "../theme";
+import { useTheme } from "../context/ThemeContext";
 
 // Custom react-native-toast-message layout — matches AlertHost's card
 // language exactly (light-grey rounded square, same text colors) instead
@@ -14,6 +15,8 @@ const TYPE_META = {
 };
 
 function ToastCard({ type, text1, text2 }) {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const meta = TYPE_META[type] || TYPE_META.info;
   return (
     <View style={s.card}>
@@ -32,7 +35,7 @@ export const toastConfig = {
   info: (props) => <ToastCard type="info" {...props} />,
 };
 
-const s = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   card: {
     width: "90%",
     flexDirection: "row",

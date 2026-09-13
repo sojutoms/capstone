@@ -29,6 +29,13 @@ const PASSWORD_RULES = [
 
 const getPwdChecks = (pw) => PASSWORD_RULES.map((r) => ({ ...r, passed: r.test(pw) }));
 
+// Matches web's ResendOtpButton formatTime exactly.
+const formatCountdown = (secs) => {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return m > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${s}s`;
+};
+
 const getPasswordStrength = (pw) => {
   if (!pw) return "";
   let s = 0;
@@ -344,7 +351,7 @@ const av = StyleSheet.create({
 
 // ─── Main Screen ───────────────────────────────────────────────────────────────
 export default function LoginScreen({ navigation }) {
-  const { login, signup, confirmOtp, sendForgotOtp, confirmResetPassword } = useAuth();
+  const { login, signup, confirmOtp, sendForgotOtp, confirmResetPassword, resendOtp } = useAuth();
 
   const [mode, setMode] = useState("login"); // login | signup | forgot | reset
 
@@ -358,6 +365,14 @@ export default function LoginScreen({ navigation }) {
 
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp]         = useState("");
+
+  // Resend cooldown for whichever OTP step is currently showing (signup
+  // OTP or forgot-password reset OTP) — matches web's ResendOtpButton
+  // escalation exactly: 60s -> 120s -> 180s, server-enforced too.
+  const [otpResendAttempts, setOtpResendAttempts] = useState(0);
+  const [otpCountdown, setOtpCountdown]           = useState(60);
+  const [otpCanResend, setOtpCanResend]           = useState(false);
+  const [otpResending, setOtpResending]           = useState(false);
 
   const [termsAgreed, setTermsAgreed]     = useState(false);
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
@@ -381,6 +396,43 @@ export default function LoginScreen({ navigation }) {
       Animated.spring(cardTranslateY, { toValue: 0, friction: 7, tension: 60, useNativeDriver: true }),
     ]).start();
   }, []);
+
+  // Resend countdown ticker — only relevant while an OTP step is showing.
+  useEffect(() => {
+    if (!(otpSent || mode === "reset")) return;
+    if (otpCountdown <= 0) { setOtpCanResend(true); return; }
+    const t = setTimeout(() => setOtpCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [otpCountdown, otpSent, mode]);
+
+  const resetOtpResendState = () => {
+    setOtpResendAttempts(0);
+    setOtpCountdown(60);
+    setOtpCanResend(false);
+  };
+
+  const handleResendOtp = async () => {
+    if (!otpCanResend || otpResending) return;
+    setOtpResending(true);
+    try {
+      const type = mode === "reset" ? "forgot" : "signup";
+      await resendOtp(formData.email.trim(), type);
+      showAlert("A new code has been sent.");
+      setOtp("");
+      setOtpCanResend(false);
+      const newAttempts = otpResendAttempts + 1;
+      setOtpResendAttempts(newAttempts);
+      setOtpCountdown(newAttempts === 1 ? 120 : 180);
+    } catch (err) {
+      if (err.remainingSeconds) {
+        setOtpCanResend(false);
+        setOtpCountdown(err.remainingSeconds);
+      }
+      showAlert(err.message || "Failed to resend code");
+    } finally {
+      setOtpResending(false);
+    }
+  };
 
   // Fade card on mode switch
   const switchMode = (next) => {
@@ -467,6 +519,7 @@ export default function LoginScreen({ navigation }) {
     try {
       await signup({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim(), phone, password });
       setOtpSent(true);
+      resetOtpResendState();
       showAlert("OTP sent to your email!");
     } catch (err) {
       showAlert(err.message || "Failed to send OTP");
@@ -500,6 +553,7 @@ export default function LoginScreen({ navigation }) {
     try {
       await sendForgotOtp(email);
       showAlert("Reset OTP sent to your email!");
+      resetOtpResendState();
       switchMode("reset");
     } catch (err) {
       showAlert(err.message || "Failed to send reset OTP");
@@ -618,6 +672,18 @@ export default function LoginScreen({ navigation }) {
         <View style={{ marginTop: 10 }}>
           <Text style={s.otpHint}>Enter the 6-digit code sent to <Text style={{ color: "#aaa" }}>{formData.email}</Text></Text>
           <OtpInput value={otp} onChange={setOtp} error={errors.otp} />
+          <View style={s.resendRow}>
+            <Text style={s.resendLabel}>Didn't receive it? </Text>
+            {otpCanResend ? (
+              <TouchableOpacity onPress={handleResendOtp} disabled={otpResending}>
+                <Text style={s.resendLink}>Resend code</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={s.resendTimer}>
+                {otpResending ? "Sending…" : `Resend in ${formatCountdown(otpCountdown)}`}
+              </Text>
+            )}
+          </View>
           <PrimaryBtn label="VERIFY & CREATE ACCOUNT" onPress={handleVerifyOtp} loading={loading} />
         </View>
       )}
@@ -661,6 +727,18 @@ export default function LoginScreen({ navigation }) {
       <FieldInput placeholder="Confirm new password" value={formData.confirmPassword} onChangeText={set("confirmPassword")} secureTextEntry showToggle toggled={showResetConfirm} onToggle={() => setShowResetConfirm((v) => !v)} error={errors.confirmPassword} />
 
       <OtpInput value={otp} onChange={setOtp} error={errors.otp} />
+      <View style={s.resendRow}>
+        <Text style={s.resendLabel}>Didn't receive it? </Text>
+        {otpCanResend ? (
+          <TouchableOpacity onPress={handleResendOtp} disabled={otpResending}>
+            <Text style={s.resendLink}>Resend code</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={s.resendTimer}>
+            {otpResending ? "Sending…" : `Resend in ${formatCountdown(otpCountdown)}`}
+          </Text>
+        )}
+      </View>
       <PrimaryBtn label="RESET PASSWORD" onPress={handleReset} loading={loading} />
     </>
   );
@@ -729,5 +807,9 @@ const s = StyleSheet.create({
   termsLinkDone: { color: colors.success },
   fieldError: { color: "#8b2020", fontSize: 11, marginBottom: 4, marginLeft: 2 },
   otpHint: { color: "#444", fontSize: 12, textAlign: "center", marginBottom: 8 },
+  resendRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginTop: 4, marginBottom: 8 },
+  resendLabel: { color: "#333", fontSize: 12 },
+  resendLink: { color: colors.accentGold, fontSize: 12, fontWeight: "700" },
+  resendTimer: { color: "#3a3a3a", fontSize: 12 },
   backBtn: { color: "#555", fontSize: 12 },
 });

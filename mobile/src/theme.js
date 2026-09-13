@@ -10,13 +10,13 @@
 // well against the old dark background, but black reads as the stronger
 // accent against white.
 
-export const colors = {
+export const lightColors = {
   // Backgrounds
   bgPrimary: "#ffffff",
   bgSecondary: "#f8f8f8",
   bgSurface: "#ffffff",
   bgElevated: "#f4f4f4",
-  bgCard: "#ffffff",
+  bgCard: "#e0e0e0",
   bgTertiary: "#eeeeee",
 
   // Text
@@ -47,6 +47,51 @@ export const colors = {
   black: "#000000",
   white: "#ffffff",
 };
+
+// Dark palette — a true inverse of the light one (white accent on black,
+// mirroring light mode's black accent on white) instead of the old gold
+// accent, so dark mode reads as the same design flipped, not a different
+// color scheme.
+export const darkColors = {
+  // Lightened from near-black to a softer dark grey — the original
+  // #0a0a0a read as too harsh/black, this is closer to iOS/Material's
+  // dark-grey surfaces while still clearly "dark mode".
+  bgPrimary: "#1c1c1e",
+  bgSecondary: "#232325",
+  bgSurface: "#2c2c2e",
+  bgElevated: "#3a3a3c",
+  bgCard: "#3a3a3c",
+  bgTertiary: "#333335",
+
+  textPrimary: "#ffffff",
+  textSecondary: "#a0a0a0",
+  textTertiary: "#808080",
+  textMuted: "#666666",
+  textInverse: "#000000",
+
+  accentGold: "#ffffff",
+  accentGoldLight: "#cccccc",
+  accentGoldWash: "rgba(255, 255, 255, 0.08)",
+
+  borderSubtle: "rgba(255, 255, 255, 0.08)",
+  borderLight: "rgba(255, 255, 255, 0.15)",
+  glassBg: "rgba(255, 255, 255, 0.03)",
+  glassBorder: "rgba(255, 255, 255, 0.08)",
+  glassBgHover: "rgba(255, 255, 255, 0.06)",
+  glassBorderHover: "rgba(255, 255, 255, 0.2)",
+
+  danger: "#e5484d",
+  success: "#4caf50",
+  warning: "#ff9800",
+
+  black: "#000000",
+  white: "#ffffff",
+};
+
+// Default export used by screens not yet migrated to useTheme() — always
+// the light palette. Screens should prefer `const { colors } = useTheme()`
+// from ../context/ThemeContext to react to the user's dark mode setting.
+export const colors = lightColors;
 
 // Web's --shadow-* tokens, translated to RN's shadow* + elevation props.
 // Use via spread: style={[styles.card, shadows.md]}

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { authorizedFetch } from "../../services/api";
+import { pauseIdleTimeout } from "../../utils/idleGuard";
 import "./Model3DPanel.css";
 
 const POLL_INTERVAL = 3000;
@@ -130,6 +131,12 @@ const Model3DPanel = ({ productId, images = [], disabled }) => {
       clearInterval(pollRef.current);
       pollRef.current = null;
     }
+    if (!active) return;
+    // A real generation/render job can run for many minutes with zero mouse
+    // or keyboard activity — hold off the idle auto-logout for as long as
+    // we're actively polling for it, so a patient admin doesn't get kicked
+    // out mid-wait.
+    return pauseIdleTimeout();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [model3d?.status]);
 

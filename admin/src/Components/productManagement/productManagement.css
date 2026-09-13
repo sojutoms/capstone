@@ -1146,28 +1146,25 @@
 .listproduct-edit-icon {
   width: 32px;
   height: 32px;
-  padding: 6px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--bg-card);
   border-radius: var(--radius-sm);
   cursor: pointer;
   box-shadow: var(--shadow-md);
   transition: all var(--duration-fast) var(--ease-out);
   border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
 }
 
 .listproduct-edit-icon:hover,
 .listproduct-remove-icon:hover {
   background: var(--text-primary);
   border-color: var(--text-primary);
+  color: var(--bg-deep);
   transform: translateY(-2px);
-}
-
-.listproduct-edit-icon:hover {
-  filter: brightness(0);
-}
-
-.listproduct-remove-icon:hover {
-  filter: brightness(0) invert(1);
 }
 
 .deleted-badge {

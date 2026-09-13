@@ -32,7 +32,15 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-status-bar",
+      "expo-video",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "GoodSoles PH needs camera access so you can try shoes on with AR."
+        }
+      ]
     ],
     "extra": {
       "eas": {

@@ -8,8 +8,6 @@ const {
   editProduct,
   removeProduct,
   restoreProduct,
-  toggleNew,
-  bulkUpdateNew,
   getFeatured,
   getNewCollections,
   fixSizes,
@@ -31,8 +29,6 @@ router.post("/addcolorway", adminAuth, validate(["parentId", "name"]), addColorw
 router.post("/editproduct", adminAuth, validate(["id"]), validateProduct, editProduct);
 router.post("/removeproduct", adminAuth, removeProduct);
 router.post("/restoreproduct", adminAuth, restoreProduct);
-router.post("/togglenew", adminAuth, toggleNew);
-router.post("/bulk-update-new", adminAuth, bulkUpdateNew);
 router.get("/featured", getFeatured);
 router.get("/newcollections", getNewCollections);
 router.get("/fix-sizes", adminAuth, fixSizes);
