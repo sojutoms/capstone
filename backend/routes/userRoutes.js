@@ -25,6 +25,8 @@ const {
   updateAddress,
   verifyCurrentPassword,
   sendChangePasswordOtp,
+  sendChangeEmailOtp,
+  confirmEmailChange,
   resendOtp,
   redeemPoints,
 } = require("../controllers/userController");
@@ -48,6 +50,8 @@ router.put("/user/profile", fetchUser, updateUserProfile);
 router.put("/user/changepassword", fetchUser, changeUserPassword);
 router.post("/user/verify-current-password", fetchUser, verifyCurrentPassword);
 router.post("/user/send-change-password-otp", fetchUser, sendChangePasswordOtp);
+router.post("/user/send-email-change-otp", fetchUser, sendChangeEmailOtp);
+router.put("/user/confirm-email-change", fetchUser, confirmEmailChange);
 router.post("/redeempoints", fetchUser, redeemPoints);
 
 // Authenticated user delete (user deletes their own account)

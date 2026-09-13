@@ -334,7 +334,7 @@ const LoginSignup = () => {
   const [brandLeft, setBrandLeft] = useState(false);
 
   const [formData, setFormData] = useState({
-    firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "", newPassword: "",
+    firstName: "", lastName: "", email: "", phone: "+63", password: "", confirmPassword: "", newPassword: "",
   });
 
   const [agreed, setAgreed] = useState(false);
@@ -391,7 +391,7 @@ const LoginSignup = () => {
       setAnimating(true);
       setTimeout(() => { setBrandLeft(toSignup); setMode(next); setAnimating(false); }, 500);
     } else { setMode(next); }
-    setFormData({ firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "", newPassword: "" });
+    setFormData({ firstName: "", lastName: "", email: "", phone: "+63", password: "", confirmPassword: "", newPassword: "" });
     setOtpSent(false); setOtp(""); clearErrors();
     setPwStrength("");
     setResendKey((k) => k + 1); // reset resend button
@@ -423,15 +423,15 @@ const LoginSignup = () => {
     if (!agreed) { setErr("agreed", "You must read and agree to both documents to continue."); return; }
     let bad = false;
     if (!firstName) { setErr("firstName", "First name required."); bad = true; }
-    else if (/\d/.test(firstName)) { setErr("firstName", "No numbers allowed."); bad = true; }
+    else if (!/^[A-Za-z\s'-]+$/.test(firstName)) { setErr("firstName", "No numbers or special characters allowed."); bad = true; }
     else if (firstName.length < 2) { setErr("firstName", "At least 2 characters."); bad = true; }
     if (!lastName) { setErr("lastName", "Last name required."); bad = true; }
-    else if (/\d/.test(lastName)) { setErr("lastName", "No numbers allowed."); bad = true; }
+    else if (!/^[A-Za-z\s'-]+$/.test(lastName)) { setErr("lastName", "No numbers or special characters allowed."); bad = true; }
     else if (lastName.length < 2) { setErr("lastName", "At least 2 characters."); bad = true; }
     if (!email) { setErr("email", "Email is required."); bad = true; }
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErr("email", "Enter a valid email."); bad = true; }
     if (!phone) { setErr("phone", "Phone number is required."); bad = true; }
-    else if (!/^\d{11}$/.test(phone)) { setErr("phone", "Phone number must be exactly 11 digits."); bad = true; }
+    else if (!/^\+63\d{10}$/.test(phone)) { setErr("phone", "Phone number must start with +63 and be followed by exactly 10 digits."); bad = true; }
     if (!password) { setErr("password", "Password is required."); bad = true; }
     else { const checks = getPwdChecks(password); if (checks.some((c) => !c.passed)) { setErr("password", "Password does not meet all requirements."); bad = true; } }
     if (!confirmPassword) { setErr("confirmPassword", "Confirm your password."); bad = true; }
@@ -484,7 +484,7 @@ const LoginSignup = () => {
     if (data.success) {
       toast.success("Password reset! Please log in.");
       switchMode("login");
-      setFormData({ firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "", newPassword: "" });
+      setFormData({ firstName: "", lastName: "", email: "", phone: "+63", password: "", confirmPassword: "", newPassword: "" });
     } else {
       toast.error(data.errors || "Reset failed");
     }
@@ -560,12 +560,12 @@ const LoginSignup = () => {
         <div className="ls-fields-grid">
           <Field error={errors.firstName}>
             <input name="firstName" type="text" placeholder="First name" value={formData.firstName} onKeyDown={handleSignupKey}
-              onChange={(e) => { const v = e.target.value.replace(/[0-9]/g, "").slice(0, MAX_NAME); setErrors((p) => ({ ...p, firstName: "" })); setFormData((p) => ({ ...p, firstName: v })); }}
+              onChange={(e) => { const v = e.target.value.replace(/[^A-Za-z\s'-]/g, "").slice(0, MAX_NAME); setErrors((p) => ({ ...p, firstName: "" })); setFormData((p) => ({ ...p, firstName: v })); }}
             />
           </Field>
           <Field error={errors.lastName}>
             <input name="lastName" type="text" placeholder="Last name" value={formData.lastName} onKeyDown={handleSignupKey}
-              onChange={(e) => { const v = e.target.value.replace(/[0-9]/g, "").slice(0, MAX_NAME); setErrors((p) => ({ ...p, lastName: "" })); setFormData((p) => ({ ...p, lastName: v })); }}
+              onChange={(e) => { const v = e.target.value.replace(/[^A-Za-z\s'-]/g, "").slice(0, MAX_NAME); setErrors((p) => ({ ...p, lastName: "" })); setFormData((p) => ({ ...p, lastName: v })); }}
             />
           </Field>
         </div>
@@ -575,9 +575,16 @@ const LoginSignup = () => {
         </Field>
 
         <Field error={errors.phone}>
-          <input name="phone" type="text" inputMode="numeric" placeholder="Phone number (e.g. 09XXXXXXXXX)"
-            value={formData.phone} maxLength={11} disabled={otpSent} onKeyDown={handleSignupKey}
-            onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 11); setErrors((p) => ({ ...p, phone: "" })); setFormData((p) => ({ ...p, phone: v })); }}
+          <input name="phone" type="text" inputMode="numeric" placeholder="+639XXXXXXXXX"
+            value={formData.phone} maxLength={13} disabled={otpSent} onKeyDown={handleSignupKey}
+            onChange={(e) => {
+              let digits = e.target.value.replace(/\D/g, "");
+              if (!digits.startsWith("63")) digits = "63" + digits.replace(/^6?3?/, "");
+              digits = digits.slice(0, 12);
+              const v = "+" + digits;
+              setErrors((p) => ({ ...p, phone: "" }));
+              setFormData((p) => ({ ...p, phone: v }));
+            }}
           />
         </Field>
 

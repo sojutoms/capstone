@@ -8,6 +8,7 @@ const otpSchema = new mongoose.Schema({
   username:     { type: String, required: true },
   password:     { type: String, required: true },
   phone:        { type: String, default: "" },
+  newEmail:     { type: String, default: "" },
   expiresAt:    { type: Date,   required: true },
   resendCount:  { type: Number, default: 0 },
   lastResendAt: { type: Date,   default: Date.now },
