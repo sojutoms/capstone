@@ -21,6 +21,7 @@ import { Alert } from "../utils/customAlert";
 import * as ImagePicker from "expo-image-picker";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system/legacy";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
@@ -181,16 +182,35 @@ const buildCertificateHtml = (order) => {
 </body></html>`;
 };
 
-const shareGeneratedPdf = async (html, fallbackFilename) => {
-  const { uri } = await Print.printToFileAsync({ html, base64: false });
+const shareGeneratedPdf = async (html, filename) => {
+  const { uri: printedUri } = await Print.printToFileAsync({ html, base64: false });
+
+  // On Android, Print writes to a system-owned Print cache path that
+  // FileProvider refuses to expose to other apps ("Not allowed to read file
+  // under given URL"). Copy into our own cache directory first — that path
+  // IS covered by the FileProvider config, so shareAsync can hand it off.
+  let shareUri = printedUri;
+  try {
+    const targetDir = FileSystem.cacheDirectory;
+    if (targetDir) {
+      const safeName = filename.replace(/[^\w.-]/g, "_");
+      const dest = `${targetDir}${safeName}`;
+      try { await FileSystem.deleteAsync(dest, { idempotent: true }); } catch {}
+      await FileSystem.copyAsync({ from: printedUri, to: dest });
+      shareUri = dest;
+    }
+  } catch (err) {
+    console.log("PDF copy fallback:", err?.message || err);
+  }
+
   if (await Sharing.isAvailableAsync()) {
-    await Sharing.shareAsync(uri, {
+    await Sharing.shareAsync(shareUri, {
       mimeType: "application/pdf",
-      dialogTitle: fallbackFilename,
+      dialogTitle: filename,
       UTI: "com.adobe.pdf",
     });
   }
-  return uri;
+  return shareUri;
 };
 
 const effectiveStatus = (order) => {
