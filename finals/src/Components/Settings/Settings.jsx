@@ -15,6 +15,13 @@ const normalizePhone = (raw) => {
   return value;
 };
 
+// Matches LoginSignup.jsx's ResendOtpButton formatTime exactly.
+const formatCountdown = (secs) => {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return m > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${s}s`;
+};
+
 const passwordRules = [
   { key: "length", label: "At least 8 characters", test: (p) => p.length >= 8 },
   { key: "upper", label: "One uppercase letter (A-Z)", test: (p) => /[A-Z]/.test(p) },
@@ -118,8 +125,8 @@ const OtpInput = ({ value, length = 6, onChange, error }) => {
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("profile");
 
-  const [profile, setProfile] = useState({ firstName: "", lastName: "", email: "", phone: "", photo: "" });
-  const [originalProfile, setOriginalProfile] = useState({ firstName: "", lastName: "", email: "", phone: "", photo: "" });
+  const [profile, setProfile] = useState({ firstName: "", lastName: "", email: "", phone: "", photo: "", place: "", bio: "" });
+  const [originalProfile, setOriginalProfile] = useState({ firstName: "", lastName: "", email: "", phone: "", photo: "", place: "", bio: "" });
   const [editing, setEditing] = useState(false);
 
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -145,6 +152,19 @@ const Settings = () => {
   const [pwdOtpError, setPwdOtpError] = useState("");
   const [pwdOtpSending, setPwdOtpSending] = useState(false);
   const pendingPwdRef = useRef({ current: "", newPass: "" });
+
+  // Resend cooldown — same 60s -> 120s -> 180s escalation as signup/forgot.
+  const [pwdResendAttempts, setPwdResendAttempts] = useState(0);
+  const [pwdCountdown, setPwdCountdown]           = useState(60);
+  const [pwdCanResend, setPwdCanResend]           = useState(false);
+  const [pwdResending, setPwdResending]           = useState(false);
+
+  useEffect(() => {
+    if (pwdStep !== "otp") return;
+    if (pwdCountdown <= 0) { setPwdCanResend(true); return; }
+    const t = setTimeout(() => setPwdCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [pwdCountdown, pwdStep]);
 
   const [message, setMessage] = useState(null);
   const closeMsgRef = useRef(null);
@@ -173,7 +193,15 @@ const Settings = () => {
           firstName = parts[0] || "";
           lastName = parts.slice(1).join(" ") || "";
         }
-        const prof = { firstName, lastName, email: user.email || "", phone: normalizePhone(user.phone || ""), photo: user.photo || "" };
+        const prof = {
+          firstName,
+          lastName,
+          email: user.email || "",
+          phone: normalizePhone(user.phone || ""),
+          photo: user.photo || "",
+          place: user.place || "",
+          bio: user.bio || "",
+        };
         setProfile(prof);
         setOriginalProfile(prof);
       }
@@ -368,6 +396,7 @@ const Settings = () => {
         setPwdStep("otp");
         setPwdOtp("");
         setPwdOtpError("");
+        resetPwdResendState();
         showMessage("success", "OTP sent to your email");
       } else {
         showMessage("error", otpData.message || "Failed to send OTP");
@@ -376,6 +405,41 @@ const Settings = () => {
       showMessage("error", "Request failed. Please try again.");
     } finally {
       setPwdOtpSending(false);
+    }
+  };
+
+  const resetPwdResendState = () => {
+    setPwdResendAttempts(0);
+    setPwdCountdown(60);
+    setPwdCanResend(false);
+  };
+
+  const handleResendPwdOtp = async () => {
+    if (!pwdCanResend || pwdResending) return;
+    setPwdResending(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/resend-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: profile.email, type: "change-password" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMessage("success", "New OTP sent to your email");
+        setPwdOtp("");
+        setPwdOtpError("");
+        setPwdCanResend(false);
+        const newAttempts = pwdResendAttempts + 1;
+        setPwdResendAttempts(newAttempts);
+        setPwdCountdown(data.nextCooldownSeconds || (newAttempts === 1 ? 120 : 180));
+      } else {
+        if (data.remainingSeconds) { setPwdCanResend(false); setPwdCountdown(data.remainingSeconds); }
+        showMessage("error", data.errors || "Failed to resend OTP");
+      }
+    } catch {
+      showMessage("error", "Network error. Please try again.");
+    } finally {
+      setPwdResending(false);
     }
   };
 
@@ -615,11 +679,52 @@ const Settings = () => {
                   )}
                 </div>
 
+                <div className="input-group">
+                  <label>Place (City / Province)</label>
+                  <input
+                    name="place"
+                    className={editing ? "editing" : ""}
+                    disabled={!editing}
+                    value={profile.place}
+                    maxLength={80}
+                    placeholder="e.g. Quezon City"
+                    onChange={(e) => setProfile((p) => ({ ...p, place: e.target.value }))}
+                  />
+                </div>
+
+                <div className="input-group">
+                  <div className="bio-label-row">
+                    <label>Bio</label>
+                    <span
+                      className={`bio-word-count${(profile.bio || "").trim().split(/\s+/).filter(Boolean).length > 15 ? " bio-word-count-over" : ""}`}
+                    >
+                      {(profile.bio || "").trim().split(/\s+/).filter(Boolean).length}/15 words
+                    </span>
+                  </div>
+                  <textarea
+                    name="bio"
+                    className={`bio-textarea${editing ? " editing" : ""}`}
+                    disabled={!editing}
+                    value={profile.bio}
+                    rows={4}
+                    placeholder="Tell us a bit about yourself (max. 15 words)…"
+                    onChange={(e) => setProfile((p) => ({ ...p, bio: e.target.value }))}
+                  />
+                  {editing && (profile.bio || "").trim().split(/\s+/).filter(Boolean).length > 15 && (
+                    <span className="field-error">
+                      15 words max (currently {(profile.bio || "").trim().split(/\s+/).filter(Boolean).length})
+                    </span>
+                  )}
+                </div>
+
                 {editing && (
                   <button
                     type="submit"
                     className="save-btn"
-                    disabled={!!(profile.phone && !/^\+63\d{10}$/.test(profile.phone))}
+                    disabled={
+                      !!(profile.phone && !/^\+63\d{10}$/.test(profile.phone)) ||
+                      (profile.bio || "").trim().split(/\s+/).filter(Boolean).length > 15
+                    }
                   >
                     Submit
                   </button>
@@ -717,6 +822,18 @@ const Settings = () => {
                       Enter it below to confirm the password change.
                     </p>
                     <OtpInput value={pwdOtp} onChange={setPwdOtp} error={pwdOtpError} />
+                    <div className="otp-resend-row">
+                      <span className="otp-resend-label">Didn't receive it?</span>
+                      {pwdCanResend ? (
+                        <button type="button" className="otp-resend-link" onClick={handleResendPwdOtp} disabled={pwdResending}>
+                          Resend code
+                        </button>
+                      ) : (
+                        <span className="otp-resend-timer">
+                          {pwdResending ? "Sending…" : `Resend in ${formatCountdown(pwdCountdown)}`}
+                        </span>
+                      )}
+                    </div>
                     <div className="otp-verify-actions">
                       <button className="save-btn" onClick={handleVerifyPwdOtp}>Verify &amp; Update Password</button>
                       <button className="edit-toggle cancel-btn" onClick={handleCancelOtp} style={{ marginTop: 10 }}>

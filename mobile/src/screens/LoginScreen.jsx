@@ -14,8 +14,11 @@ import {
   Image,
   Modal,
   TouchableOpacity,
+  Dimensions,
 } from "react-native";
 import { Alert } from "../utils/customAlert";
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 import { useAuth } from "../context/AuthContext";
 import { colors, fonts } from "../theme";
 
@@ -317,7 +320,7 @@ const pb = StyleSheet.create({
 
 const LinkBtn = ({ label, onPress }) => (
   <TouchableOpacity onPress={onPress} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-    <Text style={{ color: colors.accentGold, fontSize: 12 }}>{label}</Text>
+    <Text style={{ color: "#ffffff", fontSize: 12 }}>{label}</Text>
   </TouchableOpacity>
 );
 
@@ -351,12 +354,13 @@ const av = StyleSheet.create({
 
 // ─── Main Screen ───────────────────────────────────────────────────────────────
 export default function LoginScreen({ navigation }) {
-  const { login, signup, confirmOtp, sendForgotOtp, confirmResetPassword, resendOtp } = useAuth();
+  const { login, signup, confirmOtp, sendForgotOtp, confirmForgotOtp, confirmResetPassword, resendOtp } = useAuth();
 
   const [mode, setMode] = useState("login"); // login | signup | forgot | reset
+  const [resetOtpVerified, setResetOtpVerified] = useState(false);
 
   const [formData, setFormData] = useState({
-    firstName: "", lastName: "", email: "", phone: "",
+    firstName: "", lastName: "", email: "", phone: "+63", // matches web's LoginSignup.jsx pattern
     password: "", confirmPassword: "", newPassword: "",
   });
 
@@ -419,6 +423,7 @@ export default function LoginScreen({ navigation }) {
       await resendOtp(formData.email.trim(), type);
       showAlert("A new code has been sent.");
       setOtp("");
+      setResetOtpVerified(false);
       setOtpCanResend(false);
       const newAttempts = otpResendAttempts + 1;
       setOtpResendAttempts(newAttempts);
@@ -434,13 +439,13 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
-  // Fade card on mode switch
   const switchMode = (next) => {
     Animated.timing(cardOpacity, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
       setMode(next);
       setErrors({});
       setOtpSent(false);
       setOtp("");
+      setResetOtpVerified(false);
       Animated.timing(cardOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     });
   };
@@ -505,7 +510,7 @@ export default function LoginScreen({ navigation }) {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setErr("email", "Enter a valid email."); bad = true; }
 
     if (!phone) { setErr("phone", "Phone number is required."); bad = true; }
-    else if (!/^\d{11}$/.test(phone)) { setErr("phone", "Must be exactly 11 digits."); bad = true; }
+    else if (!/^\+63\d{10}$/.test(phone)) { setErr("phone", "Phone number must start with +63 and be followed by exactly 10 digits."); bad = true; }
 
     if (!password) { setErr("password", "Password is required."); bad = true; }
     else if (getPwdChecks(password).some((c) => !c.passed)) { setErr("password", "Password does not meet all requirements."); bad = true; }
@@ -562,6 +567,21 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  // ─── VERIFY RESET OTP (without consuming it) ─────────────────────────────────
+  const handleVerifyResetOtp = async () => {
+    clearErrors();
+    if (!/^\d{6}$/.test(otp)) { setErr("otp", "Enter all 6 digits."); return; }
+    setLoading(true);
+    try {
+      await confirmForgotOtp(formData.email.trim(), otp);
+      setResetOtpVerified(true);
+    } catch (err) {
+      setErr("otp", err.message || "OTP verification failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ─── RESET PASSWORD ──────────────────────────────────────────────────────────
   const handleReset = async () => {
     clearErrors();
@@ -576,7 +596,7 @@ export default function LoginScreen({ navigation }) {
     try {
       await confirmResetPassword(formData.email.trim(), otp, newPassword);
       showAlert("Password reset! Please sign in.");
-      setFormData({ firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "", newPassword: "" });
+      setFormData({ firstName: "", lastName: "", email: "", phone: "+63", password: "", confirmPassword: "", newPassword: "" });
       switchMode("login");
     } catch (err) {
       showAlert(err.message || "Reset failed");
@@ -635,9 +655,14 @@ export default function LoginScreen({ navigation }) {
       </View>
 
       <FieldInput placeholder="Email address" value={formData.email} onChangeText={set("email")} keyboardType="email-address" error={errors.email} editable={!otpSent} />
-      <FieldInput placeholder="Phone (09XXXXXXXXX)" value={formData.phone}
-        onChangeText={(v) => set("phone")(v.replace(/\D/g, "").slice(0, 11))}
-        keyboardType="number-pad" maxLength={11} error={errors.phone} editable={!otpSent} />
+      <FieldInput placeholder="+639XXXXXXXXX" value={formData.phone}
+        onChangeText={(v) => {
+          let digits = v.replace(/\D/g, "");
+          if (!digits.startsWith("63")) digits = "63" + digits.replace(/^6?3?/, "");
+          digits = digits.slice(0, 12);
+          set("phone")("+" + digits);
+        }}
+        keyboardType="number-pad" maxLength={13} error={errors.phone} editable={!otpSent} />
 
       <FieldInput placeholder="Password" value={formData.password} onChangeText={set("password")} secureTextEntry showToggle toggled={showPwd} onToggle={() => setShowPwd((v) => !v)} error={errors.password} />
       {formData.password.length > 0 && <PwdChecklist checks={getPwdChecks(formData.password)} />}
@@ -713,33 +738,48 @@ export default function LoginScreen({ navigation }) {
   const renderReset = () => (
     <>
       <Text style={s.eyebrow}>Account Recovery</Text>
-      <Text style={s.heading}>Reset Password</Text>
-      <Text style={s.subheading}>Enter the code and your new password</Text>
+      <Text style={s.heading}>{resetOtpVerified ? "New Password" : "Verify Code"}</Text>
+      <Text style={s.subheading}>
+        {resetOtpVerified
+          ? "Enter your new password below to finish resetting."
+          : `Enter the 6-digit code sent to ${formData.email || "your email"}.`}
+      </Text>
       <View style={{ height: 16 }} />
 
-      <FieldInput placeholder="New password" value={formData.newPassword} onChangeText={set("newPassword")} secureTextEntry showToggle toggled={showNewPwd} onToggle={() => setShowNewPwd((v) => !v)} error={errors.newPassword} />
-      {formData.newPassword.length > 0 && <PwdChecklist checks={getPwdChecks(formData.newPassword)} />}
-      {pwStrength ? (
-        <Text style={[s.strength, { color: STRENGTH_COLOR[pwStrength] || "#555" }]}>{pwStrength}</Text>
-      ) : null}
-
-      <View style={{ height: 4 }} />
-      <FieldInput placeholder="Confirm new password" value={formData.confirmPassword} onChangeText={set("confirmPassword")} secureTextEntry showToggle toggled={showResetConfirm} onToggle={() => setShowResetConfirm((v) => !v)} error={errors.confirmPassword} />
-
-      <OtpInput value={otp} onChange={setOtp} error={errors.otp} />
-      <View style={s.resendRow}>
-        <Text style={s.resendLabel}>Didn't receive it? </Text>
-        {otpCanResend ? (
-          <TouchableOpacity onPress={handleResendOtp} disabled={otpResending}>
-            <Text style={s.resendLink}>Resend code</Text>
+      {!resetOtpVerified ? (
+        <>
+          <OtpInput value={otp} onChange={setOtp} error={errors.otp} />
+          <View style={s.resendRow}>
+            <Text style={s.resendLabel}>Didn't receive it? </Text>
+            {otpCanResend ? (
+              <TouchableOpacity onPress={handleResendOtp} disabled={otpResending}>
+                <Text style={s.resendLink}>Resend code</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={s.resendTimer}>
+                {otpResending ? "Sending…" : `Resend in ${formatCountdown(otpCountdown)}`}
+              </Text>
+            )}
+          </View>
+          <PrimaryBtn label="VERIFY OTP" onPress={handleVerifyResetOtp} loading={loading} />
+          <TouchableOpacity onPress={() => switchMode("forgot")} style={{ marginTop: 12 }}>
+            <Text style={s.backBtn}>← Change email</Text>
           </TouchableOpacity>
-        ) : (
-          <Text style={s.resendTimer}>
-            {otpResending ? "Sending…" : `Resend in ${formatCountdown(otpCountdown)}`}
-          </Text>
-        )}
-      </View>
-      <PrimaryBtn label="RESET PASSWORD" onPress={handleReset} loading={loading} />
+        </>
+      ) : (
+        <>
+          <FieldInput placeholder="New password" value={formData.newPassword} onChangeText={set("newPassword")} secureTextEntry showToggle toggled={showNewPwd} onToggle={() => setShowNewPwd((v) => !v)} error={errors.newPassword} />
+          {formData.newPassword.length > 0 && <PwdChecklist checks={getPwdChecks(formData.newPassword)} />}
+          {pwStrength ? (
+            <Text style={[s.strength, { color: STRENGTH_COLOR[pwStrength] || "#555" }]}>{pwStrength}</Text>
+          ) : null}
+
+          <View style={{ height: 4 }} />
+          <FieldInput placeholder="Confirm new password" value={formData.confirmPassword} onChangeText={set("confirmPassword")} secureTextEntry showToggle toggled={showResetConfirm} onToggle={() => setShowResetConfirm((v) => !v)} error={errors.confirmPassword} />
+
+          <PrimaryBtn label="RESET PASSWORD" onPress={handleReset} loading={loading} />
+        </>
+      )}
     </>
   );
 
@@ -748,8 +788,8 @@ export default function LoginScreen({ navigation }) {
   return (
     <View style={{ flex: 1 }}>
       <ImageBackground
-        source={require("../../assets/loginbg.png")}
-        style={StyleSheet.absoluteFillObject}
+        source={require("../../assets/loginbg.jpg")}
+        style={{ position: "absolute", top: 0, left: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT }}
         resizeMode="cover"
       />
       <View style={s.overlay} pointerEvents="none" />
@@ -784,32 +824,32 @@ export default function LoginScreen({ navigation }) {
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.72)" },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
   content: { flexGrow: 1, justifyContent: "center", padding: 20 },
   card: { backgroundColor: "rgba(10,10,10,0.85)", borderWidth: 0.5, borderColor: "rgba(255,255,255,0.06)", borderRadius: 20, padding: 22 },
-  eyebrow: { textAlign: "center", fontSize: 9, letterSpacing: 2.5, color: "#383838", textTransform: "uppercase", marginBottom: 4 },
-  heading: { textAlign: "center", fontSize: 34, fontFamily: fonts.display, color: colors.textPrimary, letterSpacing: 0.5 },
-  subheading: { textAlign: "center", color: "#383838", fontSize: 12, marginTop: 4, marginBottom: 2 },
+  eyebrow: { textAlign: "center", fontSize: 9, letterSpacing: 2.5, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", marginBottom: 4 },
+  heading: { textAlign: "center", fontSize: 34, fontFamily: fonts.display, color: "#ffffff", letterSpacing: 0.5 },
+  subheading: { textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: 12, marginTop: 4, marginBottom: 2 },
   forgotRow: { alignItems: "flex-end", marginBottom: 10, marginTop: 2 },
   divider: { flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 16 },
-  dividerLine: { flex: 1, height: 0.5, backgroundColor: "#161616" },
-  dividerText: { color: "#2a2a2a", fontSize: 10, letterSpacing: 1.5 },
-  switchText: { textAlign: "center", color: "#333", fontSize: 12 },
-  switchAccent: { color: colors.accentGold },
+  dividerLine: { flex: 1, height: 0.5, backgroundColor: "rgba(255,255,255,0.12)" },
+  dividerText: { color: "rgba(255,255,255,0.35)", fontSize: 10, letterSpacing: 1.5 },
+  switchText: { textAlign: "center", color: "rgba(255,255,255,0.45)", fontSize: 12 },
+  switchAccent: { color: "#ffffff", fontWeight: "700" },
   row: { flexDirection: "row" },
   strength: { fontSize: 11, marginTop: 4, marginLeft: 2, fontWeight: "600" },
   termsRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginTop: 10, marginBottom: 4 },
   pseudoCheck: { width: 18, height: 18, borderRadius: 4, borderWidth: 0.5, borderColor: "#222", backgroundColor: "#0a0a0a", alignItems: "center", justifyContent: "center", marginTop: 1 },
   pseudoCheckDone: { borderColor: "#444", backgroundColor: "#161616" },
   pseudoCheckMark: { color: "#aaa", fontSize: 10, fontWeight: "800" },
-  termsText: { flex: 1, color: "#555", fontSize: 12, lineHeight: 18 },
-  termsLink: { color: colors.accentGoldLight, textDecorationLine: "underline" },
+  termsText: { flex: 1, color: "rgba(255,255,255,0.55)", fontSize: 12, lineHeight: 18 },
+  termsLink: { color: "#ffffff", textDecorationLine: "underline" },
   termsLinkDone: { color: colors.success },
-  fieldError: { color: "#8b2020", fontSize: 11, marginBottom: 4, marginLeft: 2 },
-  otpHint: { color: "#444", fontSize: 12, textAlign: "center", marginBottom: 8 },
+  fieldError: { color: "#e05c5c", fontSize: 11, marginBottom: 4, marginLeft: 2 },
+  otpHint: { color: "rgba(255,255,255,0.5)", fontSize: 12, textAlign: "center", marginBottom: 8 },
   resendRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginTop: 4, marginBottom: 8 },
-  resendLabel: { color: "#333", fontSize: 12 },
+  resendLabel: { color: "rgba(255,255,255,0.4)", fontSize: 12 },
   resendLink: { color: colors.accentGold, fontSize: 12, fontWeight: "700" },
-  resendTimer: { color: "#3a3a3a", fontSize: 12 },
-  backBtn: { color: "#555", fontSize: 12 },
+  resendTimer: { color: "rgba(255,255,255,0.35)", fontSize: 12 },
+  backBtn: { color: "rgba(255,255,255,0.55)", fontSize: 12 },
 });

@@ -29,7 +29,6 @@ const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
 
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState("");
-  const [title, setTitle] = useState("");
   const [fit, setFit] = useState("");
   const [comfort, setComfort] = useState("");
   const [recommend, setRecommend] = useState("");
@@ -58,7 +57,6 @@ const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
   const resetForm = useCallback(() => {
     setRating(0);
     setReview("");
-    setTitle("");
     setFit("");
     setComfort("");
     setRecommend("");
@@ -112,10 +110,6 @@ const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
     }
   };
 
-  const handleTitleChange = (e) => {
-    setTitle(e.target.value);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (rating === 0) { addToast("error", "Please select a rating"); return; }
@@ -129,7 +123,6 @@ const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
     }
 
     const { clean: cleanReview } = checkAndClean(review.trim());
-    const { clean: cleanTitle }  = checkAndClean(title.trim());
 
     setLoading(true);
     try {
@@ -139,7 +132,6 @@ const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
         productId,
         rating,
         review:    cleanReview,
-        title:     cleanTitle,
         fit,
         comfort,
         recommend,
@@ -286,18 +278,6 @@ const ReviewModal = ({ product, onReviewSubmit, open, onClose }) => {
                     {profanityWarning}
                   </div>
                 )}
-              </div>
-
-              <div className="form-group">
-                <label>Review title</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={handleTitleChange}
-                  placeholder="Summarize your review in 150 characters or less."
-                  maxLength={150}
-                />
-                <small>{title.length}/150</small>
               </div>
 
               <div className="form-group">

@@ -437,9 +437,13 @@
 }
 
 .btn-refund {
-  background: #fff;
-  color: #000;
-  border: none;
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  border: 1px solid var(--text-primary);
+}
+
+.btn-refund:hover {
+  opacity: 0.9;
 }
 
 .status-pill {

@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
+import { Image } from "expo-image";
 import Feather from "@expo/vector-icons/Feather";
 import { fonts, radius, typography } from "../theme";
 import { useTheme } from "../context/ThemeContext";
@@ -46,7 +47,13 @@ export default function ProductCard({ item, index = 0, onPress, onAddToCart, fav
             {favorited ? "♥" : "♡"}
           </Text>
         </TouchableOpacity>
-        <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="contain" />
+        <Image
+          source={{ uri: item.image }}
+          style={styles.cardImage}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          transition={150}
+        />
       </View>
       <View style={styles.cardBody}>
         <Text style={styles.cardBrand} numberOfLines={1}>

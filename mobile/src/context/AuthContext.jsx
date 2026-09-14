@@ -6,6 +6,7 @@ import {
   signupUser,
   verifyOtp,
   forgotPassword,
+  verifyResetOtp,
   resetPassword,
   resendOtp as resendOtpApi,
 } from "../api/authApi";
@@ -104,7 +105,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ─── Reset password ───────────────────────────────────────────────────────────
+  const confirmForgotOtp = async (email, otp) => {
+    const res = await verifyResetOtp(email, otp);
+    if (!res.success) throw new Error(res.errors || "OTP verification failed");
+  };
+
   const confirmResetPassword = async (email, otp, newPassword) => {
     const res = await resetPassword(email, otp, newPassword);
     if (!res.success) throw new Error(res.errors || "Password reset failed");
@@ -134,6 +139,7 @@ export const AuthProvider = ({ children }) => {
         signup,
         confirmOtp,
         sendForgotOtp,
+        confirmForgotOtp,
         confirmResetPassword,
         resendOtp,
         logout,

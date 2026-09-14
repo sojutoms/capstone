@@ -15,7 +15,9 @@ import {
   Alert,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -69,6 +71,9 @@ export default function ProfileScreen({ navigation }) {
   const { colors, isDark, toggleTheme } = useTheme();
   const { showEverywhere, setShowEverywhere } = useChatSettings();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // iOS only: root here is a plain View (no SafeAreaView), so without this
+  // the top content renders straight under the status bar/notch.
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState(false);
@@ -113,38 +118,83 @@ export default function ProfileScreen({ navigation }) {
     setRefreshing(false);
   };
 
+  const validatePhoto = async (asset) => {
+    const uri = asset?.uri || asset;
+    const filename = String(uri).split("/").pop() || "";
+    const ext = (filename.split(".").pop() || "").toLowerCase();
+    const mime = String(asset?.mimeType || "").toLowerCase();
+
+    const allowedExts = ["jpg", "jpeg", "png", "webp"];
+    const allowedMimes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const extOk  = allowedExts.includes(ext);
+    const mimeOk = mime ? allowedMimes.includes(mime) : true;
+    if (!extOk || !mimeOk) {
+      Alert.alert("Unsupported file type", "Please upload a JPG, PNG, or WEBP photo.");
+      return false;
+    }
+
+    let size = Number(asset?.fileSize) || 0;
+    if (!size) {
+      try {
+        const info = await FileSystem.getInfoAsync(uri, { size: true });
+        size = Number(info?.size) || 0;
+      } catch {}
+    }
+    if (size && size > 5 * 1024 * 1024) {
+      Alert.alert("That image is too large", "Please upload a photo up to 5MB.");
+      return false;
+    }
+
+    return true;
+  };
+
   const uploadAvatar = async (uri) => {
     setUploadingPhoto(true);
     try {
-      const filename = uri.split("/").pop() || "avatar.jpg";
-      const ext = (filename.split(".").pop() || "jpg").toLowerCase();
-      const formData = new FormData();
-      formData.append("product", {
-        uri,
-        name: filename,
-        type: `image/${ext === "jpg" ? "jpeg" : ext}`,
+      const uploadResult = await FileSystem.uploadAsync(`${BASE_URL}/upload`, uri, {
+        fieldName: "product",
+        httpMethod: "POST",
+        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+        headers: {
+          "auth-token": userToken || "",
+          "ngrok-skip-browser-warning": "true",
+        },
       });
 
-      const uploadRes  = await fetch(`${BASE_URL}/upload`, { method: "POST", body: formData });
-      const uploadData = await uploadRes.json();
-      if (!uploadData.success || !uploadData.image_url) {
-        Alert.alert("Upload Failed", uploadData.error || "Could not upload photo.");
+      let uploadData;
+      try {
+        uploadData = JSON.parse(uploadResult.body || "{}");
+      } catch {
+        console.log("Upload non-JSON response:", uploadResult.status, (uploadResult.body || "").slice(0, 200));
+        Alert.alert(
+          "Upload Failed",
+          `Server returned ${uploadResult.status}. ${(uploadResult.body || "").slice(0, 120) || "Empty response."}`
+        );
+        return;
+      }
+      if (uploadResult.status < 200 || uploadResult.status >= 300 || !uploadData.success || !uploadData.image_url) {
+        Alert.alert("Upload Failed", uploadData.error || `Server returned ${uploadResult.status}.`);
         return;
       }
 
-      const saveRes  = await fetch(`${BASE_URL}/user/profile`, {
+      const saveRes = await fetch(`${BASE_URL}/user/profile`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "auth-token": userToken || "" },
+        headers: {
+          "Content-Type": "application/json",
+          "auth-token": userToken || "",
+          "ngrok-skip-browser-warning": "true",
+        },
         body: JSON.stringify({ photo: uploadData.image_url }),
       });
-      const saveData = await saveRes.json();
+      const saveData = await saveRes.json().catch(() => ({}));
       if (saveData.success) {
         await refreshUserProfile();
       } else {
         Alert.alert("Save Failed", saveData.error || "Could not save your new photo.");
       }
-    } catch {
-      Alert.alert("Network Error", "Could not upload your photo.");
+    } catch (err) {
+      console.log("uploadAvatar error:", err?.message || err);
+      Alert.alert("Network Error", err?.message || "Could not upload your photo.");
     } finally {
       setUploadingPhoto(false);
     }
@@ -162,7 +212,10 @@ export default function ProfileScreen({ navigation }) {
       aspect: [1, 1],
       quality: 0.7,
     });
-    if (!result.canceled && result.assets?.[0]?.uri) uploadAvatar(result.assets[0].uri);
+    const asset = !result.canceled && result.assets?.[0];
+    if (!asset?.uri) return;
+    if (!(await validatePhoto(asset))) return;
+    uploadAvatar(asset.uri);
   };
 
   const pickFromLibrary = async () => {
@@ -177,7 +230,10 @@ export default function ProfileScreen({ navigation }) {
       aspect: [1, 1],
       quality: 0.7,
     });
-    if (!result.canceled && result.assets?.[0]?.uri) uploadAvatar(result.assets[0].uri);
+    const asset = !result.canceled && result.assets?.[0];
+    if (!asset?.uri) return;
+    if (!(await validatePhoto(asset))) return;
+    uploadAvatar(asset.uri);
   };
 
   const handleAvatarPress = () => {
@@ -216,7 +272,10 @@ export default function ProfileScreen({ navigation }) {
     <View style={styles.root}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[
+          styles.scroll,
+          Platform.OS === "ios" && { paddingTop: insets.top + 16 },
+        ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />

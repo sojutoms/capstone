@@ -33,6 +33,11 @@ async function post(path, body) {
   }
 }
 
+// The backend responds with HTTP 200 + { success: false, errors: "..." } on
+// business failures (invalid OTP, bad login, etc.), so treat that as failure
+// too — not only non-2xx HTTP.
+const failed = (ok, data) => !ok || data?.success === false;
+
 // ─── LOGIN ─────────────────────────────────────────────────────────────────────
 export async function loginUser(email, password) {
   console.log("🔐 LOGIN REQUEST:", { email, password });
@@ -40,7 +45,7 @@ export async function loginUser(email, password) {
 
   const { ok, data } = await post("/login", { email, password });
 
-  if (!ok) {
+  if (failed(ok, data)) {
     return { success: false, errors: data.message || data.errors || "Login failed" };
   }
   return { success: true, token: data.token, user: data.user };
@@ -52,7 +57,7 @@ export async function signupUser({ firstName, lastName, email, phone, password }
 
   const { ok, data } = await post("/signup", { firstName, lastName, email, phone, password });
 
-  if (!ok) {
+  if (failed(ok, data)) {
     return {
       success: false,
       errors: data.message || data.errors || "Signup failed",
@@ -68,8 +73,8 @@ export async function verifyOtp(email, otp) {
 
   const { ok, data } = await post("/verify-otp", { email, otp });
 
-  if (!ok) {
-    return { success: false, errors: data.message || data.errors || "OTP verification failed" };
+  if (failed(ok, data) || !data.token) {
+    return { success: false, errors: data.message || data.errors || "Invalid OTP" };
   }
   return { success: true, token: data.token };
 }
@@ -80,7 +85,7 @@ export async function forgotPassword(email) {
 
   const { ok, data } = await post("/forgot-password", { email });
 
-  if (!ok) {
+  if (failed(ok, data)) {
     return { success: false, errors: data.message || data.errors || "Failed to send reset OTP" };
   }
   return { success: true };
@@ -92,12 +97,24 @@ export async function resendOtp(email, type) {
 
   const { ok, data } = await post("/resend-otp", { email, type });
 
-  if (!ok) {
+  if (failed(ok, data)) {
     return {
       success: false,
       errors: data.message || data.errors || "Failed to resend code",
       remainingSeconds: data.remainingSeconds,
     };
+  }
+  return { success: true };
+}
+
+// ─── VERIFY RESET OTP (does not consume it) ────────────────────────────────────
+export async function verifyResetOtp(email, otp) {
+  console.log("🔢 VERIFY RESET OTP:", { email, otp });
+
+  const { ok, data } = await post("/verify-reset-otp", { email, otp });
+
+  if (failed(ok, data)) {
+    return { success: false, errors: data.message || data.errors || "Invalid OTP" };
   }
   return { success: true };
 }
@@ -108,7 +125,7 @@ export async function resetPassword(email, otp, newPassword) {
 
   const { ok, data } = await post("/reset-password", { email, otp, newPassword });
 
-  if (!ok) {
+  if (failed(ok, data)) {
     return { success: false, errors: data.message || data.errors || "Password reset failed" };
   }
   return { success: true };

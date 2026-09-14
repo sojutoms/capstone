@@ -9,10 +9,11 @@ import {
   StatusBar,
   ScrollView,
   RefreshControl,
-  SafeAreaView,
   Platform,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Alert } from "../utils/customAlert";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { fonts, radius, shadows, spacing, typography } from "../theme";
@@ -25,6 +26,9 @@ export default function CartScreen({ navigation }) {
   const { refreshFavorites } = useFavorites();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // iOS only: root is a plain View, not SafeAreaView (matches ProfileScreen),
+  // so the header needs its own inset-derived padding here instead.
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
 
   // Picks up anything added/removed from the web app while this tab wasn't
@@ -41,6 +45,16 @@ export default function CartScreen({ navigation }) {
     setRefreshing(false);
   };
 
+  const getItemAvailableStock = (item) => {
+    const sizeData = item?.sizes?.[item.selectedSize];
+    return typeof sizeData === "object"
+      ? Number(sizeData.quantity) || 0
+      : Number(sizeData) || 0;
+  };
+
+  const outOfStockCount = cart.filter((it) => it.quantity > getItemAvailableStock(it)).length;
+  const hasBlockingStockIssue = outOfStockCount > 0;
+
   const calculateTotal = () => {
     return cart.reduce((total, item) => {
       const sizeData = item?.sizes?.[item.selectedSize];
@@ -52,9 +66,22 @@ export default function CartScreen({ navigation }) {
     }, 0);
   };
 
+  const handleCheckout = () => {
+    if (hasBlockingStockIssue) {
+      const label = outOfStockCount === 1 ? "1 item is" : `${outOfStockCount} items are`;
+      Alert.alert(
+        "Remove out-of-stock items",
+        `${label} out of stock. Please remove them before checking out.`,
+        [{ text: "OK" }]
+      );
+      return;
+    }
+    navigation.navigate("PlaceOrder");
+  };
+
   if (!cart.length) {
     return (
-      <SafeAreaView style={styles.root}>
+      <View style={styles.root}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
         <ScrollView
           contentContainerStyle={styles.emptyContainer}
@@ -74,16 +101,16 @@ export default function CartScreen({ navigation }) {
             <Text style={styles.shopBtnText}>EXPLORE PRODUCTS →</Text>
           </TouchableOpacity>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={styles.root}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       {/* ── HEADER ── */}
-      <View style={styles.header}>
+      <View style={[styles.header, Platform.OS === "ios" && { paddingTop: insets.top + 20 }]}>
         <Text style={styles.headerLabel}>YOUR CART</Text>
         <Text style={styles.headerCount}>{cart.length} item{cart.length !== 1 ? "s" : ""}</Text>
       </View>
@@ -219,14 +246,20 @@ export default function CartScreen({ navigation }) {
           <Text style={styles.totalValue}>₱{calculateTotal().toLocaleString()}</Text>
         </View>
 
+        {hasBlockingStockIssue && (
+          <Text style={styles.stockBlockNote}>
+            {outOfStockCount === 1 ? "1 item is" : `${outOfStockCount} items are`} out of stock — remove to continue.
+          </Text>
+        )}
+
         <PressScale
-          style={styles.checkoutBtn}
-          onPress={() => navigation.navigate("PlaceOrder")}
+          style={[styles.checkoutBtn, hasBlockingStockIssue && styles.checkoutBtnDisabled]}
+          onPress={handleCheckout}
         >
           <Text style={styles.checkoutText}>CHECKOUT</Text>
         </PressScale>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -537,5 +570,15 @@ const makeStyles = (colors) => StyleSheet.create({
     ...typography.button,
     color: colors.textInverse,
     fontSize: 13,
+  },
+  checkoutBtnDisabled: {
+    opacity: 0.45,
+  },
+  stockBlockNote: {
+    color: colors.danger,
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 14,
+    letterSpacing: 0.3,
   },
 });

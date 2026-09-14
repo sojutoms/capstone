@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   Dimensions,
   ScrollView,
@@ -13,6 +12,7 @@ import {
   TextInput,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { fonts, radius } from "../theme";
@@ -122,6 +122,9 @@ export default function ShopScreen({ navigation }) {
   const { favorites, toggleFavorite, isFavorite, refreshFavorites } = useFavorites();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  // iOS only: root is a plain View, not SafeAreaView (matches ProfileScreen),
+  // so the top content needs its own inset-derived padding here instead.
+  const insets = useSafeAreaInsets();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -185,12 +188,15 @@ export default function ShopScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={styles.safe}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          Platform.OS === "ios" && { paddingTop: insets.top + 16 },
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
         }
@@ -300,7 +306,7 @@ export default function ShopScreen({ navigation }) {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

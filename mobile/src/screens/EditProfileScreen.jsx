@@ -20,6 +20,18 @@ const BASE_URL =
     ? "http://localhost:4000"
     : "https://lifting-manpower-corral.ngrok-free.dev";
 
+// Converts a legacy 09XXXXXXXXX number (still the format most existing
+// accounts have saved) into the +63XXXXXXXXXX format the register form now
+// produces, so this field always matches it. Matches web's Settings.jsx.
+const normalizePhone = (raw) => {
+  const value = (raw || "").trim();
+  if (value.startsWith("+63")) return value;
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("0")) return "+63" + digits.slice(1);
+  if (!digits) return "+63";
+  return value;
+};
+
 const Label = ({ text, s }) => <Text style={s.label}>{text}</Text>;
 const FieldError = ({ msg, s }) => (msg ? <Text style={s.errorText}>⚠ {msg}</Text> : null);
 
@@ -32,6 +44,16 @@ export default function EditProfileScreen({ navigation }) {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const [emailEditing,    setEmailEditing]    = useState(false);
+  const [emailStep,       setEmailStep]       = useState("form"); // "form" | "otp"
+  const [newEmailValue,   setNewEmailValue]   = useState("");
+  const [emailError,      setEmailError]      = useState("");
+  const [emailOtpSending, setEmailOtpSending] = useState(false);
+  const [emailOtp,        setEmailOtp]        = useState("");
+  const [emailOtpError,   setEmailOtpError]   = useState("");
+  const [emailVerifying,  setEmailVerifying]  = useState(false);
+  const pendingEmailRef = React.useRef("");
 
   useEffect(() => {
     (async () => {
@@ -50,7 +72,7 @@ export default function EditProfileScreen({ navigation }) {
           setForm({
             firstName, lastName,
             email: u.email || "",
-            phone: u.phone || "",
+            phone: normalizePhone(u.phone || ""),
             place: u.place || "",
             bio: u.bio || "",
           });
@@ -67,7 +89,10 @@ export default function EditProfileScreen({ navigation }) {
     if (name === "firstName" || name === "lastName") {
       value = value.replace(/[0-9]/g, "").replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' \-]/g, "").slice(0, 54);
     } else if (name === "phone") {
-      value = value.replace(/\D/g, "").slice(0, 11);
+      let digits = value.replace(/\D/g, "");
+      if (!digits.startsWith("63")) digits = "63" + digits.replace(/^6?3?/, "");
+      digits = digits.slice(0, 12);
+      value = "+" + digits;
     }
     setForm((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
@@ -79,10 +104,80 @@ export default function EditProfileScreen({ navigation }) {
     const e = {};
     if (!form.firstName.trim()) e.firstName = "First name is required";
     if (!form.lastName.trim()) e.lastName = "Last name is required";
-    if (form.phone && !/^\d{11}$/.test(form.phone)) e.phone = "Must be 11 digits";
+    if (form.phone && !/^\+63\d{10}$/.test(form.phone)) e.phone = "Phone number must start with +63 and be followed by exactly 10 digits.";
     if (countWords(form.bio) > 15) e.bio = `15 words max (currently ${countWords(form.bio)})`;
     setErrors(e);
     return Object.keys(e).length === 0;
+  };
+
+  const handleRequestEmailOtp = async () => {
+    setEmailError("");
+    const trimmed = (newEmailValue || "").trim();
+    if (!trimmed) { setEmailError("Email is required."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { setEmailError("Enter a valid email address."); return; }
+    if (trimmed.toLowerCase() === form.email.toLowerCase()) { setEmailError("This is already your current email."); return; }
+
+    setEmailOtpSending(true);
+    try {
+      const res  = await fetch(`${BASE_URL}/user/send-email-change-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "auth-token": userToken || "" },
+        body: JSON.stringify({ newEmail: trimmed }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        pendingEmailRef.current = trimmed;
+        setEmailStep("otp");
+        setEmailOtp("");
+        setEmailOtpError("");
+        Alert.alert("Code Sent", "OTP sent to your current email.");
+      } else {
+        setEmailError(data.message || "Failed to send OTP");
+      }
+    } catch {
+      setEmailError("Request failed. Please try again.");
+    } finally {
+      setEmailOtpSending(false);
+    }
+  };
+
+  const handleVerifyEmailOtp = async () => {
+    setEmailOtpError("");
+    if (!/^\d{6}$/.test(emailOtp)) { setEmailOtpError("Enter all 6 digits."); return; }
+    setEmailVerifying(true);
+    try {
+      const res  = await fetch(`${BASE_URL}/user/confirm-email-change`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "auth-token": userToken || "" },
+        body: JSON.stringify({ newEmail: pendingEmailRef.current, otp: emailOtp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const updatedEmail = data.email || pendingEmailRef.current;
+        setForm((p) => ({ ...p, email: updatedEmail }));
+        setEmailEditing(false);
+        setEmailStep("form");
+        setNewEmailValue("");
+        setEmailOtp("");
+        await refreshUserProfile();
+        Alert.alert("Email Updated", "Your contact email has been changed.");
+      } else {
+        setEmailOtpError(data.message || "Invalid OTP. Please try again.");
+      }
+    } catch {
+      setEmailOtpError("Verification failed. Please try again.");
+    } finally {
+      setEmailVerifying(false);
+    }
+  };
+
+  const handleCancelEmailEdit = () => {
+    setEmailEditing(false);
+    setEmailStep("form");
+    setNewEmailValue("");
+    setEmailError("");
+    setEmailOtp("");
+    setEmailOtpError("");
   };
 
   const handleSave = async () => {
@@ -161,30 +256,112 @@ export default function EditProfileScreen({ navigation }) {
       <View style={s.fieldGroup}>
         <View style={s.labelRow}>
           <Label text="Contact Email" s={s} />
-          <View style={s.lockedBadge}>
-            <Text style={s.lockedBadgeText}>LOCKED</Text>
-          </View>
+          {!emailEditing && (
+            <View style={s.lockedBadge}>
+              <Text style={s.lockedBadgeText}>LOCKED</Text>
+            </View>
+          )}
         </View>
-        <TextInput
-          style={[s.input, s.inputDisabled]}
-          value={form.email}
-          editable={false}
-          placeholder="email@example.com"
-          placeholderTextColor={colors.bgTertiary}
-        />
-        <Text style={s.lockedHint}>Email cannot be changed</Text>
+
+        {emailStep === "form" ? (
+          <>
+            <TextInput
+              style={[s.input, !emailEditing && s.inputDisabled, emailError && s.inputError]}
+              value={emailEditing ? newEmailValue : form.email}
+              editable={emailEditing}
+              onChangeText={(v) => { setNewEmailValue(v); setEmailError(""); }}
+              placeholder="email@example.com"
+              placeholderTextColor={colors.bgTertiary}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <FieldError msg={emailError} s={s} />
+
+            {!emailEditing ? (
+              <TouchableOpacity
+                onPress={() => { setEmailEditing(true); setNewEmailValue(form.email); setEmailError(""); }}
+                style={s.emailChangeBtn}
+                activeOpacity={0.85}
+              >
+                <Text style={s.emailChangeBtnText}>CHANGE EMAIL</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={s.emailActionsRow}>
+                <TouchableOpacity
+                  style={[s.emailSendBtn, emailOtpSending && s.saveBtnDisabled]}
+                  onPress={handleRequestEmailOtp}
+                  disabled={emailOtpSending}
+                  activeOpacity={0.85}
+                >
+                  {emailOtpSending
+                    ? <ActivityIndicator size="small" color={colors.textInverse} />
+                    : <Text style={s.emailSendBtnText}>SEND CODE</Text>
+                  }
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={s.emailCancelBtn}
+                  onPress={handleCancelEmailEdit}
+                  disabled={emailOtpSending}
+                  activeOpacity={0.85}
+                >
+                  <Text style={s.emailCancelBtnText}>CANCEL</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
+        ) : (
+          <View style={s.otpBlock}>
+            <Text style={s.otpHint}>
+              A 6-digit code was sent to{" "}
+              <Text style={s.otpHintStrong}>{form.email}</Text>{" "}
+              to confirm changing it to{" "}
+              <Text style={s.otpHintStrong}>{pendingEmailRef.current}</Text>.
+            </Text>
+
+            <TextInput
+              style={[s.input, s.otpInput, emailOtpError && s.inputError]}
+              value={emailOtp}
+              onChangeText={(v) => { setEmailOtp(v.replace(/\D/g, "").slice(0, 6)); setEmailOtpError(""); }}
+              placeholder="000000"
+              placeholderTextColor={colors.bgTertiary}
+              keyboardType="number-pad"
+              maxLength={6}
+            />
+            <FieldError msg={emailOtpError} s={s} />
+
+            <TouchableOpacity
+              style={[s.emailSendBtn, { marginTop: 10 }, emailVerifying && s.saveBtnDisabled]}
+              onPress={handleVerifyEmailOtp}
+              disabled={emailVerifying}
+              activeOpacity={0.85}
+            >
+              {emailVerifying
+                ? <ActivityIndicator size="small" color={colors.textInverse} />
+                : <Text style={s.emailSendBtnText}>VERIFY & UPDATE EMAIL</Text>
+              }
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleCancelEmailEdit}
+              style={s.otpBackBtn}
+              disabled={emailVerifying}
+            >
+              <Text style={s.otpBackBtnText}>← Back</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <View style={s.fieldGroup}>
-        <Label text="Phone" s={s} />
+        <Label text="Phone Number" s={s} />
         <TextInput
           style={[s.input, errors.phone && s.inputError]}
           value={form.phone}
           onChangeText={(v) => handleChange("phone", v)}
-          placeholder="09XXXXXXXXX"
+          placeholder="+639XXXXXXXXX"
           placeholderTextColor={colors.bgTertiary}
           keyboardType="number-pad"
-          maxLength={11}
+          maxLength={13}
         />
         <FieldError msg={errors.phone} s={s} />
       </View>
@@ -297,4 +474,68 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.6 },
   saveText: { ...typography.button, color: colors.textInverse, fontSize: 14 },
+
+  emailChangeBtn: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: radius.md,
+    paddingVertical: 11,
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+  emailChangeBtnText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 1.4,
+  },
+
+  emailActionsRow: { flexDirection: "row", gap: 10, marginTop: 10 },
+  emailSendBtn: {
+    flex: 1,
+    backgroundColor: colors.accentGold,
+    borderRadius: radius.md,
+    paddingVertical: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emailSendBtnText: {
+    color: colors.textInverse,
+    fontSize: 12,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 1.4,
+  },
+  emailCancelBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: radius.md,
+    paddingVertical: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emailCancelBtnText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 1.4,
+  },
+
+  otpBlock: { marginTop: 4 },
+  otpHint: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  otpHintStrong: { color: colors.textPrimary, fontFamily: fonts.bodyBold },
+  otpInput: {
+    letterSpacing: 6,
+    fontSize: 18,
+    fontFamily: fonts.display,
+    textAlign: "center",
+  },
+  otpBackBtn: { alignItems: "center", marginTop: 12 },
+  otpBackBtnText: { color: colors.textMuted, fontSize: 12, letterSpacing: 0.4 },
 });

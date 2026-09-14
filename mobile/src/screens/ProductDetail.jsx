@@ -11,13 +11,13 @@ import {
   Platform,
   TextInput,
   StatusBar,
-  SafeAreaView,
   Dimensions,
   Animated,
   RefreshControl,
   Modal,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ImageViewing from "../components/ImageViewerModal";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCart }      from "../context/CartContext";
@@ -108,7 +108,9 @@ export default function ProductDetailScreen({ route }) {
   const { product }                    = route.params || {};
   const { colors, isDark } = useTheme();
   const s = useMemo(() => makeStyles(colors), [colors]);
-
+  // iOS only: root is a plain View, not SafeAreaView (matches ProfileScreen),
+  // so the top nav bar needs its own inset-derived padding here instead.
+  const insets = useSafeAreaInsets();
   const [selectedSize,     setSelectedSize]     = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [show360, setShow360] = useState(false);
@@ -292,11 +294,11 @@ export default function ProductDetailScreen({ route }) {
      RENDER
   ═══════════════════════════════════════════════ */
   return (
-    <SafeAreaView style={s.safe}>
+    <View style={s.safe}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       {/* ══ TOP NAV BAR ══ */}
-      <View style={s.topBar}>
+      <View style={[s.topBar, Platform.OS === "ios" && { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.navBtn}>
           <Text style={s.navArrow}>←</Text>
         </TouchableOpacity>
@@ -773,7 +775,7 @@ export default function ProductDetailScreen({ route }) {
         onRequestClose={() => setImageViewerVisible(false)}
         onImageIndexChange={setActiveImageIndex}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

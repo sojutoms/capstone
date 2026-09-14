@@ -367,6 +367,50 @@
   color: #ff4d4d;
 }
 
+.saved-address-edit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.addr-save-btn {
+  flex: 1;
+  padding: 10px 0;
+  border: 1px solid var(--accent-gold);
+  border-radius: 8px;
+  background: var(--accent-gold);
+  color: var(--bg-primary);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.addr-save-btn:hover { opacity: 0.85; }
+.addr-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.addr-cancel-btn {
+  flex: 1;
+  padding: 10px 0;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.addr-cancel-btn:hover {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
 .voucher-dropdown-root {
   position: relative;
   margin-top: 24px;

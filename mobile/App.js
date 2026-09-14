@@ -1,5 +1,6 @@
 import React, { useRef } from "react";
 import { View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer, DarkTheme } from "@react-navigation/native";
 import { setActiveRouteName } from "./src/navigation/activeRoute";
 import { useFonts, BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
@@ -26,9 +27,11 @@ import { colors as fallbackColors } from "./src/theme";
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 

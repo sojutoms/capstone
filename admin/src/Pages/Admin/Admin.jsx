@@ -34,7 +34,7 @@ const Toast = ({ toast, onDismiss }) => {
   if (!toast) return null;
 
   return (
-    <div className={`toast-message ${toast.type || "info"}`}>
+    <div className={`admin-page-toast ${toast.type || "info"}`}>
       {toast.message}
       {toast.actions && (
         <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>

@@ -14,20 +14,83 @@ import {
 } from "react-native";
 import { CommonActions } from "@react-navigation/native";
 import { BASE_URL } from "../api/config";
+import { useAuth } from "../context/AuthContext";
 import { colors, fonts } from "../theme";
 
-export default function ForgotPasswordScreen({ navigation }) {
-  const [step,        setStep]        = useState(1);
-  const [email,       setEmail]       = useState("");
-  const [otp,         setOtp]         = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [showPass,    setShowPass]    = useState(false);
-  const [error,       setError]       = useState("");
-  const [loading,     setLoading]     = useState(false);
+const PASSWORD_RULES = [
+  { key: "length",  label: "At least 8 characters",         test: (p) => p.length >= 8 },
+  { key: "upper",   label: "One uppercase letter (A-Z)",    test: (p) => /[A-Z]/.test(p) },
+  { key: "number",  label: "One number (0-9)",              test: (p) => /[0-9]/.test(p) },
+  { key: "special", label: "One special character (!@#$…)", test: (p) => /[^A-Za-z0-9]/.test(p) },
+];
 
-  const [focusEmail, setFocusEmail] = useState(false);
-  const [focusOtp,   setFocusOtp]   = useState(false);
-  const [focusPass,  setFocusPass]  = useState(false);
+const formatCountdown = (secs) => {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return m > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${s}s`;
+};
+
+export default function ForgotPasswordScreen({ navigation }) {
+  const { resendOtp } = useAuth();
+
+  const [step,            setStep]            = useState(1);
+  const [otpVerified,     setOtpVerified]     = useState(false);
+  const [email,           setEmail]           = useState("");
+  const [otp,             setOtp]             = useState("");
+  const [newPassword,     setNewPassword]     = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPass,        setShowPass]        = useState(false);
+  const [showConfirm,     setShowConfirm]     = useState(false);
+  const [error,           setError]           = useState("");
+  const [loading,         setLoading]         = useState(false);
+
+  const [focusEmail,   setFocusEmail]   = useState(false);
+  const [focusOtp,     setFocusOtp]     = useState(false);
+  const [focusPass,    setFocusPass]    = useState(false);
+  const [focusConfirm, setFocusConfirm] = useState(false);
+
+  const [otpResendAttempts, setOtpResendAttempts] = useState(0);
+  const [otpCountdown,      setOtpCountdown]      = useState(60);
+  const [otpCanResend,      setOtpCanResend]      = useState(false);
+  const [otpResending,      setOtpResending]      = useState(false);
+
+  useEffect(() => {
+    if (step !== 2) return;
+    if (otpCountdown <= 0) { setOtpCanResend(true); return; }
+    const t = setTimeout(() => setOtpCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [otpCountdown, step]);
+
+  const resetOtpResendState = () => {
+    setOtpResendAttempts(0);
+    setOtpCountdown(60);
+    setOtpCanResend(false);
+  };
+
+  const handleResendOtp = async () => {
+    if (!otpCanResend || otpResending) return;
+    setOtpResending(true);
+    setError("");
+    try {
+      await resendOtp(email.trim(), "forgot-password");
+      setOtp("");
+      setOtpVerified(false);
+      setOtpCanResend(false);
+      const newAttempts = otpResendAttempts + 1;
+      setOtpResendAttempts(newAttempts);
+      setOtpCountdown(newAttempts === 1 ? 120 : 180);
+    } catch (err) {
+      if (err.remainingSeconds) {
+        setOtpCanResend(false);
+        setOtpCountdown(err.remainingSeconds);
+      }
+      setError(err.message || "Failed to resend code");
+    } finally {
+      setOtpResending(false);
+    }
+  };
+
+  const pwdChecks = PASSWORD_RULES.map((r) => ({ ...r, passed: r.test(newPassword) }));
 
   const fadeAnim    = useRef(new Animated.Value(0)).current;
   const slideAnim   = useRef(new Animated.Value(24)).current;
@@ -63,6 +126,8 @@ export default function ForgotPasswordScreen({ navigation }) {
       if (!data.success) { setError(data.errors || "Failed to send OTP"); return; }
       resetEntrance();
       setStep(2);
+      setOtpVerified(false);
+      resetOtpResendState();
     } catch {
       setError("Unable to reach server");
     } finally {
@@ -70,11 +135,45 @@ export default function ForgotPasswordScreen({ navigation }) {
     }
   };
 
-  /* ── STEP 2: RESET PASSWORD ── */
+  /* ── STEP 2A: VERIFY OTP (without consuming it) ── */
+  const handleVerifyOtp = async () => {
+    setError("");
+    if (otp.length !== 6) { setError("Enter all 6 digits"); return; }
+    setLoading(true);
+    try {
+      const res  = await fetch(`${BASE_URL}/verify-reset-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "ngrok-skip-browser-warning": "true" },
+        body: JSON.stringify({ email: email.trim(), otp }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        const raw = String(data.errors || "");
+        const msg = raw.toLowerCase();
+        setError(
+          msg.includes("expired") ? "OTP expired" :
+          msg.includes("invalid") ? "Incorrect OTP" :
+          raw || "OTP verification failed"
+        );
+        return;
+      }
+      resetEntrance();
+      setOtpVerified(true);
+    } catch {
+      setError("Unable to reach server");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ── STEP 2B: RESET PASSWORD (once OTP verified) ── */
   const handleResetPassword = async () => {
     setError("");
-    if (otp.length !== 6) { setError("OTP must be 6 digits"); return; }
-    if (!newPassword)     { setError("Enter a new password"); return; }
+    if (otp.length !== 6)  { setError("Enter all 6 digits"); return; }
+    if (!newPassword)      { setError("Enter a new password"); return; }
+    if (pwdChecks.some((c) => !c.passed)) { setError("Password does not meet all requirements."); return; }
+    if (!confirmPassword)  { setError("Confirm your new password"); return; }
+    if (newPassword !== confirmPassword) { setError("Passwords don't match."); return; }
     setLoading(true);
     try {
       const res  = await fetch(`${BASE_URL}/reset-password`, {
@@ -84,11 +183,13 @@ export default function ForgotPasswordScreen({ navigation }) {
       });
       const data = await res.json();
       if (!data.success) {
-        const msg = String(data.errors || "").toLowerCase();
+        const raw = String(data.errors || "");
+        const msg = raw.toLowerCase();
         setError(
+          msg.includes("different from your current") ? "New password must be different from your current password." :
           msg.includes("invalid") ? "Incorrect OTP" :
           msg.includes("expired") ? "OTP expired" :
-          data.errors || "Reset failed"
+          raw || "Reset failed"
         );
         return;
       }
@@ -125,19 +226,21 @@ export default function ForgotPasswordScreen({ navigation }) {
               },
             ]}
           >
-            {/* ── STEP INDICATOR (inside card, top) ── */}
             <View style={s.stepRow}>
-              {/* Step 1 */}
               <View style={[s.stepCircle, step >= 1 && s.stepCircleActive]}>
                 <Text style={[s.stepCircleText, step >= 1 && s.stepCircleTextActive]}>1</Text>
               </View>
 
-              {/* Connector */}
               <View style={[s.stepLine, step >= 2 && s.stepLineActive]} />
 
-              {/* Step 2 */}
               <View style={[s.stepCircle, step >= 2 && s.stepCircleActive]}>
                 <Text style={[s.stepCircleText, step >= 2 && s.stepCircleTextActive]}>2</Text>
+              </View>
+
+              <View style={[s.stepLine, otpVerified && s.stepLineActive]} />
+
+              <View style={[s.stepCircle, otpVerified && s.stepCircleActive]}>
+                <Text style={[s.stepCircleText, otpVerified && s.stepCircleTextActive]}>3</Text>
               </View>
             </View>
 
@@ -148,14 +251,18 @@ export default function ForgotPasswordScreen({ navigation }) {
                 { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
               ]}
             >
-              <Text style={s.eyebrow}>{step === 1 ? "STEP 1 OF 2" : "STEP 2 OF 2"}</Text>
+              <Text style={s.eyebrow}>
+                {step === 1 ? "STEP 1 OF 3" : otpVerified ? "STEP 3 OF 3" : "STEP 2 OF 3"}
+              </Text>
               <Text style={s.title}>
-                {step === 1 ? "Forgot\nPassword" : "Reset\nPassword"}
+                {step === 1 ? "Forgot\nPassword" : otpVerified ? "New\nPassword" : "Verify\nCode"}
               </Text>
               <Text style={s.subtitle}>
                 {step === 1
                   ? "Enter the email linked to your account.\nWe'll send you a one-time code."
-                  : `OTP sent to ${email}.\nEnter the code and your new password.`}
+                  : otpVerified
+                    ? "Enter your new password below\nto finish resetting."
+                    : `OTP sent to ${email}.\nEnter the 6-digit code to continue.`}
               </Text>
             </Animated.View>
 
@@ -208,59 +315,122 @@ export default function ForgotPasswordScreen({ navigation }) {
                   { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
                 ]}
               >
-                <View style={s.fieldGroup}>
-                  <Text style={s.label}>ONE-TIME CODE</Text>
-                  <View style={[s.inputWrap, focusOtp && s.inputWrapFocused]}>
-                    <TextInput
-                      style={[s.input, s.inputOtp]}
-                      placeholder="6-digit OTP"
-                      placeholderTextColor="#555"
-                      keyboardType="numeric"
-                      maxLength={6}
-                      value={otp}
-                      onChangeText={setOtp}
-                      onFocus={() => setFocusOtp(true)}
-                      onBlur={() => setFocusOtp(false)}
-                    />
-                  </View>
-                </View>
+                {!otpVerified ? (
+                  <>
+                    <View style={s.fieldGroup}>
+                      <Text style={s.label}>ONE-TIME CODE</Text>
+                      <View style={[s.inputWrap, focusOtp && s.inputWrapFocused]}>
+                        <TextInput
+                          style={[s.input, s.inputOtp]}
+                          placeholder="6-digit OTP"
+                          placeholderTextColor="#555"
+                          keyboardType="numeric"
+                          maxLength={6}
+                          value={otp}
+                          onChangeText={(v) => { setOtp(v.replace(/\D/g, "").slice(0, 6)); setError(""); }}
+                          onFocus={() => setFocusOtp(true)}
+                          onBlur={() => setFocusOtp(false)}
+                        />
+                      </View>
+                    </View>
 
-                <View style={s.fieldGroup}>
-                  <Text style={s.label}>NEW PASSWORD</Text>
-                  <View style={[s.inputWrap, focusPass && s.inputWrapFocused]}>
-                    <TextInput
-                      style={s.input}
-                      placeholder="••••••••"
-                      placeholderTextColor="#555"
-                      secureTextEntry={!showPass}
-                      value={newPassword}
-                      onChangeText={setNewPassword}
-                      onFocus={() => setFocusPass(true)}
-                      onBlur={() => setFocusPass(false)}
-                    />
-                    <TouchableOpacity onPress={() => setShowPass(!showPass)} style={s.eyeBtn}>
-                      <Text style={s.eyeText}>{showPass ? "HIDE" : "SHOW"}</Text>
+                    <View style={s.resendRow}>
+                      <Text style={s.resendLabel}>Didn't receive it? </Text>
+                      {otpCanResend ? (
+                        <TouchableOpacity onPress={handleResendOtp} disabled={otpResending}>
+                          <Text style={s.resendLink}>Resend code</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={s.resendTimer}>
+                          {otpResending ? "Sending…" : `Resend in ${formatCountdown(otpCountdown)}`}
+                        </Text>
+                      )}
+                    </View>
+
+                    {error ? <Text style={s.error}>{error}</Text> : null}
+
+                    <TouchableOpacity
+                      style={[s.primaryBtn, loading && s.primaryBtnDim]}
+                      onPress={handleVerifyOtp}
+                      disabled={loading}
+                      activeOpacity={0.88}
+                    >
+                      {loading
+                        ? <ActivityIndicator color={colors.textInverse} size="small" />
+                        : <Text style={s.primaryBtnText}>VERIFY OTP</Text>
+                      }
                     </TouchableOpacity>
-                  </View>
-                </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={s.fieldGroup}>
+                      <Text style={s.label}>NEW PASSWORD</Text>
+                      <View style={[s.inputWrap, focusPass && s.inputWrapFocused]}>
+                        <TextInput
+                          style={s.input}
+                          placeholder="••••••••"
+                          placeholderTextColor="#555"
+                          secureTextEntry={!showPass}
+                          value={newPassword}
+                          onChangeText={setNewPassword}
+                          onFocus={() => setFocusPass(true)}
+                          onBlur={() => setFocusPass(false)}
+                        />
+                        <TouchableOpacity onPress={() => setShowPass(!showPass)} style={s.eyeBtn}>
+                          <Text style={s.eyeText}>{showPass ? "HIDE" : "SHOW"}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
 
-                {error ? <Text style={s.error}>{error}</Text> : null}
+                    {newPassword.length > 0 && (
+                      <View style={s.checklist}>
+                        {pwdChecks.map((c) => (
+                          <View key={c.key} style={s.checkRow}>
+                            <Text style={[s.checkIcon, c.passed ? s.checkPass : s.checkFail]}>{c.passed ? "✓" : "✗"}</Text>
+                            <Text style={[s.checkLabel, c.passed && s.checkLabelPass]}>{c.label}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
 
-                <TouchableOpacity
-                  style={[s.primaryBtn, loading && s.primaryBtnDim]}
-                  onPress={handleResetPassword}
-                  disabled={loading}
-                  activeOpacity={0.88}
-                >
-                  {loading
-                    ? <ActivityIndicator color={colors.textInverse} size="small" />
-                    : <Text style={s.primaryBtnText}>RESET PASSWORD</Text>
-                  }
-                </TouchableOpacity>
+                    <View style={s.fieldGroup}>
+                      <Text style={s.label}>CONFIRM NEW PASSWORD</Text>
+                      <View style={[s.inputWrap, focusConfirm && s.inputWrapFocused]}>
+                        <TextInput
+                          style={s.input}
+                          placeholder="••••••••"
+                          placeholderTextColor="#555"
+                          secureTextEntry={!showConfirm}
+                          value={confirmPassword}
+                          onChangeText={setConfirmPassword}
+                          onFocus={() => setFocusConfirm(true)}
+                          onBlur={() => setFocusConfirm(false)}
+                        />
+                        <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)} style={s.eyeBtn}>
+                          <Text style={s.eyeText}>{showConfirm ? "HIDE" : "SHOW"}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {error ? <Text style={s.error}>{error}</Text> : null}
+
+                    <TouchableOpacity
+                      style={[s.primaryBtn, loading && s.primaryBtnDim]}
+                      onPress={handleResetPassword}
+                      disabled={loading}
+                      activeOpacity={0.88}
+                    >
+                      {loading
+                        ? <ActivityIndicator color={colors.textInverse} size="small" />
+                        : <Text style={s.primaryBtnText}>RESET PASSWORD</Text>
+                      }
+                    </TouchableOpacity>
+                  </>
+                )}
 
                 <TouchableOpacity
                   style={s.ghostBtn}
-                  onPress={() => { resetEntrance(); setStep(1); setError(""); }}
+                  onPress={() => { resetEntrance(); setStep(1); setOtpVerified(false); setError(""); setOtp(""); setNewPassword(""); setConfirmPassword(""); }}
                 >
                   <Text style={s.ghostBtnText}>← Change email</Text>
                 </TouchableOpacity>
@@ -405,6 +575,25 @@ const s = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 8,
   },
+  resendRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  resendLabel: { color: "rgba(255,255,255,0.4)", fontSize: 11 },
+  resendLink:  { color: colors.accentGold, fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
+  resendTimer: { color: "rgba(255,255,255,0.35)", fontSize: 11 },
+
+  checklist: { marginTop: -2, marginBottom: 4, gap: 4, paddingHorizontal: 2 },
+  checkRow:  { flexDirection: "row", alignItems: "center", gap: 8 },
+  checkIcon: { fontSize: 11, width: 14 },
+  checkPass: { color: colors.success || "#4caf50" },
+  checkFail: { color: "rgba(255,255,255,0.35)" },
+  checkLabel:     { fontSize: 11, color: "rgba(255,255,255,0.45)" },
+  checkLabelPass: { color: "rgba(255,255,255,0.85)" },
+
   eyeBtn:  { paddingLeft: 12 },
   eyeText: {
     fontSize: 9,

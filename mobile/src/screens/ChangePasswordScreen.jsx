@@ -30,6 +30,13 @@ const PASSWORD_RULES = [
   { key: "special", label: "One special character (!@#$...)", test: (p) => /[^A-Za-z0-9]/.test(p) },
 ];
 
+// Matches web's ResendOtpButton formatTime exactly.
+const formatCountdown = (secs) => {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return m > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${s}s`;
+};
+
 const Label = ({ text, s }) => <Text style={s.label}>{text}</Text>;
 const FieldError = ({ msg, s }) => (msg ? <Text style={s.errorText}>⚠ {msg}</Text> : null);
 
@@ -57,7 +64,7 @@ function PasswordField({ label, value, onChangeText, visible, onToggleVisible, e
 }
 
 export default function ChangePasswordScreen({ navigation }) {
-  const { userToken, userProfile } = useAuth();
+  const { userToken, userProfile, resendOtp } = useAuth();
   const { colors } = useTheme();
   const s = useMemo(() => makeStyles(colors), [colors]);
 
@@ -76,12 +83,55 @@ export default function ChangePasswordScreen({ navigation }) {
   const [verifying, setVerifying] = useState(false);
   const pending = React.useRef({ current: "", newPass: "" });
 
+  // Resend cooldown — same 60s -> 120s -> 180s escalation as signup/forgot.
+  const [otpResendAttempts, setOtpResendAttempts] = useState(0);
+  const [otpCountdown, setOtpCountdown]           = useState(60);
+  const [otpCanResend, setOtpCanResend]           = useState(false);
+  const [otpResending, setOtpResending]           = useState(false);
+
+  React.useEffect(() => {
+    if (step !== "otp") return;
+    if (otpCountdown <= 0) { setOtpCanResend(true); return; }
+    const t = setTimeout(() => setOtpCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [otpCountdown, step]);
+
+  const resetOtpResendState = () => {
+    setOtpResendAttempts(0);
+    setOtpCountdown(60);
+    setOtpCanResend(false);
+  };
+
+  const handleResendOtp = async () => {
+    if (!otpCanResend || otpResending) return;
+    setOtpResending(true);
+    try {
+      await resendOtp(userProfile?.email, "change-password");
+      Alert.alert("Sent", "A new code has been sent to your email.");
+      setOtp("");
+      setOtpError("");
+      setOtpCanResend(false);
+      const newAttempts = otpResendAttempts + 1;
+      setOtpResendAttempts(newAttempts);
+      setOtpCountdown(newAttempts === 1 ? 120 : 180);
+    } catch (err) {
+      if (err.remainingSeconds) {
+        setOtpCanResend(false);
+        setOtpCountdown(err.remainingSeconds);
+      }
+      Alert.alert("Error", err.message || "Failed to resend code");
+    } finally {
+      setOtpResending(false);
+    }
+  };
+
   const checks = PASSWORD_RULES.map((r) => ({ ...r, passed: r.test(newPass) }));
 
   const handleRequestOtp = async () => {
     const e = {};
     if (!current) e.current = "Current password is required.";
     if (!newPass) e.newPass = "New password is required.";
+    else if (newPass === current) e.newPass = "New password must be different from your current password.";
     else if (checks.some((c) => !c.passed)) e.newPass = "Password does not meet all requirements.";
     if (!confirm) e.confirm = "Please confirm your new password.";
     else if (newPass !== confirm) e.confirm = "Passwords do not match.";
@@ -111,6 +161,7 @@ export default function ChangePasswordScreen({ navigation }) {
         setStep("otp");
         setOtp("");
         setOtpError("");
+        resetOtpResendState();
       } else {
         Alert.alert("Error", otpData.message || "Failed to send OTP");
       }
@@ -222,6 +273,19 @@ export default function ChangePasswordScreen({ navigation }) {
             <FieldError msg={otpError} s={s} />
           </View>
 
+          <View style={s.resendRow}>
+            <Text style={s.resendLabel}>Didn't receive it? </Text>
+            {otpCanResend ? (
+              <TouchableOpacity onPress={handleResendOtp} disabled={otpResending}>
+                <Text style={s.resendLink}>Resend code</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={s.resendTimer}>
+                {otpResending ? "Sending…" : `Resend in ${formatCountdown(otpCountdown)}`}
+              </Text>
+            )}
+          </View>
+
           <TouchableOpacity
             style={[s.saveBtn, verifying && s.saveBtnDisabled]}
             onPress={handleVerifyOtp}
@@ -285,6 +349,11 @@ const makeStyles = (colors) => StyleSheet.create({
   checkLabelPass: { color: colors.textSecondary },
 
   otpHint: { fontSize: 13, color: colors.textSecondary, lineHeight: 20, marginBottom: 20 },
+
+  resendRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginTop: 4, marginBottom: 8 },
+  resendLabel: { color: colors.textMuted, fontSize: 12 },
+  resendLink: { color: colors.accentGold, fontSize: 12, fontWeight: "700" },
+  resendTimer: { color: colors.textMuted, fontSize: 12 },
 
   saveBtn: {
     backgroundColor: colors.textPrimary,

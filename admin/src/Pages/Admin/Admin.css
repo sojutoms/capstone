@@ -124,9 +124,7 @@
     to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ── Toast ─────────────────────────────────────────────────────────────── */
-
-.toast-message {
+.admin-page-toast {
     position: fixed;
     bottom: 24px;
     right: 24px;
@@ -146,7 +144,7 @@
     gap: 10px;
 }
 
-.toast-message::before {
+.admin-page-toast::before {
     content: '';
     width: 4px;
     height: 18px;
@@ -154,7 +152,7 @@
     flex-shrink: 0;
 }
 
-.toast-message.success::before { background: var(--accent-green, #22c55e); }
-.toast-message.error::before   { background: var(--accent-red, #ef4444); }
-.toast-message.info::before    { background: var(--accent-blue, #3b82f6); }
-.toast-message.warning::before { background: var(--accent-amber, #f59e0b); }
+.admin-page-toast.success::before { background: var(--accent-green, #22c55e); }
+.admin-page-toast.error::before   { background: var(--accent-red, #ef4444); }
+.admin-page-toast.info::before    { background: var(--accent-blue, #3b82f6); }
+.admin-page-toast.warning::before { background: var(--accent-amber, #f59e0b); }

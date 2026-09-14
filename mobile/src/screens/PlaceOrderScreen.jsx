@@ -12,11 +12,14 @@ import {
   Modal,
   Linking,
   AppState,
+  Animated,
+  Easing,
+  FlatList,
+  Pressable,
 } from "react-native";
 import { Alert } from "../utils/customAlert";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import axios from "axios";
-import { Picker } from "@react-native-picker/picker";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { getShippingFee, getShippingTier } from "../services/shippingFee";
@@ -36,12 +39,181 @@ const BASE_URL =
 
 /* ─── tiny helpers ─────────────────────────────────────────────────────────── */
 
+// Converts a legacy 09XXXXXXXXX (or bare 10-digit) number into the
+// +63XXXXXXXXXX format the register form now produces, so a saved address
+// loaded back into this field doesn't show a mismatched prefix. Leaves an
+// already-+63 value alone, defaults an empty one to the bare prefix.
+// Matches web's PlaceOrder.jsx exactly.
+const normalizePhone = (raw) => {
+  const value = (raw || "").trim();
+  if (value.startsWith("+63")) return value;
+  const digits = value.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("0")) return "+63" + digits.slice(1);
+  if (digits.length === 10) return "+63" + digits;
+  if (!digits) return "+63";
+  return value;
+};
+
+// PSGC returns UTF-8 bytes but RN's HTTP layer sometimes decodes them as
+// Latin-1, turning "ñ" (0xC3 0xB1) into "Ã±" ("Parañaque" → "ParaÃ±aque",
+// "Las Piñas" → "Las PiÃ±as"). Reinterpret each char as its byte value and
+// UTF-8-decode; if the platform lacks TextDecoder, fall back to targeted
+// replacements for the Spanish chars actually present in PH place names.
+const decodeMojibake = (str) => {
+  if (!str || typeof str !== "string") return str;
+  if (!/Ã[\x80-\xBF]/.test(str)) return str;
+  if (typeof TextDecoder !== "undefined") {
+    try {
+      const bytes = new Uint8Array(str.length);
+      for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i) & 0xff;
+      return new TextDecoder("utf-8").decode(bytes);
+    } catch {}
+  }
+  return str
+    .replace(/Ã±/g, "ñ").replace(/Ã‘/g, "Ñ")
+    .replace(/Ã¡/g, "á").replace(/Ã©/g, "é").replace(/Ã­/g, "í").replace(/Ã³/g, "ó").replace(/Ãº/g, "ú")
+    .replace(/Ã/g, "Á").replace(/Ã‰/g, "É").replace(/Ã/g, "Í").replace(/Ã“/g, "Ó").replace(/Ãš/g, "Ú");
+};
+
+const fixList = (list) =>
+  (Array.isArray(list) ? list : []).map((it) => ({ ...it, name: decodeMojibake(it?.name) }));
+
 const Label = ({ text, s }) => <Text style={s.label}>{text}</Text>;
 
 const FieldError = ({ msg, s }) =>
   msg ? <Text style={s.errorText}>⚠ {msg}</Text> : null;
 
 const Divider = ({ s }) => <View style={s.divider} />;
+
+function Dropdown({
+  label,
+  value,
+  items,
+  onSelect,
+  placeholder = "Select…",
+  enabled = true,
+  loading = false,
+  error,
+  s,
+  colors,
+}) {
+  const [open, setOpen] = useState(false);
+  const fade = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.96)).current;
+  const backdropFade = useRef(new Animated.Value(0)).current;
+
+  const openSheet = () => {
+    if (!enabled || loading) return;
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (open) {
+      Animated.parallel([
+        Animated.timing(backdropFade, { toValue: 1, duration: 180, useNativeDriver: true }),
+        Animated.timing(fade, { toValue: 1, duration: 200, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.spring(scale, { toValue: 1, friction: 8, tension: 90, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [open]);
+
+  const closeSheet = (cb) => {
+    Animated.parallel([
+      Animated.timing(backdropFade, { toValue: 0, duration: 140, useNativeDriver: true }),
+      Animated.timing(fade,         { toValue: 0, duration: 140, useNativeDriver: true }),
+      Animated.timing(scale,        { toValue: 0.96, duration: 140, useNativeDriver: true }),
+    ]).start(() => {
+      setOpen(false);
+      if (typeof cb === "function") cb();
+    });
+  };
+
+  const selectedItem = items.find((i) => i.value === value);
+  const displayText = selectedItem ? selectedItem.label : placeholder;
+  const isPlaceholder = !selectedItem;
+
+  return (
+    <View style={s.fieldGroup}>
+      <Label text={label} s={s} />
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={openSheet}
+        disabled={!enabled || loading}
+        style={[
+          s.dropdownField,
+          (!enabled || loading) && s.dropdownFieldDisabled,
+          error && s.inputError,
+        ]}
+      >
+        {loading ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <ActivityIndicator size="small" color={colors.textMuted} />
+            <Text style={s.loadingText}>Loading {label.toLowerCase()}…</Text>
+          </View>
+        ) : (
+          <Text
+            style={[s.dropdownText, isPlaceholder && s.dropdownPlaceholder]}
+            numberOfLines={1}
+          >
+            {displayText}
+          </Text>
+        )}
+        <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+      </TouchableOpacity>
+      <FieldError msg={error} s={s} />
+
+      <Modal visible={open} transparent animationType="none" onRequestClose={() => closeSheet()}>
+        <Animated.View style={[s.dropdownBackdrop, { opacity: backdropFade }]}>
+          <Pressable style={{ flex: 1 }} onPress={() => closeSheet()} />
+        </Animated.View>
+
+        <View pointerEvents="box-none" style={s.dropdownSheetContainer}>
+          <Animated.View
+            style={[
+              s.dropdownSheet,
+              { opacity: fade, transform: [{ scale }] },
+            ]}
+          >
+            <View style={s.dropdownSheetHeader}>
+              <Text style={s.dropdownSheetTitle}>{label.toUpperCase()}</Text>
+              <TouchableOpacity onPress={() => closeSheet()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close" size={22} color={colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={items}
+              keyExtractor={(it) => String(it.value)}
+              showsVerticalScrollIndicator
+              keyboardShouldPersistTaps="handled"
+              ItemSeparatorComponent={() => <View style={s.dropdownItemSep} />}
+              ListEmptyComponent={
+                <View style={{ padding: 24, alignItems: "center" }}>
+                  <Text style={s.loadingText}>No options available</Text>
+                </View>
+              }
+              renderItem={({ item }) => {
+                const isSel = item.value === value;
+                return (
+                  <TouchableOpacity
+                    activeOpacity={0.75}
+                    style={[s.dropdownItem, isSel && s.dropdownItemSelected]}
+                    onPress={() => closeSheet(() => onSelect(item.value))}
+                  >
+                    <Text style={[s.dropdownItemText, isSel && s.dropdownItemTextSelected]} numberOfLines={1}>
+                      {item.label}
+                    </Text>
+                    {isSel && <Ionicons name="checkmark" size={18} color={colors.accentGold} />}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </Animated.View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MAIN SCREEN
@@ -62,7 +234,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
   const [method, setMethod] = useState("online");
 
   const [form, setForm] = useState({
-    firstName: "", lastName: "", email: "", street: "", phone: "",
+    firstName: "", lastName: "", email: "", street: "", phone: "+63",
     region: "", province: "", city: "", barangay: "",
   });
 
@@ -191,7 +363,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
   useEffect(() => {
     setLoadingRegions(true);
     axios.get("https://psgc.cloud/api/regions")
-      .then((res) => setRegions(Array.isArray(res.data) ? res.data : []))
+      .then((res) => setRegions(fixList(res.data)))
       .catch(() => setRegions([]))
       .finally(() => setLoadingRegions(false));
     loadSavedAddresses();
@@ -215,7 +387,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
     if (!isNCR) {
       setLoadingProvinces(true);
       axios.get(`https://psgc.cloud/api/regions/${encodeURIComponent(form.region)}/provinces`)
-        .then((res) => setProvinces((Array.isArray(res.data) ? res.data : []).sort((a, b) => (a.name||"").localeCompare(b.name||""))))
+        .then((res) => setProvinces(fixList(res.data).sort((a, b) => (a.name||"").localeCompare(b.name||""))))
         .catch(() => setProvinces([]))
         .finally(() => setLoadingProvinces(false));
     }
@@ -231,7 +403,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
       ? `https://psgc.cloud/api/provinces/${encodeURIComponent(form.province)}/cities-municipalities`
       : `https://psgc.cloud/api/regions/${encodeURIComponent(form.region)}/cities-municipalities`;
     axios.get(url)
-      .then((res) => setCities((Array.isArray(res.data) ? res.data : []).sort((a, b) => (a.name||"").localeCompare(b.name||""))))
+      .then((res) => setCities(fixList(res.data).sort((a, b) => (a.name||"").localeCompare(b.name||""))))
       .catch(() => setCities([]))
       .finally(() => setLoadingCities(false));
   }, [form.province, form.region, hasProvinces, isLoadingSavedAddress]);
@@ -242,7 +414,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
     if (!form.city) return;
     setLoadingBarangays(true);
     axios.get(`https://psgc.cloud/api/cities-municipalities/${encodeURIComponent(form.city)}/barangays`)
-      .then((res) => setBarangays((Array.isArray(res.data) ? res.data : []).sort((a, b) => (a.name||"").localeCompare(b.name||""))))
+      .then((res) => setBarangays(fixList(res.data).sort((a, b) => (a.name||"").localeCompare(b.name||""))))
       .catch(() => setBarangays([]))
       .finally(() => setLoadingBarangays(false));
   }, [form.city, isLoadingSavedAddress]);
@@ -252,7 +424,10 @@ export default function PlaceOrderScreen({ navigation, route }) {
     if (name === "firstName" || name === "lastName") {
       value = value.replace(/[0-9]/g, "").replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' \-]/g, "").slice(0, 54);
     } else if (name === "phone") {
-      value = value.replace(/\D/g, "").slice(0, 11);
+      let digits = value.replace(/\D/g, "");
+      if (!digits.startsWith("63")) digits = "63" + digits.replace(/^6?3?/, "");
+      digits = digits.slice(0, 12);
+      value = "+" + digits;
     }
     setForm((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
@@ -274,9 +449,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
     if (hasProvinces && !form.province) e.province = "Select a province";
     if (!form.city)     e.city     = "Select a city / municipality";
     if (!form.barangay) e.barangay = "Select a barangay";
-    const ph = (form.phone || "").replace(/\D/g, "");
-    if (!ph) e.phone = "Phone is required";
-    else if (!/^\d{11}$/.test(ph)) e.phone = "Must be 11 digits";
+    if (!/^\+63\d{10}$/.test(form.phone || "")) e.phone = "Phone number must start with +63 and be followed by exactly 10 digits.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -448,7 +621,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
         ...prev,
         firstName: address.firstName || "", lastName: address.lastName || "",
         email: address.email || "", street: address.street || "",
-        phone: (address.phone || "").replace(/\D/g, "").slice(0, 11),
+        phone: normalizePhone(address.phone || ""),
         region: regionCode, province: isNCR ? NCR_REGION_CODE : provinceCode,
         city: cityCode, barangay: barangayCode,
       }));
@@ -458,45 +631,19 @@ export default function PlaceOrderScreen({ navigation, route }) {
     }
   };
 
-  /* ── picker field component ── */
   const PickerField = ({ label, field, items, loading, enabled = true }) => (
-    <View style={s.fieldGroup}>
-      <Label text={label} s={s} />
-      <View style={[s.pickerWrapper, (!enabled || loading) && s.pickerDisabled]}>
-        {loading ? (
-          <View style={s.pickerLoading}>
-            <ActivityIndicator size="small" color={colors.textMuted} />
-            <Text style={s.loadingText}>Loading {label.toLowerCase()}…</Text>
-          </View>
-        ) : (
-          <Picker
-            style={s.picker}
-            mode="dropdown"
-            dropdownIconColor={colors.textMuted}
-            selectedValue={form[field]}
-            onValueChange={(v) => handleChange(field, v)}
-            enabled={enabled && !loading}
-          >
-            <Picker.Item
-              label={`Select ${label}`}
-              value=""
-              color={Platform.OS === "android" ? colors.textSecondary : colors.textMuted}
-              style={Platform.OS === "android" ? { backgroundColor: colors.bgCard, color: colors.textSecondary } : {}}
-            />
-            {items.map((item) => (
-              <Picker.Item
-                key={item.code}
-                label={item.name}
-                value={item.code}
-                color={colors.textPrimary}
-                style={Platform.OS === "android" ? { backgroundColor: colors.bgCard, color: colors.textPrimary } : {}}
-              />
-            ))}
-          </Picker>
-        )}
-      </View>
-      <FieldError msg={errors[field]} s={s} />
-    </View>
+    <Dropdown
+      label={label}
+      value={form[field]}
+      items={items.map((item) => ({ label: item.name, value: item.code }))}
+      onSelect={(v) => handleChange(field, v)}
+      placeholder={`Select ${label}`}
+      enabled={enabled}
+      loading={loading}
+      error={errors[field]}
+      s={s}
+      colors={colors}
+    />
   );
 
   /* ══════════════════════════════════════════════════════════════════════
@@ -615,59 +762,33 @@ export default function PlaceOrderScreen({ navigation, route }) {
         {/* Region */}
         <PickerField label="Region" field="region" items={regions} loading={loadingRegions} enabled />
 
-        {/* Province */}
-        <View style={s.fieldGroup}>
-          <Label text="Province" s={s} />
-          <View style={[s.pickerWrapper, (!hasProvinces || !form.region) && s.pickerDisabled]}>
-            {!hasProvinces ? (
-              <Picker
-                style={s.picker}
-                mode="dropdown"
-                selectedValue={NCR_REGION_CODE}
-                enabled={false}
-                dropdownIconColor={colors.textMuted}
-              >
-                <Picker.Item
-                  label="Metro Manila"
-                  value={NCR_REGION_CODE}
-                  color={colors.textPrimary}
-                  style={Platform.OS === "android" ? { backgroundColor: colors.bgCard, color: colors.textPrimary } : {}}
-                />
-              </Picker>
-            ) : loadingProvinces ? (
-              <View style={s.pickerLoading}>
-                <ActivityIndicator size="small" color={colors.textMuted} />
-                <Text style={s.loadingText}>Loading provinces…</Text>
-              </View>
-            ) : (
-              <Picker
-                style={s.picker}
-                mode="dropdown"
-                dropdownIconColor={colors.textMuted}
-                selectedValue={form.province}
-                onValueChange={(v) => handleChange("province", v)}
-                enabled={!!form.region && !loadingProvinces}
-              >
-                <Picker.Item
-                  label="Select Province"
-                  value=""
-                  color={Platform.OS === "android" ? colors.textSecondary : colors.textMuted}
-                  style={Platform.OS === "android" ? { backgroundColor: colors.bgCard, color: colors.textSecondary } : {}}
-                />
-                {provinces.map((p) => (
-                  <Picker.Item
-                    key={p.code}
-                    label={p.name}
-                    value={p.code}
-                    color={colors.textPrimary}
-                    style={Platform.OS === "android" ? { backgroundColor: colors.bgCard, color: colors.textPrimary } : {}}
-                  />
-                ))}
-              </Picker>
-            )}
-          </View>
-          <FieldError msg={errors.province} s={s} />
-        </View>
+        {!hasProvinces ? (
+          <Dropdown
+            label="Province"
+            value={NCR_REGION_CODE}
+            items={[{ label: "Metro Manila", value: NCR_REGION_CODE }]}
+            onSelect={() => {}}
+            placeholder="Metro Manila"
+            enabled={false}
+            loading={false}
+            error={errors.province}
+            s={s}
+            colors={colors}
+          />
+        ) : (
+          <Dropdown
+            label="Province"
+            value={form.province}
+            items={provinces.map((p) => ({ label: p.name, value: p.code }))}
+            onSelect={(v) => handleChange("province", v)}
+            placeholder="Select Province"
+            enabled={!!form.region && !loadingProvinces}
+            loading={loadingProvinces}
+            error={errors.province}
+            s={s}
+            colors={colors}
+          />
+        )}
 
         {/* City */}
         <PickerField
@@ -694,10 +815,10 @@ export default function PlaceOrderScreen({ navigation, route }) {
             style={[s.input, errors.phone && s.inputError]}
             value={form.phone}
             onChangeText={(v) => handleChange("phone", v)}
-            placeholder="09XXXXXXXXX"
+            placeholder="+639XXXXXXXXX"
             placeholderTextColor={colors.bgTertiary}
             keyboardType="number-pad"
-            maxLength={11}
+            maxLength={13}
           />
           <FieldError msg={errors.phone} s={s} />
         </View>
@@ -1025,21 +1146,94 @@ const makeStyles = (colors) => StyleSheet.create({
   inputError: { borderWidth: 1.5, borderColor: colors.danger },
   errorText:  { fontSize: 11, color: colors.danger, marginTop: 5, letterSpacing: 0.3 },
 
-  /* ── pickers ── */
-  pickerWrapper: {
-    backgroundColor: colors.bgTertiary,
-    borderRadius: radius.md,
-    overflow: "hidden",
-  },
-  pickerDisabled: { backgroundColor: colors.bgPrimary, opacity: 0.5 },
-  picker:         { height: 50, width: "100%", color: colors.textPrimary, backgroundColor: colors.bgTertiary },
-  pickerLoading: {
+  dropdownField: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
-    gap: 10,
+    justifyContent: "space-between",
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    paddingHorizontal: 14,
+    paddingVertical: isSmall ? 12 : 14,
+    minHeight: 48,
+  },
+  dropdownFieldDisabled: {
+    backgroundColor: colors.bgTertiary,
+    opacity: 0.7,
+  },
+  dropdownText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.textPrimary,
+    marginRight: 8,
+  },
+  dropdownPlaceholder: {
+    color: colors.textMuted,
   },
   loadingText: { fontSize: 13, color: colors.textMuted },
+
+  dropdownBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  dropdownSheetContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  dropdownSheet: {
+    width: "100%",
+    maxHeight: "70%",
+    backgroundColor: colors.bgPrimary,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    overflow: "hidden",
+    ...(shadows?.md || {}),
+  },
+  dropdownSheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  dropdownSheetTitle: {
+    fontSize: 12,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 1.4,
+    color: colors.textPrimary,
+    textTransform: "uppercase",
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    backgroundColor: colors.bgPrimary,
+  },
+  dropdownItemSelected: {
+    backgroundColor: colors.bgCard,
+  },
+  dropdownItemText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.textPrimary,
+    marginRight: 10,
+  },
+  dropdownItemTextSelected: {
+    color: colors.accentGold,
+    fontFamily: fonts.bodyBold,
+  },
+  dropdownItemSep: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.borderSubtle,
+  },
 
   /* ── checkbox ── */
   checkRow: {

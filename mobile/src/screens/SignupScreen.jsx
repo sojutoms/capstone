@@ -13,8 +13,11 @@ import {
   KeyboardAvoidingView,
   ImageBackground,
   TouchableOpacity,
+  Dimensions,
 } from "react-native";
 import { BlurView } from "expo-blur";
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 import { BASE_URL, API_HEADERS } from "../api/config";
 import { colors, fonts } from "../theme";
 import { TERMS_CONTENT } from "../constants/legalContent";
@@ -77,7 +80,7 @@ function CheckBadge() {
 const fieldStyles = StyleSheet.create({
   wrapper: { marginBottom: 12 },
   label: {
-    color: "#505050",
+    color: "rgba(255,255,255,0.55)",
     fontSize: 9,
     fontWeight: "500",
     letterSpacing: 1.8,
@@ -140,8 +143,8 @@ const ruleStyles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 4 },
   dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "#282828" },
   dotMet: { backgroundColor: "#888" },
-  text: { color: "#383838", fontSize: 10 },
-  textMet: { color: "#666" },
+  text: { color: "rgba(255,255,255,0.45)", fontSize: 10 },
+  textMet: { color: "rgba(255,255,255,0.75)" },
 });
 
 // ─── Strength Bar ────────────────────────────────────────────────────────────
@@ -279,7 +282,7 @@ const heroStyles = StyleSheet.create({
   char: {
     fontSize: 50,
     fontFamily: fonts.display,
-    color: colors.textPrimary,
+    color: "#ffffff",
     letterSpacing: -1,
     lineHeight: 56,
   },
@@ -436,8 +439,8 @@ function ReviewRow({ label, value, last }) {
 const rvStyles = StyleSheet.create({
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 6 },
   border: { borderBottomWidth: 0.5, borderBottomColor: "#1e1e1e" },
-  key: { fontSize: 10, color: "#383838", letterSpacing: 1 },
-  val: { fontSize: 11, color: "#666", maxWidth: 160 },
+  key: { fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 1 },
+  val: { fontSize: 11, color: "rgba(255,255,255,0.8)", maxWidth: 160 },
 });
 
 // ─── Legal Modal (scroll-to-unlock, same style as old modal) ─────────────────
@@ -567,7 +570,7 @@ export default function SignupScreen({ navigation }) {
   const [firstName, setFirstName]               = useState("");
   const [lastName, setLastName]                 = useState("");
   const [email, setEmail]                       = useState("");
-  const [phone, setPhone]                       = useState(""); // ← added
+  const [phone, setPhone]                       = useState("+63"); // matches web's LoginSignup.jsx pattern
   const [password, setPassword]                 = useState("");
   const [confirmPassword, setConfirmPassword]   = useState("");
   const [loading, setLoading]                   = useState(false);
@@ -593,7 +596,7 @@ export default function SignupScreen({ navigation }) {
   const fnValid  = firstName.trim().length >= 2 && !/\d/.test(firstName);
   const lnValid  = lastName.trim().length >= 2 && !/\d/.test(lastName);
   const emValid  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const phValid  = /^\d{11}$/.test(phone); // ← added
+  const phValid  = /^\+63\d{10}$/.test(phone);
   const hasLen   = password.length >= 8;
   const hasUp    = /[A-Z]/.test(password);
   const hasNum   = /\d/.test(password);
@@ -625,7 +628,7 @@ export default function SignupScreen({ navigation }) {
           firstName: firstName.trim(),
           lastName:  lastName.trim(),
           email:     email.trim(),
-          phone:     phone.trim(), // ← added
+          phone:     phone.trim(),
           password,
         }),
       });
@@ -655,9 +658,8 @@ export default function SignupScreen({ navigation }) {
       <View style={{ flex: 1, width: "100%", overflow: "hidden" }}>
         <ImageBackground
           source={require("../../assets/signlog-bg.png")}
-          style={StyleSheet.absoluteFillObject}
+          style={{ position: "absolute", top: 0, left: 0, width: SCREEN_WIDTH, height: SCREEN_HEIGHT }}
           resizeMode="cover"
-          imageStyle={{ width: "100%", height: "100%" }}
         />
         <View style={s.overlay} pointerEvents="none" />
 
@@ -694,10 +696,17 @@ export default function SignupScreen({ navigation }) {
                     onChangeText={(v) => { setEmail(v); setServerError(""); }}
                     valid={emValid} keyboardType="email-address"
                   />
-                  {/* ── Phone field (new) ── */}
-                  <FloatingInput label="Phone Number (e.g. 09XXXXXXXXX)" value={phone}
-                    onChangeText={(v) => setPhone(v.replace(/\D/g, "").slice(0, 11))}
-                    valid={phValid} keyboardType="number-pad" maxLength={11}
+                  {/* ── Phone field — matches web's LoginSignup.jsx exactly:
+                      the +63 prefix lives inside the value itself and stays
+                      locked, only the digits after it are actually editable. ── */}
+                  <FloatingInput label="Phone Number" value={phone}
+                    onChangeText={(v) => {
+                      let digits = v.replace(/\D/g, "");
+                      if (!digits.startsWith("63")) digits = "63" + digits.replace(/^6?3?/, "");
+                      digits = digits.slice(0, 12);
+                      setPhone("+" + digits);
+                    }}
+                    valid={phValid} keyboardType="number-pad" maxLength={13}
                   />
                   <ShimmerButton label="CONTINUE" onPress={goNext} disabled={!step0Ready} />
                   <Text style={s.signinLink}>
@@ -795,7 +804,7 @@ const s = StyleSheet.create({
   container: { flex: 1 },
   content: { flexGrow: 1, justifyContent: "center", padding: 20 },
   card: { backgroundColor: "rgba(10,10,10,0.82)", borderWidth: 0.5, borderColor: "rgba(255,255,255,0.06)", borderRadius: 20, padding: 22 },
-  heroMeta: { textAlign: "center", fontSize: 9, letterSpacing: 2.5, color: "#383838", textTransform: "uppercase", marginBottom: 4 },
+  heroMeta: { textAlign: "center", fontSize: 9, letterSpacing: 2.5, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", marginBottom: 4 },
   accentLine: { height: 0.5, backgroundColor: "rgba(255,255,255,0.06)", marginBottom: 20 },
   nameRow: { flexDirection: "row", gap: 9 },
   nameField: { flex: 1 },
@@ -808,12 +817,12 @@ const s = StyleSheet.create({
   pseudoCheck: { width: 17, height: 17, borderRadius: 4, borderWidth: 0.5, borderColor: "#2a2a2a", backgroundColor: "rgba(8,8,8,0.7)", alignItems: "center", justifyContent: "center", marginTop: 1 },
   pseudoCheckDone: { backgroundColor: "#1a1a1a", borderColor: "#444" },
   pseudoCheckMark: { color: "#aaa", fontSize: 9, fontWeight: "800" },
-  cboxText: { color: "#444", fontSize: 11, flex: 1, lineHeight: 18 },
-  cboxLink: { color: colors.accentGoldLight, textDecorationLine: "underline" },
+  cboxText: { color: "rgba(255,255,255,0.55)", fontSize: 11, flex: 1, lineHeight: 18 },
+  cboxLink: { color: "#ffffff", textDecorationLine: "underline" },
   cboxLinkDone: { color: colors.success },
   errorBanner: { backgroundColor: "rgba(20,20,20,0.8)", borderWidth: 0.5, borderColor: "#2a2a2a", borderRadius: 8, padding: 10, marginBottom: 12 },
   errorText: { color: colors.danger, fontSize: 11, lineHeight: 17 },
-  signinLink: { textAlign: "center", color: "#333", fontSize: 11, marginTop: 14 },
-  signinAccent: { color: colors.accentGold },
-  backLink: { textAlign: "center", color: "#555", fontSize: 11, marginTop: 14 },
+  signinLink: { textAlign: "center", color: "rgba(255,255,255,0.45)", fontSize: 11, marginTop: 14 },
+  signinAccent: { color: "#ffffff", fontWeight: "700" },
+  backLink: { textAlign: "center", color: "rgba(255,255,255,0.55)", fontSize: 11, marginTop: 14 },
 });

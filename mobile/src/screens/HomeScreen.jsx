@@ -9,13 +9,13 @@ import {
   TouchableOpacity,
   Platform,
   StatusBar,
-  SafeAreaView,
   Dimensions,
   Animated,
   RefreshControl,
   Linking,
 } from "react-native";
 import { VideoView, useVideoPlayer } from "expo-video";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { CommonActions, useFocusEffect } from "@react-navigation/native";
 import { useFavorites } from "../context/FavoritesContext";
@@ -60,6 +60,8 @@ const EDITORIAL_SLIDES = [
 
 // Space reserved at the top of the ScrollView so its content starts below
 // the floating header panel (logo + greeting) instead of underneath it.
+// Android-tuned value — untouched. iOS derives its own version of this from
+// the device's real safe-area inset instead (see headerExtraPad below).
 const FLOATING_HEADER_CLEARANCE = 160;
 
 /* ─────────────────── CATEGORY DROPDOWN (copied from ShopScreen.jsx,
@@ -307,6 +309,14 @@ export default function HomeScreen({ navigation }) {
   const tileStyles = useMemo(() => makeTileStyles(colors), [colors]);
   const mapStyles = useMemo(() => makeMapStyles(colors), [colors]);
 
+  // iOS-only header sizing: derived from the real device safe-area inset
+  // (root is a plain View, not SafeAreaView, so nothing else adds this
+  // automatically). Android is untouched, still using its own flat,
+  // previously-tuned numbers below.
+  const insets = useSafeAreaInsets();
+  const headerExtraPad   = Platform.OS === "ios" ? insets.top + 56 : 48;
+  const scrollClearance  = Platform.OS === "ios" ? headerExtraPad + 95 : FLOATING_HEADER_CLEARANCE;
+
   const handleAddToCart = (item) => {
     if (isOutOfStock(item)) {
       Toast.show({ type: "error", text1: "Out of stock" });
@@ -457,7 +467,12 @@ export default function HomeScreen({ navigation }) {
   const droppedProducts  = products.slice(0, 2);
 
   return (
-    <SafeAreaView style={s.safe}>
+    // Plain View, not SafeAreaView — matches ProfileScreen's root exactly.
+    // Core SafeAreaView auto-adds the device's real top/bottom insets on
+    // iOS on top of the manual insets.top/insets.bottom math already used
+    // below and in the tab bar clearance, double-counting them (it's a
+    // no-op on Android, so this changes nothing there).
+    <View style={s.safe}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       {/* ── FLOATING HEADER (logo + chat + greeting) ──
@@ -466,13 +481,18 @@ export default function HomeScreen({ navigation }) {
           transparent, the content scrolling underneath just shows through. */}
       <View style={s.floatingHeaderOverlay} pointerEvents="box-none">
         <Animated.View
-          style={[s.headerPanel, { opacity: headerOpacity }]}
+          style={[s.headerPanel, { opacity: headerOpacity, paddingTop: headerExtraPad }]}
           pointerEvents={headerCollapsed ? "none" : "auto"}
         >
           {/* Chat button moved up to its own top-right corner, separate
               from the greeting row below — matching the reference layout's
               bell icon placement. */}
-          <TouchableOpacity ref={chatBtnRef} style={s.chatBtnTopRight} onPress={handleOpenChat} activeOpacity={0.8}>
+          <TouchableOpacity
+            ref={chatBtnRef}
+            style={[s.chatBtnTopRight, Platform.OS === "ios" && { top: insets.top + 14 }]}
+            onPress={handleOpenChat}
+            activeOpacity={0.8}
+          >
             <Ionicons name="chatbubble-ellipses-outline" size={18} color="#ffffff" />
           </TouchableOpacity>
 
@@ -494,7 +514,7 @@ export default function HomeScreen({ navigation }) {
       <Animated.ScrollView
         style={s.container}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: FLOATING_HEADER_CLEARANCE, paddingBottom: TAB_BAR_CLEARANCE }}
+        contentContainerStyle={{ paddingTop: scrollClearance, paddingBottom: TAB_BAR_CLEARANCE }}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           {
@@ -517,7 +537,11 @@ export default function HomeScreen({ navigation }) {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 18 }}
+            contentContainerStyle={{
+              paddingLeft: Platform.OS === "ios" ? 3 : 16,
+              paddingRight: 16,
+              gap: Platform.OS === "ios" ? 15 : 18,
+            }}
           >
             {BRANDS.map((b) => (
               <TouchableOpacity
@@ -653,7 +677,7 @@ export default function HomeScreen({ navigation }) {
         <StoreMapSection mapStyles={mapStyles} colors={colors} />
 
       </Animated.ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -383,7 +383,6 @@ function RadioGroup({ options, value, onChange, styles }) {
 function ReviewModal({ visible, product, onClose, onSubmit, submitting, styles, colors }) {
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState("");
-  const [title, setTitle] = useState("");
   const [fit, setFit] = useState("");
   const [comfort, setComfort] = useState("");
   const [recommend, setRecommend] = useState("");
@@ -391,7 +390,7 @@ function ReviewModal({ visible, product, onClose, onSubmit, submitting, styles, 
 
   useEffect(() => {
     if (visible) {
-      setRating(0); setReview(""); setTitle("");
+      setRating(0); setReview("");
       setFit(""); setComfort(""); setRecommend(""); setAgreed(false);
     }
   }, [visible]);
@@ -433,16 +432,6 @@ function ReviewModal({ visible, product, onClose, onSubmit, submitting, styles, 
             />
             <Text style={styles.writeMuted}>{review.length}/5000</Text>
 
-            <Text style={[styles.inputLabel, { marginTop: 14 }]}>REVIEW TITLE</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Summarize your review in 150 characters or less"
-              placeholderTextColor={colors.bgTertiary}
-              maxLength={150}
-              value={title}
-              onChangeText={setTitle}
-            />
-
             <Text style={[styles.inputLabel, { marginTop: 14 }]}>HOW DID THIS PRODUCT FIT?</Text>
             <RadioGroup options={REVIEW_FIT_OPTIONS} value={fit} onChange={setFit} styles={styles} />
 
@@ -466,7 +455,7 @@ function ReviewModal({ visible, product, onClose, onSubmit, submitting, styles, 
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalBtnPrimary, !canSubmit && styles.modalBtnDisabled]}
-              onPress={() => canSubmit && onSubmit({ rating, review: review.trim(), title: title.trim(), fit, comfort, recommend })}
+              onPress={() => canSubmit && onSubmit({ rating, review: review.trim(), fit, comfort, recommend })}
               disabled={!canSubmit}
             >
               {submitting

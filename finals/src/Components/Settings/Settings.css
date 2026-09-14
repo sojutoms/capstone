@@ -303,6 +303,63 @@
   color: var(--text-muted, #666666);
 }
 
+.bio-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.bio-word-count {
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  color: var(--text-muted, #666666);
+  text-transform: uppercase;
+}
+
+.bio-word-count-over {
+  color: #ff4d4d;
+}
+
+.bio-textarea {
+  width: 100%;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-primary, #ffffff);
+  outline: none;
+  resize: vertical;
+  min-height: 96px;
+  line-height: 1.5;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.bio-textarea:focus {
+  border-color: var(--settings-accent);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.bio-textarea.editing {
+  border-color: var(--settings-accent);
+}
+
+.bio-textarea:disabled {
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-muted, #666666);
+  cursor: not-allowed;
+  resize: none;
+}
+
+.bio-textarea::placeholder {
+  color: var(--text-muted, #666666);
+}
+
 .save-btn {
   margin-top: 24px;
   background: linear-gradient(135deg, var(--settings-accent), var(--accent-gold-light, #f0f0f0));
@@ -494,6 +551,37 @@
 
 .otp-verify-hint strong {
   color: var(--text-primary, #ffffff);
+}
+
+.otp-resend-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  font-size: 12px;
+}
+
+.otp-resend-label {
+  color: var(--text-muted, #666666);
+}
+
+.otp-resend-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--settings-accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.otp-resend-link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.otp-resend-timer {
+  color: var(--text-muted, #666666);
 }
 
 .settings-otp-wrapper {
