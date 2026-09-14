@@ -226,7 +226,8 @@ const STORE = {
 
 const StoreMapSection = ({ mapStyles, colors }) => {
   const openInMaps = () => {
-    const url = `https://www.google.com/maps/search/?api=1&query=${STORE.lat},${STORE.lng}`;
+    const destination = encodeURIComponent(`${STORE.name}, ${STORE.address}`);
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
     Linking.openURL(url);
   };
   const callStore = () => Linking.openURL(`tel:${STORE.phone}`);

@@ -484,6 +484,8 @@ const ProductManagement = () => {
   const [viewMode, setViewMode] = useState("grid"); // grid | list
   let filteredProducts = [...allproducts];
 
+  filteredProducts = filteredProducts.filter((p) => showDeleted ? !!p.isDeleted : !p.isDeleted);
+
   if (colorwayFilter === "base") filteredProducts = filteredProducts.filter((p) => !p.parentId);
   if (colorwayFilter === "colorway") filteredProducts = filteredProducts.filter((p) => !!p.parentId);
 
@@ -512,6 +514,7 @@ const ProductManagement = () => {
 
   const totalProducts = allproducts.filter((p) => !p.isDeleted && !p.parentId).length;
   const colorwayProducts = allproducts.filter((p) => !p.isDeleted && !!p.parentId).length;
+  const deletedCount = allproducts.filter((p) => p.isDeleted).length;
   const lowStockCount = allproducts.filter((p) => {
     if (p.isDeleted) return false;
     const sizes = getEffectiveSizes(p);
@@ -689,6 +692,25 @@ const ProductManagement = () => {
               </div>
             </div>
             <div className="right-controls">
+              <button
+                type="button"
+                className={`filter-chip ${showDeleted ? "active" : ""}`}
+                onClick={() => { setShowDeleted((v) => !v); setProductPage(1); }}
+                title={showDeleted ? "Currently showing deleted products — click to hide" : "Show soft-deleted products so you can restore them"}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6M14 11v6" />
+                  <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+                </svg>
+                {showDeleted ? "HIDE DELETED" : "SHOW DELETED"}
+                {deletedCount > 0 && <span style={{
+                  background: showDeleted ? 'rgba(0,0,0,0.2)' : 'var(--accent-red, #ef4444)',
+                  color: '#fff', padding: '1px 7px', borderRadius: 999, fontSize: 10, fontWeight: 800, marginLeft: 2,
+                }}>{deletedCount}</span>}
+              </button>
               <div className="results-count">{sortedProducts.length} results</div>
             </div>
           </div>

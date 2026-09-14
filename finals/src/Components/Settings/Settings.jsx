@@ -141,6 +141,11 @@ const Settings = () => {
   const [emailOtpSending, setEmailOtpSending] = useState(false);
   const pendingEmailRef = useRef("");
 
+  const [emailResendAttempts, setEmailResendAttempts] = useState(0);
+  const [emailCountdown, setEmailCountdown]           = useState(60);
+  const [emailCanResend, setEmailCanResend]           = useState(false);
+  const [emailResending, setEmailResending]           = useState(false);
+
   const [passwords, setPasswords] = useState({ current: "", newPass: "", confirm: "" });
   const [pwdErrors, setPwdErrors] = useState({});
   const [showNewPwd, setShowNewPwd] = useState(false);
@@ -165,6 +170,13 @@ const Settings = () => {
     const t = setTimeout(() => setPwdCountdown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [pwdCountdown, pwdStep]);
+
+  useEffect(() => {
+    if (emailStep !== "otp") return;
+    if (emailCountdown <= 0) { setEmailCanResend(true); return; }
+    const t = setTimeout(() => setEmailCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [emailCountdown, emailStep]);
 
   const [message, setMessage] = useState(null);
   const closeMsgRef = useRef(null);
@@ -286,6 +298,7 @@ const Settings = () => {
         setEmailStep("otp");
         setEmailOtp("");
         setEmailOtpError("");
+        resetEmailResendState();
         showMessage("success", "OTP sent to your current email");
       } else {
         setEmailError(data.message || "Failed to send OTP");
@@ -294,6 +307,42 @@ const Settings = () => {
       setEmailError("Request failed. Please try again.");
     } finally {
       setEmailOtpSending(false);
+    }
+  };
+
+  const resetEmailResendState = () => {
+    setEmailResendAttempts(0);
+    setEmailCountdown(60);
+    setEmailCanResend(false);
+  };
+
+  const handleResendEmailOtp = async () => {
+    if (!emailCanResend || emailResending) return;
+    if (!pendingEmailRef.current) return;
+    setEmailResending(true);
+    setEmailOtpError("");
+    const token = localStorage.getItem("auth-token");
+    try {
+      const res = await fetch(`${API_BASE_URL}/user/send-email-change-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "auth-token": token },
+        body: JSON.stringify({ newEmail: pendingEmailRef.current }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEmailOtp("");
+        setEmailCanResend(false);
+        const newAttempts = emailResendAttempts + 1;
+        setEmailResendAttempts(newAttempts);
+        setEmailCountdown(newAttempts === 1 ? 120 : 180);
+        showMessage("success", "A new code has been sent to your email.");
+      } else {
+        showMessage("error", data.message || "Failed to resend code");
+      }
+    } catch {
+      showMessage("error", "Network error. Please try again.");
+    } finally {
+      setEmailResending(false);
     }
   };
 
@@ -647,6 +696,18 @@ const Settings = () => {
                         to confirm changing it to <strong>{pendingEmailRef.current}</strong>.
                       </p>
                       <OtpInput value={emailOtp} onChange={setEmailOtp} error={emailOtpError} />
+                      <div className="otp-resend-row">
+                        <span className="otp-resend-label">Didn't receive it?</span>
+                        {emailCanResend ? (
+                          <button type="button" className="otp-resend-link" onClick={handleResendEmailOtp} disabled={emailResending}>
+                            Resend code
+                          </button>
+                        ) : (
+                          <span className="otp-resend-timer">
+                            {emailResending ? "Sending…" : `Resend in ${formatCountdown(emailCountdown)}`}
+                          </span>
+                        )}
+                      </div>
                       <div className="otp-verify-actions">
                         <button className="save-btn" type="button" onClick={handleVerifyEmailOtp}>Verify &amp; Update Email</button>
                         <button className="edit-toggle cancel-btn" type="button" onClick={handleCancelEmailOtp} style={{ marginTop: 10 }}>

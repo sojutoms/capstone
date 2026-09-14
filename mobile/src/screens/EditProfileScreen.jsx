@@ -55,6 +55,30 @@ export default function EditProfileScreen({ navigation }) {
   const [emailVerifying,  setEmailVerifying]  = useState(false);
   const pendingEmailRef = React.useRef("");
 
+  const [emailResendAttempts, setEmailResendAttempts] = useState(0);
+  const [emailCountdown,      setEmailCountdown]      = useState(60);
+  const [emailCanResend,      setEmailCanResend]      = useState(false);
+  const [emailResending,      setEmailResending]      = useState(false);
+
+  useEffect(() => {
+    if (emailStep !== "otp") return;
+    if (emailCountdown <= 0) { setEmailCanResend(true); return; }
+    const t = setTimeout(() => setEmailCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [emailCountdown, emailStep]);
+
+  const resetEmailResendState = () => {
+    setEmailResendAttempts(0);
+    setEmailCountdown(60);
+    setEmailCanResend(false);
+  };
+
+  const formatEmailCountdown = (secs) => {
+    const m = Math.floor(secs / 60);
+    const sec = secs % 60;
+    return m > 0 ? `${m}:${String(sec).padStart(2, "0")}` : `${sec}s`;
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -130,6 +154,7 @@ export default function EditProfileScreen({ navigation }) {
         setEmailStep("otp");
         setEmailOtp("");
         setEmailOtpError("");
+        resetEmailResendState();
         Alert.alert("Code Sent", "OTP sent to your current email.");
       } else {
         setEmailError(data.message || "Failed to send OTP");
@@ -138,6 +163,35 @@ export default function EditProfileScreen({ navigation }) {
       setEmailError("Request failed. Please try again.");
     } finally {
       setEmailOtpSending(false);
+    }
+  };
+
+  const handleResendEmailOtp = async () => {
+    if (!emailCanResend || emailResending) return;
+    if (!pendingEmailRef.current) return;
+    setEmailResending(true);
+    setEmailOtpError("");
+    try {
+      const res  = await fetch(`${BASE_URL}/user/send-email-change-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "auth-token": userToken || "" },
+        body: JSON.stringify({ newEmail: pendingEmailRef.current }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEmailOtp("");
+        setEmailCanResend(false);
+        const newAttempts = emailResendAttempts + 1;
+        setEmailResendAttempts(newAttempts);
+        setEmailCountdown(newAttempts === 1 ? 120 : 180);
+        Alert.alert("Sent", "A new code has been sent to your email.");
+      } else {
+        Alert.alert("Error", data.message || "Failed to resend code");
+      }
+    } catch {
+      Alert.alert("Network Error", "Please try again.");
+    } finally {
+      setEmailResending(false);
     }
   };
 
@@ -328,6 +382,19 @@ export default function EditProfileScreen({ navigation }) {
               maxLength={6}
             />
             <FieldError msg={emailOtpError} s={s} />
+
+            <View style={s.emailResendRow}>
+              <Text style={s.emailResendLabel}>Didn't receive it? </Text>
+              {emailCanResend ? (
+                <TouchableOpacity onPress={handleResendEmailOtp} disabled={emailResending}>
+                  <Text style={s.emailResendLink}>Resend code</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={s.emailResendTimer}>
+                  {emailResending ? "Sending…" : `Resend in ${formatEmailCountdown(emailCountdown)}`}
+                </Text>
+              )}
+            </View>
 
             <TouchableOpacity
               style={[s.emailSendBtn, { marginTop: 10 }, emailVerifying && s.saveBtnDisabled]}
@@ -538,4 +605,9 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   otpBackBtn: { alignItems: "center", marginTop: 12 },
   otpBackBtnText: { color: colors.textMuted, fontSize: 12, letterSpacing: 0.4 },
+
+  emailResendRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginTop: 10 },
+  emailResendLabel: { color: colors.textMuted, fontSize: 12 },
+  emailResendLink:  { color: colors.accentGold, fontSize: 12, fontWeight: "700" },
+  emailResendTimer: { color: colors.textMuted, fontSize: 12 },
 });

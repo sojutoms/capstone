@@ -23,7 +23,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.goodsolesph.mobile"
@@ -41,7 +41,8 @@
           "cameraPermission": "GoodSoles PH needs camera access so you can try shoes on with AR."
         }
       ],
-      "expo-image"
+      "expo-image",
+      "expo-sharing"
     ],
     "extra": {
       "eas": {

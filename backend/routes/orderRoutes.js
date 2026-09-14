@@ -1,9 +1,11 @@
 const express = require("express");
 const router  = express.Router();
 const multer  = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
 const { fetchUser, requireRole } = require("../middleware/auth");
-const upload = require("../config/multer"); // Cloudinary multer config
+const upload = require("../config/multer"); // Cloudinary multer config (shared)
+const { cloudinary } = upload;
 
 const {
   getOrderHistory,
@@ -31,13 +33,28 @@ const ACCEPTED_MIME_TYPES = [
 const MAX_FILES   = 6;
 const MAX_SIZE_MB = 50;
 
-// Override the limits on the shared uploader so refund uploads respect the caps.
-// We wrap the shared `upload` config but call `.array()` with explicit limits.
-// If your multer config already accepts limits via options you can adjust there;
-// otherwise we apply a thin wrapper here.
+// Dedicated multer instance for refund media so we're not capped by the
+// shared config's global `files: 5` (which applied even when a route asked
+// for more). Reuses the same Cloudinary account/storage; only the limits
+// differ.
+const refundStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "sneakyconcepts/refunds",
+    resource_type: "auto",
+    allowed_formats: ["jpg", "jpeg", "png", "webp", "gif", "mp4", "mov", "webm"],
+  },
+});
+const refundMulter = multer({
+  storage: refundStorage,
+  limits: {
+    fileSize: MAX_SIZE_MB * 1024 * 1024,
+    files:    MAX_FILES,
+  },
+});
+
 const refundUpload = (req, res, next) => {
-  // Use the shared Cloudinary storage but constrain to 6 files / 50 MB each
-  upload.array("media", MAX_FILES)(req, res, (err) => {
+  refundMulter.array("media", MAX_FILES)(req, res, (err) => {
     if (!err) {
       // Post-upload MIME validation
       const files = req.files || [];

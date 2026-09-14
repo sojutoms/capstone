@@ -19,6 +19,8 @@ import {
 } from "react-native";
 import { Alert } from "../utils/customAlert";
 import * as ImagePicker from "expo-image-picker";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
@@ -80,6 +82,115 @@ const daysElapsed = (isoTimestamp, days) => {
   if (!isoTimestamp) return false;
   const ms = days * 24 * 60 * 60 * 1000;
   return Date.now() - new Date(isoTimestamp).getTime() >= ms;
+};
+
+const escapeHtml = (str) => String(str ?? "").replace(/[&<>"']/g, (c) => (
+  { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+));
+
+const buildReceiptHtml = (order) => {
+  const subtotal = order.subtotal || order.items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const shippingFee = Number(order.shippingFee) || 0;
+  const total = order.total || 0;
+  const rows = order.items.map((it) => `
+    <tr>
+      <td>${escapeHtml(it.name)}<div class="meta">Size: ${escapeHtml(it.size)}</div></td>
+      <td class="c">${it.quantity}</td>
+      <td class="r">₱${Number(it.price).toLocaleString()}</td>
+    </tr>`).join("");
+  return `
+<!doctype html><html><head><meta charset="utf-8" />
+<title>Receipt - Order ${escapeHtml(order.orderNumber)}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; padding: 40px; color: #111; }
+  h1 { margin: 0 0 4px; letter-spacing: 4px; }
+  .sub { color: #666; font-size: 12px; letter-spacing: 1px; }
+  .header { border-bottom: 2px solid #111; padding-bottom: 20px; margin-bottom: 24px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th { text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; color: #666; border-bottom: 1px solid #ccc; padding: 10px 8px; }
+  td { padding: 12px 8px; border-bottom: 1px solid #eee; font-size: 13px; vertical-align: top; }
+  .meta { font-size: 11px; color: #888; margin-top: 3px; }
+  .c { text-align: center; } .r { text-align: right; }
+  .summary td { border: none; padding: 6px 8px; font-size: 13px; }
+  .summary tr.total td { border-top: 2px solid #111; font-weight: 700; font-size: 15px; padding-top: 12px; }
+  .footer { margin-top: 40px; text-align: center; color: #999; font-size: 11px; letter-spacing: 0.5px; }
+</style></head><body>
+  <div class="header">
+    <h1>GOODSOLES.PH</h1>
+    <div class="sub">ORDER RECEIPT · #${escapeHtml(order.orderNumber)}</div>
+    <div class="sub">${new Date(order.timestamp).toLocaleString()}</div>
+  </div>
+  <table>
+    <thead><tr><th>Item</th><th class="c">Qty</th><th class="r">Price</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <table class="summary">
+    <tr><td>Subtotal</td><td class="r">₱${subtotal.toLocaleString()}</td></tr>
+    <tr><td>Shipping</td><td class="r">₱${shippingFee.toLocaleString()}</td></tr>
+    <tr class="total"><td>TOTAL PAID</td><td class="r">₱${total.toLocaleString()}</td></tr>
+  </table>
+  <div class="footer">
+    Thank you for choosing GoodSoles PH.<br/>
+    This is a digitally generated receipt.
+  </div>
+</body></html>`;
+};
+
+const buildCertificateHtml = (order) => {
+  const serial = `GS-${String(order.orderNumber).padStart(6, "0")}-${String(order.timestamp).slice(-4)}`;
+  const item = order.items?.[0]?.name || "Premium Selection";
+  const date = new Date(order.timestamp).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  return `
+<!doctype html><html><head><meta charset="utf-8" />
+<title>Certificate - Order ${escapeHtml(order.orderNumber)}</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; padding: 0; color: #111; margin: 0; }
+  .wrap { padding: 48px; }
+  .frame { border: 3px double #111; padding: 40px; position: relative; }
+  .frame::before { content: ''; position: absolute; inset: 8px; border: 1px solid #111; pointer-events: none; }
+  .brand { text-align: center; letter-spacing: 6px; font-size: 12px; color: #666; margin-bottom: 8px; }
+  h1 { text-align: center; font-size: 26px; letter-spacing: 6px; margin: 0 0 6px; }
+  .subtitle { text-align: center; letter-spacing: 4px; font-size: 11px; color: #888; margin-bottom: 32px; }
+  .row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed #ccc; font-size: 13px; }
+  .row .k { text-transform: uppercase; letter-spacing: 2px; font-size: 11px; color: #666; }
+  .row .v { font-weight: 600; }
+  .statement { margin-top: 24px; font-size: 12px; line-height: 1.6; color: #333; text-align: center; padding: 0 12px; }
+  .footer { display: flex; justify-content: space-between; margin-top: 40px; align-items: end; }
+  .sig-line { border-top: 1px solid #111; width: 180px; padding-top: 6px; text-align: center; font-size: 10px; letter-spacing: 2px; color: #666; }
+  .seal { border: 2px solid #111; border-radius: 50%; width: 92px; height: 92px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
+</style></head><body>
+  <div class="wrap">
+    <div class="frame">
+      <div class="brand">GOODSOLES.PH</div>
+      <h1>CERTIFICATE OF AUTHENTICITY</h1>
+      <div class="subtitle">PREMIUM COLLECTOR SERIES</div>
+      <div class="row"><span class="k">Item Identifier</span><span class="v">${escapeHtml(item)}</span></div>
+      <div class="row"><span class="k">Acquisition Date</span><span class="v">${escapeHtml(date)}</span></div>
+      <div class="row"><span class="k">Verification ID</span><span class="v">${escapeHtml(serial)}</span></div>
+      <p class="statement">
+        This digital certificate verifies that the aforementioned item has undergone a rigorous
+        multi-point inspection by GoodSoles experts and is guaranteed 100% authentic.
+      </p>
+      <div class="footer">
+        <div class="sig-line">AUTHORIZED SIGNATURE</div>
+        <div class="seal">AUTHENTIC</div>
+      </div>
+    </div>
+  </div>
+</body></html>`;
+};
+
+const shareGeneratedPdf = async (html, fallbackFilename) => {
+  const { uri } = await Print.printToFileAsync({ html, base64: false });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(uri, {
+      mimeType: "application/pdf",
+      dialogTitle: fallbackFilename,
+      UTI: "com.adobe.pdf",
+    });
+  }
+  return uri;
 };
 
 const effectiveStatus = (order) => {
@@ -259,9 +370,10 @@ function RefundModal({ visible, order, onClose, onSubmit, submitting, styles, co
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [media, setMedia] = useState([]);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (visible) { setReason(""); setNotes(""); setMedia([]); }
+    if (visible) { setReason(""); setNotes(""); setMedia([]); setErrors({}); }
   }, [visible]);
 
   const addPhotos = async () => {
@@ -280,12 +392,30 @@ function RefundModal({ visible, order, onClose, onSubmit, submitting, styles, co
     });
     if (!result.canceled && result.assets?.length) {
       setMedia((prev) => [...prev, ...result.assets.slice(0, remaining)].slice(0, MAX_REFUND_MEDIA));
+      if (errors.media) setErrors((p) => { const n = { ...p }; delete n.media; return n; });
     }
   };
 
   const removePhoto = (idx) => setMedia((prev) => prev.filter((_, i) => i !== idx));
 
-  const canSubmit = !!reason && media.length > 0 && !submitting;
+  const validate = () => {
+    const e = {};
+    if (!reason) e.reason = "Please select an item in the list.";
+    if (media.length === 0) e.media = "Please attach at least one photo or video showing the issue.";
+    return e;
+  };
+
+  const handleSubmit = () => {
+    if (submitting) return;
+    const e = validate();
+    setErrors(e);
+    if (Object.keys(e).length > 0) return;
+    onSubmit(reason, notes, media);
+  };
+
+  const clearError = (field) => {
+    if (errors[field]) setErrors((p) => { const n = { ...p }; delete n[field]; return n; });
+  };
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -304,13 +434,14 @@ function RefundModal({ visible, order, onClose, onSubmit, submitting, styles, co
                 <TouchableOpacity
                   key={r}
                   style={[styles.reasonOption, reason === r && styles.reasonOptionSelected]}
-                  onPress={() => setReason(r)}
+                  onPress={() => { setReason(r); clearError("reason"); }}
                 >
                   <View style={[styles.radioCircle, reason === r && styles.radioCircleFilled]} />
                   <Text style={[styles.reasonText, reason === r && styles.reasonTextSelected]}>{r}</Text>
                 </TouchableOpacity>
               ))}
             </View>
+            {errors.reason && <Text style={styles.reviewErrorText}>{errors.reason}</Text>}
 
             <Text style={[styles.inputLabel, { marginTop: 14 }]}>ADDITIONAL DETAILS (OPTIONAL)</Text>
             <TextInput
@@ -333,12 +464,16 @@ function RefundModal({ visible, order, onClose, onSubmit, submitting, styles, co
                 </View>
               ))}
               {media.length < MAX_REFUND_MEDIA && (
-                <TouchableOpacity style={styles.refundAddPhoto} onPress={addPhotos}>
+                <TouchableOpacity
+                  style={[styles.refundAddPhoto, errors.media && { borderColor: colors.danger }]}
+                  onPress={addPhotos}
+                >
                   <Text style={styles.refundAddPhotoText}>+</Text>
                 </TouchableOpacity>
               )}
             </ScrollView>
             <Text style={styles.refundMediaHint}>At least one photo of the item is required.</Text>
+            {errors.media && <Text style={styles.reviewErrorText}>{errors.media}</Text>}
           </ScrollView>
 
           <View style={styles.modalActions}>
@@ -346,9 +481,10 @@ function RefundModal({ visible, order, onClose, onSubmit, submitting, styles, co
               <Text style={styles.modalBtnSecondaryText}>CANCEL</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalBtnPrimary, !canSubmit && styles.modalBtnDisabled]}
-              onPress={() => canSubmit && onSubmit(reason, notes, media)}
-              disabled={!canSubmit}
+              style={[styles.modalBtnPrimary, submitting && styles.modalBtnDisabled]}
+              onPress={handleSubmit}
+              disabled={submitting}
+              activeOpacity={0.85}
             >
               {submitting
                 ? <ActivityIndicator size="small" color={colors.textInverse} />
@@ -387,15 +523,37 @@ function ReviewModal({ visible, product, onClose, onSubmit, submitting, styles, 
   const [comfort, setComfort] = useState("");
   const [recommend, setRecommend] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (visible) {
       setRating(0); setReview("");
       setFit(""); setComfort(""); setRecommend(""); setAgreed(false);
+      setErrors({});
     }
   }, [visible]);
 
-  const canSubmit = rating > 0 && review.trim().length >= 10 && agreed && !submitting;
+  const validate = () => {
+    const e = {};
+    if (rating === 0) e.rating = "Please select a rating.";
+    const trimmed = review.trim();
+    if (!trimmed) e.review = "Please write your review.";
+    else if (trimmed.length < 10) e.review = "Review must be at least 10 characters.";
+    if (!agreed) e.agreed = "Please agree to the terms.";
+    return e;
+  };
+
+  const handleSubmit = () => {
+    if (submitting) return;
+    const e = validate();
+    setErrors(e);
+    if (Object.keys(e).length > 0) return;
+    onSubmit({ rating, review: review.trim(), fit, comfort, recommend });
+  };
+
+  const clearError = (field) => {
+    if (errors[field]) setErrors((p) => { const n = { ...p }; delete n[field]; return n; });
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -412,25 +570,27 @@ function ReviewModal({ visible, product, onClose, onSubmit, submitting, styles, 
             )}
 
             <Text style={styles.inputLabel}>OVERALL RATING *</Text>
-            <View style={{ flexDirection: "row", gap: 6, marginBottom: 14 }}>
+            <View style={{ flexDirection: "row", gap: 6, marginBottom: errors.rating ? 4 : 14 }}>
               {[1, 2, 3, 4, 5].map((i) => (
-                <TouchableOpacity key={i} onPress={() => setRating(i)}>
+                <TouchableOpacity key={i} onPress={() => { setRating(i); clearError("rating"); }}>
                   <Text style={{ fontSize: 28, color: i <= rating ? colors.accentGold : colors.bgTertiary }}>★</Text>
                 </TouchableOpacity>
               ))}
             </View>
+            {errors.rating && <Text style={styles.reviewErrorText}>{errors.rating}</Text>}
 
             <Text style={styles.inputLabel}>YOUR REVIEW * (min. 10 characters)</Text>
             <TextInput
-              style={styles.reviewInput}
+              style={[styles.reviewInput, errors.review && styles.reviewInputError]}
               placeholder="Describe what you liked, what you didn't, and other key things shoppers should know."
               placeholderTextColor={colors.bgTertiary}
               multiline
               maxLength={5000}
               value={review}
-              onChangeText={setReview}
+              onChangeText={(v) => { setReview(v); clearError("review"); }}
             />
             <Text style={styles.writeMuted}>{review.length}/5000</Text>
+            {errors.review && <Text style={styles.reviewErrorText}>{errors.review}</Text>}
 
             <Text style={[styles.inputLabel, { marginTop: 14 }]}>HOW DID THIS PRODUCT FIT?</Text>
             <RadioGroup options={REVIEW_FIT_OPTIONS} value={fit} onChange={setFit} styles={styles} />
@@ -441,12 +601,13 @@ function ReviewModal({ visible, product, onClose, onSubmit, submitting, styles, 
             <Text style={[styles.inputLabel, { marginTop: 14 }]}>WOULD YOU RECOMMEND IT?</Text>
             <RadioGroup options={["Yes", "No"]} value={recommend} onChange={setRecommend} styles={styles} />
 
-            <TouchableOpacity style={styles.agreeRow} onPress={() => setAgreed(!agreed)}>
+            <TouchableOpacity style={styles.agreeRow} onPress={() => { setAgreed(!agreed); clearError("agreed"); }}>
               <View style={[styles.radioCircle, agreed && styles.radioCircleFilled, { borderRadius: 4 }]} />
               <Text style={styles.writeMuted}>
                 I agree to the terms and understand my review may be used for marketing purposes.
               </Text>
             </TouchableOpacity>
+            {errors.agreed && <Text style={styles.reviewErrorText}>{errors.agreed}</Text>}
           </ScrollView>
 
           <View style={styles.modalActions}>
@@ -454,9 +615,10 @@ function ReviewModal({ visible, product, onClose, onSubmit, submitting, styles, 
               <Text style={styles.modalBtnSecondaryText}>CANCEL</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalBtnPrimary, !canSubmit && styles.modalBtnDisabled]}
-              onPress={() => canSubmit && onSubmit({ rating, review: review.trim(), fit, comfort, recommend })}
-              disabled={!canSubmit}
+              style={[styles.modalBtnPrimary, submitting && styles.modalBtnDisabled]}
+              onPress={handleSubmit}
+              disabled={submitting}
+              activeOpacity={0.85}
             >
               {submitting
                 ? <ActivityIndicator size="small" color={colors.textInverse} />
@@ -478,10 +640,38 @@ function DetailModal({
 }) {
   if (!order) return null;
   const rawIsDelivered = normalizeStatus(order.status) === "delivered";
-  const canReview = effectiveStatus(order) === "completed";
+  const isCompleted = effectiveStatus(order) === "completed";
+  const canReview = isCompleted;
   const canRefund = canRequestRefund(order);
   const isCancellable = normalizeStatus(order.status) === "pending";
   const alreadyRefunded = !!(order.refundStatus || order.refundReason);
+
+  const [receiptBusy, setReceiptBusy] = useState(false);
+  const [certBusy, setCertBusy]       = useState(false);
+
+  const handleReceipt = async () => {
+    if (receiptBusy) return;
+    setReceiptBusy(true);
+    try {
+      await shareGeneratedPdf(buildReceiptHtml(order), `Receipt-${order.orderNumber}.pdf`);
+    } catch (err) {
+      Alert.alert("Receipt", err?.message || "Could not generate receipt.");
+    } finally {
+      setReceiptBusy(false);
+    }
+  };
+
+  const handleCertificate = async () => {
+    if (certBusy) return;
+    setCertBusy(true);
+    try {
+      await shareGeneratedPdf(buildCertificateHtml(order), `Certificate-${order.orderNumber}.pdf`);
+    } catch (err) {
+      Alert.alert("Certificate", err?.message || "Could not generate certificate.");
+    } finally {
+      setCertBusy(false);
+    }
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -552,6 +742,33 @@ function DetailModal({
               <Text style={styles.refundAlreadyText}>
                 ↩ A refund has already been requested for this order.
               </Text>
+            )}
+
+            {isCompleted && (
+              <View style={styles.detailUtilRow}>
+                <TouchableOpacity
+                  style={[styles.detailUtilBtn, certBusy && styles.btnDisabled]}
+                  onPress={handleCertificate}
+                  disabled={certBusy}
+                  activeOpacity={0.85}
+                >
+                  {certBusy
+                    ? <ActivityIndicator size="small" color={colors.textPrimary} />
+                    : <Text style={styles.detailUtilBtnText}>🛡  CERTIFICATE</Text>
+                  }
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.detailUtilBtn, receiptBusy && styles.btnDisabled]}
+                  onPress={handleReceipt}
+                  disabled={receiptBusy}
+                  activeOpacity={0.85}
+                >
+                  {receiptBusy
+                    ? <ActivityIndicator size="small" color={colors.textPrimary} />
+                    : <Text style={styles.detailUtilBtnText}>📄  RECEIPT</Text>
+                  }
+                </TouchableOpacity>
+              </View>
             )}
 
             {canRefund && (
@@ -788,8 +1005,6 @@ export default function OrderHistoryScreen({ navigation }) {
 
   // ── Refund ──
 
-  // Matches backend orderController.requestRefund — multipart/form-data with
-  // reason, optional notes, and 1+ media files (photo evidence is required).
   const submitRefund = async (reason, notes, media) => {
     if (!refundOrder) return;
     setRefundSubmitting(true);
@@ -808,22 +1023,33 @@ export default function OrderHistoryScreen({ navigation }) {
         });
       });
 
-      const res = await fetch(`${BASE_URL}/order/${refundOrder.orderNumber}/refund`, {
-        method: "POST",
-        headers: { "auth-token": userToken },
-        body: formData,
+      const { status, body } = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${BASE_URL}/order/${refundOrder.orderNumber}/refund`);
+        xhr.setRequestHeader("auth-token", userToken || "");
+        xhr.setRequestHeader("ngrok-skip-browser-warning", "true");
+        xhr.setRequestHeader("Accept", "application/json");
+        xhr.onload = () => resolve({ status: xhr.status, body: xhr.responseText });
+        xhr.onerror = () => reject(new Error("Network request failed"));
+        xhr.ontimeout = () => reject(new Error("Request timed out"));
+        xhr.send(formData);
       });
-      const data = await res.json();
+
+      let data;
+      try { data = JSON.parse(body || "{}"); }
+      catch { data = { success: false, error: `Server returned ${status}.` }; }
+
       if (data.success) {
         addToast("success", "Refund request submitted.");
         setRefundVisible(false);
         setRefundOrder(null);
         fetchOrders(currentPage, statusFilter);
       } else {
-        addToast("error", data.error || "Refund request failed.");
+        addToast("error", data.error || data.message || `Refund request failed (${status}).`);
       }
-    } catch {
-      addToast("error", "Failed to submit refund request.");
+    } catch (err) {
+      console.log("submitRefund error:", err?.message || err);
+      addToast("error", err?.message || "Failed to submit refund request.");
     } finally {
       setRefundSubmitting(false);
       setLoadingIds((p) => p.filter((id) => id !== refundOrder?.orderNumber));
@@ -1514,6 +1740,16 @@ reviewInput: {
   fontSize: 13,
   textAlignVertical: "top",
 },
+reviewInputError: {
+  borderColor: colors.danger,
+},
+reviewErrorText: {
+  color: colors.danger,
+  fontSize: 11,
+  marginTop: 6,
+  marginBottom: 8,
+  letterSpacing: 0.3,
+},
 submitBtn: {
   backgroundColor: colors.textPrimary,
   paddingVertical: 12,
@@ -1614,6 +1850,24 @@ btnReviewText: { color: colors.success, fontSize: 10, fontWeight: "800", letterS
   refundAddPhotoText: { color: colors.textMuted, fontSize: 24, fontWeight: "300" },
   refundMediaHint: { color: colors.textMuted, fontSize: 11, marginBottom: 10 },
   refundAlreadyText: { color: "#ce93d8", fontSize: 12, marginBottom: 10, textAlign: "center" },
+
+  detailUtilRow: { flexDirection: "row", gap: 10, marginTop: 8, marginBottom: 8 },
+  detailUtilBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.bgPrimary,
+    paddingVertical: 12,
+    borderRadius: radius.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  detailUtilBtnText: {
+    color: colors.textPrimary,
+    fontSize: 11,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 1.5,
+  },
 
   // ── Review form (per-item) ──
   radioGroupRow: { gap: 8, marginBottom: 4 },
