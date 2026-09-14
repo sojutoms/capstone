@@ -172,6 +172,11 @@ const UserManagement = () => {
   const [voucherTarget, setVoucherTarget] = useState(null);
   const { toasts, showToast, removeToast } = useToastManager();
 
+  const [pwdNew, setPwdNew] = useState("");
+  const [pwdShow, setPwdShow] = useState(false);
+  const [pwdBusy, setPwdBusy] = useState(false);
+  const [pwdRevealed, setPwdRevealed] = useState("");
+
   // ── Fetchers ──
   const fetchUsers = async () => {
     setLoading(l => ({...l, users: true}));
@@ -286,6 +291,64 @@ const UserManagement = () => {
         showToast({ message: "Role updated", type: "success" });
       }
     } catch { showToast({ message: "Update failed", type: "error" }); }
+  };
+
+  useEffect(() => {
+    setPwdNew(""); setPwdShow(false); setPwdRevealed(""); setPwdBusy(false);
+  }, [selectedStaffId]);
+
+  const generateStrongPassword = () => {
+    const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    const lower = "abcdefghjkmnpqrstuvwxyz";
+    const nums  = "23456789";
+    const syms  = "!@#$%^&*?";
+    const all   = upper + lower + nums + syms;
+    const pick  = (set) => set[Math.floor(Math.random() * set.length)];
+    const chars = [pick(upper), pick(lower), pick(nums), pick(syms)];
+    for (let i = 0; i < 10; i++) chars.push(pick(all));
+    for (let i = chars.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [chars[i], chars[j]] = [chars[j], chars[i]];
+    }
+    return chars.join("");
+  };
+
+  const submitStaffPasswordReset = async (staff, newPassword) => {
+    setPwdBusy(true);
+    try {
+      const res = await authorizedFetch(`/admin/staff/${staff.id}/set-password`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setPwdRevealed(newPassword);
+        setPwdNew("");
+        showToast({ message: `Password reset for ${staff.name}`, type: "success" });
+      } else {
+        showToast({ message: data.error || "Failed to reset password", type: "error" });
+      }
+    } catch {
+      showToast({ message: "Network error", type: "error" });
+    } finally {
+      setPwdBusy(false);
+    }
+  };
+
+  const handleResetPassword = (staff) => {
+    if (!/^.{8,}$/.test(pwdNew) || !/[A-Z]/.test(pwdNew) || !/[0-9]/.test(pwdNew) || !/[^A-Za-z0-9]/.test(pwdNew)) {
+      showToast({ message: "Password must be 8+ chars with uppercase, number, and special.", type: "error" });
+      return;
+    }
+    showToast({
+      message: `Reset "${staff.name}"'s password? This immediately signs them out and requires them to use the new password.`,
+      type: "warning", duration: 0,
+      actions: [
+        { label: "Cancel", variant: "muted", onClick: () => {} },
+        { label: "Reset", variant: "danger", onClick: () => submitStaffPasswordReset(staff, pwdNew) },
+      ],
+    });
   };
 
   const handleRoleToggle = (user, role) => {
@@ -548,6 +611,92 @@ const UserManagement = () => {
                       <div className="user-stat-value" style={{ fontSize: 14, color: '#4ade80' }}>VERIFIED</div>
                     </div>
                   </div>
+
+                  {(isOwner || (isAdmin && !selectedStaff.roles?.includes("admin"))) && !selectedStaff.roles?.includes("owner") && (
+                    <>
+                      <div className="user-section-title" style={{ marginTop: 40 }}>STAFF CREDENTIALS</div>
+                      <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
+                        Passwords are stored as one-way bcrypt hashes and cannot be viewed — even by the owner. Use the field below to set a new password for this staff account. The plaintext will be shown once immediately after the reset so you can share it with them.
+                      </p>
+
+                      {pwdRevealed ? (
+                        <div style={{ padding: 16, borderRadius: 10, border: '1px solid #4ade80', background: 'rgba(74,222,128,0.06)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 11, fontWeight: 800, letterSpacing: 1, color: '#4ade80' }}>
+                            NEW PASSWORD — SHOWN ONCE
+                            <button
+                              className="sp-btn"
+                              style={{ padding: '4px 10px', fontSize: 11 }}
+                              onClick={() => setPwdRevealed("")}
+                            >
+                              I've saved it
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <code style={{ flex: 1, padding: '10px 12px', background: 'var(--bg-dark)', borderRadius: 6, fontFamily: 'var(--font-mono)', fontSize: 14, letterSpacing: 1, color: 'var(--text-primary)', wordBreak: 'break-all' }}>
+                              {pwdRevealed}
+                            </code>
+                            <button
+                              className="sp-btn"
+                              style={{ padding: '10px 14px', fontSize: 11 }}
+                              onClick={() => { navigator.clipboard?.writeText(pwdRevealed); showToast({ message: "Password copied to clipboard", type: "success" }); }}
+                            >
+                              Copy
+                            </button>
+                          </div>
+                          <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-tertiary)' }}>
+                            Give this to <strong>{selectedStaff.name}</strong> now. Once you dismiss this panel it cannot be recovered — you'd have to reset it again.
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'stretch', marginBottom: 10 }}>
+                            <div style={{ position: 'relative', flex: 1 }}>
+                              <input
+                                type={pwdShow ? "text" : "password"}
+                                value={pwdNew}
+                                onChange={(e) => setPwdNew(e.target.value)}
+                                placeholder="New password (min 8 chars, upper + number + special)"
+                                autoComplete="new-password"
+                                style={{
+                                  width: '100%', padding: '11px 42px 11px 14px',
+                                  background: 'var(--bg-dark)', border: '1px solid var(--border-medium)',
+                                  borderRadius: 8, color: 'var(--text-primary)', fontSize: 13, fontFamily: 'var(--font-mono)', boxSizing: 'border-box',
+                                }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setPwdShow(s => !s)}
+                                title={pwdShow ? "Hide password" : "Show password"}
+                                style={{
+                                  position: 'absolute', top: 0, right: 0, height: '100%', padding: '0 12px',
+                                  background: 'transparent', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer',
+                                }}
+                              >
+                                {pwdShow ? <EyeOffIcon /> : <EyeIcon />}
+                              </button>
+                            </div>
+                            <button
+                              type="button"
+                              className="sp-btn"
+                              style={{ padding: '0 14px', fontSize: 11, whiteSpace: 'nowrap' }}
+                              onClick={() => { const p = generateStrongPassword(); setPwdNew(p); setPwdShow(true); }}
+                            >
+                              Generate
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            className="sp-btn sp-btn--primary"
+                            disabled={pwdBusy || !pwdNew}
+                            onClick={() => handleResetPassword(selectedStaff)}
+                            style={{ opacity: (pwdBusy || !pwdNew) ? 0.6 : 1, cursor: (pwdBusy || !pwdNew) ? 'not-allowed' : 'pointer' }}
+                          >
+                            {pwdBusy ? "RESETTING…" : "RESET PASSWORD"}
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
@@ -631,7 +780,13 @@ const GiveVoucherModal = ({ user, onClose, showToast }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.title.trim() || !form.discountPercent) return setError("Title and Discount are required.");
+    if (!form.title.trim()) return setError("Title is required.");
+    if (!form.discountPercent) return setError("Discount is required.");
+    if (!form.expiresAt) return setError("Expiry date is required.");
+    const expiry = new Date(form.expiresAt);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (isNaN(expiry.getTime()) || expiry < today) return setError("Expiry date must be today or later.");
     setSaving(true);
     try {
       const res = await authorizedFetch("/admin/give-voucher", {
@@ -666,8 +821,16 @@ const GiveVoucherModal = ({ user, onClose, showToast }) => {
             </div>
           </div>
           <div className="luxe-input-group">
-            <label className="luxe-label">EXPIRES</label>
-            <input type="date" name="expiresAt" value={form.expiresAt} onChange={handleChange} className="luxe-input" />
+            <label className="luxe-label">EXPIRES *</label>
+            <input
+              type="date"
+              name="expiresAt"
+              value={form.expiresAt}
+              onChange={handleChange}
+              className="luxe-input"
+              min={new Date().toISOString().split("T")[0]}
+              required
+            />
           </div>
           {error && <p style={{ color: '#f87171', fontSize: 11, fontWeight: 700 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
@@ -680,29 +843,81 @@ const GiveVoucherModal = ({ user, onClose, showToast }) => {
   );
 };
 
+const STAFF_PASSWORD_RULES = [
+  { key: "length",  label: "At least 8 characters",         test: (p) => p.length >= 8 },
+  { key: "upper",   label: "One uppercase letter (A-Z)",    test: (p) => /[A-Z]/.test(p) },
+  { key: "number",  label: "One number (0-9)",              test: (p) => /[0-9]/.test(p) },
+  { key: "special", label: "One special character (!@#$…)", test: (p) => /[^A-Za-z0-9]/.test(p) },
+];
+
+const sanitizeStaffName = (v) => v.replace(/[^\p{L}' -]/gu, "").slice(0, 54);
+
 const CreateStaffUser = ({ showToast, onCreated }) => {
   const [show, setShow] = useState(false);
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "09", password: "", role: "staff" });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "+63", password: "", role: "staff" });
+  const [errors, setErrors] = useState({});
+  const [showPwd, setShowPwd] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const pwdChecks = STAFF_PASSWORD_RULES.map((r) => ({ ...r, passed: r.test(form.password) }));
+
+  const setField = (name, value) => {
+    if (name === "firstName" || name === "lastName") value = sanitizeStaffName(value);
+    else if (name === "phone") {
+      let digits = value.replace(/\D/g, "");
+      if (!digits.startsWith("63")) digits = "63" + digits.replace(/^6?3?/, "");
+      digits = digits.slice(0, 12);
+      value = "+" + digits;
+    }
+    setForm((p) => ({ ...p, [name]: value }));
+    setErrors((p) => ({ ...p, [name]: "" }));
+  };
+
+  const validate = () => {
+    const e = {};
+    if (!form.firstName.trim()) e.firstName = "First name is required.";
+    if (!form.lastName.trim())  e.lastName  = "Last name is required.";
+    if (!form.email.trim())     e.email     = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Enter a valid email.";
+    if (!form.phone || !/^\+63\d{10}$/.test(form.phone)) e.phone = "Phone number must start with +63 and be followed by exactly 10 digits.";
+    if (!form.password) e.password = "Password is required.";
+    else if (pwdChecks.some((c) => !c.passed)) e.password = "Password does not meet all requirements.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const reset = () => {
+    setForm({ firstName: "", lastName: "", email: "", phone: "+63", password: "", role: "staff" });
+    setErrors({});
+    setShowPwd(false);
+  };
+
+  const closeModal = () => { setShow(false); reset(); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
     setSaving(true);
     try {
       const res = await authorizedFetch("/admin/create-staff", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          name: `${form.firstName} ${form.lastName}`, 
-          email: form.email, 
-          phone: form.phone, 
-          password: form.password, 
-          role: form.role 
+        body: JSON.stringify({
+          name: `${form.firstName.trim()} ${form.lastName.trim()}`,
+          email: form.email.trim(),
+          phone: form.phone,
+          password: form.password,
+          role: form.role,
         }),
       });
-      if ((await res.json()).success) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
         showToast({ message: "Staff created", type: "success" });
-        setShow(false);
+        closeModal();
         onCreated();
+      } else {
+        const msg = String(data.error || data.message || "").toLowerCase();
+        if (msg.includes("email")) setErrors((p) => ({ ...p, email: data.error || data.message }));
+        else showToast({ message: data.error || data.message || "Failed to create staff", type: "error" });
       }
     } catch { showToast({ message: "Failed to create", type: "error" }); }
     finally { setSaving(false); }
@@ -711,19 +926,113 @@ const CreateStaffUser = ({ showToast, onCreated }) => {
   if (!show) return <button className="sp-btn sp-btn--primary" style={{ width: '100%' }} onClick={() => setShow(true)}>+ PROVISION NEW STAFF</button>;
 
   return (
-    <div className="voucher-overlay animate-in" style={{ zIndex: 3000 }} onClick={(e) => e.target === e.currentTarget && setShow(false)}>
-      <div className="voucher-modal glass-strong" style={{ maxWidth: 600 }}>
+    <div className="voucher-overlay animate-in" style={{ zIndex: 3000 }} onClick={(e) => e.target === e.currentTarget && closeModal()}>
+      <div className="voucher-modal glass-strong" style={{ maxWidth: 640 }}>
         <div className="user-section-title">PROVISION NEW STAFF</div>
-        <form onSubmit={handleSubmit} className="staff-form-luxe">
-          <div className="luxe-input-group"><label className="luxe-label">FIRST</label><input name="firstName" value={form.firstName} onChange={e => setForm({...form, firstName: e.target.value})} className="luxe-input" /></div>
-          <div className="luxe-input-group"><label className="luxe-label">LAST</label><input name="lastName" value={form.lastName} onChange={e => setForm({...form, lastName: e.target.value})} className="luxe-input" /></div>
-          <div className="luxe-input-group full-width"><label className="luxe-label">EMAIL</label><input name="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="luxe-input" /></div>
-          <div className="luxe-input-group"><label className="luxe-label">PHONE</label><input name="phone" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="luxe-input" /></div>
-          <div className="luxe-input-group"><label className="luxe-label">ROLE</label><select value={form.role} onChange={e => setForm({...form, role: e.target.value})} className="luxe-input"><option value="admin">ADMIN</option><option value="staff">STAFF</option><option value="inventory_staff">INVENTORY</option></select></div>
-          <div className="luxe-input-group full-width"><label className="luxe-label">PASSWORD</label><input type="password" name="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} className="luxe-input" /></div>
+        <form onSubmit={handleSubmit} className="staff-form-luxe" noValidate>
+          <div className="luxe-input-group">
+            <label className="luxe-label">FIRST</label>
+            <input
+              name="firstName"
+              value={form.firstName}
+              onChange={(e) => setField("firstName", e.target.value)}
+              className={`luxe-input ${errors.firstName ? "luxe-input-error" : ""}`}
+              placeholder="Nicki"
+              autoComplete="off"
+            />
+            {errors.firstName && <span className="luxe-error-text">{errors.firstName}</span>}
+          </div>
+
+          <div className="luxe-input-group">
+            <label className="luxe-label">LAST</label>
+            <input
+              name="lastName"
+              value={form.lastName}
+              onChange={(e) => setField("lastName", e.target.value)}
+              className={`luxe-input ${errors.lastName ? "luxe-input-error" : ""}`}
+              placeholder="Tomiyama"
+              autoComplete="off"
+            />
+            {errors.lastName && <span className="luxe-error-text">{errors.lastName}</span>}
+          </div>
+
+          <div className="luxe-input-group full-width">
+            <label className="luxe-label">EMAIL</label>
+            <input
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={(e) => setField("email", e.target.value)}
+              className={`luxe-input ${errors.email ? "luxe-input-error" : ""}`}
+              placeholder="staff@example.com"
+              autoComplete="off"
+            />
+            {errors.email && <span className="luxe-error-text">{errors.email}</span>}
+          </div>
+
+          <div className="luxe-input-group">
+            <label className="luxe-label">PHONE</label>
+            <input
+              name="phone"
+              value={form.phone}
+              onChange={(e) => setField("phone", e.target.value)}
+              className={`luxe-input ${errors.phone ? "luxe-input-error" : ""}`}
+              placeholder="+639XXXXXXXXX"
+              inputMode="numeric"
+              maxLength={13}
+            />
+            {errors.phone && <span className="luxe-error-text">{errors.phone}</span>}
+          </div>
+
+          <div className="luxe-input-group">
+            <label className="luxe-label">ROLE</label>
+            <select
+              value={form.role}
+              onChange={(e) => setField("role", e.target.value)}
+              className="luxe-input"
+            >
+              <option value="admin">ADMIN</option>
+              <option value="staff">STAFF</option>
+              <option value="inventory_staff">INVENTORY</option>
+            </select>
+          </div>
+
+          <div className="luxe-input-group full-width">
+            <label className="luxe-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>PASSWORD</span>
+              <button
+                type="button"
+                onClick={() => setShowPwd((s) => !s)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-tertiary)', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', cursor: 'pointer' }}
+              >
+                {showPwd ? "HIDE" : "SHOW"}
+              </button>
+            </label>
+            <input
+              type={showPwd ? "text" : "password"}
+              name="password"
+              value={form.password}
+              onChange={(e) => setField("password", e.target.value)}
+              className={`luxe-input ${errors.password ? "luxe-input-error" : ""}`}
+              placeholder="Min. 8 chars, upper + number + special"
+              autoComplete="new-password"
+            />
+            {errors.password && <span className="luxe-error-text">{errors.password}</span>}
+            {form.password.length > 0 && (
+              <div className="luxe-checks">
+                {pwdChecks.map((c) => (
+                  <div key={c.key} className={`luxe-check ${c.passed ? "luxe-check-pass" : ""}`}>
+                    <span className="luxe-check-icon">{c.passed ? "✓" : "✗"}</span>
+                    <span>{c.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="user-actions-row full-width">
             <button type="submit" className="sp-btn sp-btn--primary" disabled={saving}>{saving ? "CREATING..." : "CONFIRM"}</button>
-            <button type="button" className="sp-btn" style={{ borderColor: 'var(--border-subtle)' }} onClick={() => setShow(false)}>CANCEL</button>
+            <button type="button" className="sp-btn" style={{ borderColor: 'var(--border-subtle)' }} onClick={closeModal}>CANCEL</button>
           </div>
         </form>
       </div>

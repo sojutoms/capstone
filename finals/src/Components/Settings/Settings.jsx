@@ -657,39 +657,40 @@ const Settings = () => {
                   )}
                 </div>
 
-                <div className="input-group">
-                  <label>Phone Number</label>
-                  <input
-                    name="phone"
-                    className={editing ? "editing" : ""}
-                    disabled={!editing}
-                    value={profile.phone}
-                    inputMode="numeric"
-                    maxLength={13}
-                    placeholder="+639XXXXXXXXX"
-                    onChange={(e) => {
-                      let digits = e.target.value.replace(/\D/g, "");
-                      if (!digits.startsWith("63")) digits = "63" + digits.replace(/^6?3?/, "");
-                      digits = digits.slice(0, 12);
-                      setProfile((p) => ({ ...p, phone: "+" + digits }));
-                    }}
-                  />
-                  {editing && profile.phone && !/^\+63\d{10}$/.test(profile.phone) && (
-                    <span className="field-error">Phone number must start with +63 and be followed by exactly 10 digits.</span>
-                  )}
-                </div>
-
-                <div className="input-group">
-                  <label>Place (City / Province)</label>
-                  <input
-                    name="place"
-                    className={editing ? "editing" : ""}
-                    disabled={!editing}
-                    value={profile.place}
-                    maxLength={80}
-                    placeholder="e.g. Quezon City"
-                    onChange={(e) => setProfile((p) => ({ ...p, place: e.target.value }))}
-                  />
+                <div className="row-flex" style={{ display: "flex", gap: 20 }}>
+                  <div className="input-group" style={{ flex: 1 }}>
+                    <label>Phone Number</label>
+                    <input
+                      name="phone"
+                      className={editing ? "editing" : ""}
+                      disabled={!editing}
+                      value={profile.phone}
+                      inputMode="numeric"
+                      maxLength={13}
+                      placeholder="+639XXXXXXXXX"
+                      onChange={(e) => {
+                        let digits = e.target.value.replace(/\D/g, "");
+                        if (!digits.startsWith("63")) digits = "63" + digits.replace(/^6?3?/, "");
+                        digits = digits.slice(0, 12);
+                        setProfile((p) => ({ ...p, phone: "+" + digits }));
+                      }}
+                    />
+                    {editing && profile.phone && !/^\+63\d{10}$/.test(profile.phone) && (
+                      <span className="field-error">Phone number must start with +63 and be followed by exactly 10 digits.</span>
+                    )}
+                  </div>
+                  <div className="input-group" style={{ flex: 1 }}>
+                    <label>Place (City / Province)</label>
+                    <input
+                      name="place"
+                      className={editing ? "editing" : ""}
+                      disabled={!editing}
+                      value={profile.place}
+                      maxLength={80}
+                      placeholder="e.g. Quezon City"
+                      onChange={(e) => setProfile((p) => ({ ...p, place: e.target.value }))}
+                    />
+                  </div>
                 </div>
 
                 <div className="input-group">

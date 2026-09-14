@@ -889,6 +889,57 @@ const redeemPoints = async (req, res) => {
   }
 };
 
+const PASSWORD_RULES = [
+  (p) => p && p.length >= 8,
+  (p) => /[A-Z]/.test(p || ""),
+  (p) => /[0-9]/.test(p || ""),
+  (p) => /[^A-Za-z0-9]/.test(p || ""),
+];
+
+// PUT /admin/staff/:id/set-password
+// Owner/admin sets a staff member's password. Only the plaintext returned
+// once in this response ever exists in the clear — everywhere else it lives
+// as a bcrypt hash, so the caller must capture it now if they want to share
+// it with the staff member.
+const adminSetStaffPassword = async (req, res) => {
+  try {
+    const callerId = String(req.user?.id || req.user?.userId || "");
+    const targetId = String(req.params.id || "");
+    const { newPassword } = req.body || {};
+
+    if (!targetId) return res.status(400).json({ success: false, error: "Missing user id" });
+    if (targetId === callerId) return res.status(400).json({ success: false, error: "Use Change Password for your own account." });
+
+    if (typeof newPassword !== "string" || !PASSWORD_RULES.every((r) => r(newPassword))) {
+      return res.status(400).json({ success: false, error: "Password must be at least 8 characters and include an uppercase letter, a number, and a special character." });
+    }
+
+    const target = await Users.findById(targetId);
+    if (!target) return res.status(404).json({ success: false, error: "Staff member not found" });
+
+    const targetRoles = Array.isArray(target.roles) ? target.roles : [];
+    if (targetRoles.includes("owner")) {
+      return res.status(403).json({ success: false, error: "Owner accounts cannot be reset by other admins." });
+    }
+
+    const callerRoles = Array.isArray(req.user?.roles) ? req.user.roles : [];
+    if (!callerRoles.includes("owner") && !callerRoles.includes("admin")) {
+      return res.status(403).json({ success: false, error: "Only owner or admin can reset staff passwords." });
+    }
+    if (callerRoles.includes("admin") && !callerRoles.includes("owner") && targetRoles.includes("admin")) {
+      return res.status(403).json({ success: false, error: "Admins cannot reset other admins' passwords." });
+    }
+
+    target.password = await bcrypt.hash(newPassword, 10);
+    await target.save();
+
+    res.json({ success: true, message: "Password updated" });
+  } catch (err) {
+    console.error("adminSetStaffPassword error:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+};
+
 module.exports = {
   login,
   signup,
@@ -917,4 +968,5 @@ module.exports = {
   sendChangeEmailOtp,
   confirmEmailChange,
   redeemPoints,
+  adminSetStaffPassword,
 };

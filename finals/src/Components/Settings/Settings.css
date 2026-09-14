@@ -188,7 +188,9 @@
   padding: 48px 56px;
   position: relative;
   overflow-y: auto;
-  max-width: 900px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .section-header {

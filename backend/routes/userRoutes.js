@@ -30,6 +30,7 @@ const {
   confirmEmailChange,
   resendOtp,
   redeemPoints,
+  adminSetStaffPassword,
 } = require("../controllers/userController");
 
 // Auth
@@ -46,6 +47,7 @@ const userAdminAuth = requireRole("owner", "admin");
 router.get("/allusers", userAdminAuth, getAllUsers);
 router.post("/removeuser", userAdminAuth, removeUser);
 router.post("/blockuser", userAdminAuth, blockUser);
+router.put("/admin/staff/:id/set-password", userAdminAuth, adminSetStaffPassword);
 
 // Profile
 router.get("/user/profile", fetchUser, getUserProfile);
