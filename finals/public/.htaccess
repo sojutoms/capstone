@@ -1,0 +1,47 @@
+# Force HTTPS
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# React Router — send all non-file, non-directory requests to index.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set Strict-Transport-Security "max-age=31536000; includeSubDomains" always
+    Header set X-Frame-Options "DENY" always
+    Header set X-Content-Type-Options "nosniff" always
+    Header set Referrer-Policy "strict-origin-when-cross-origin" always
+    Header set Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(self), usb=(), interest-cohort=()"
+    Header set Cross-Origin-Opener-Policy "same-origin"
+    Header unset X-Powered-By
+    Header unset Server
+</IfModule>
+
+# Long cache for hashed static assets — CRA fingerprints filenames on every build
+<FilesMatch "\.(js|css|woff2|woff|ttf|otf|eot|png|jpg|jpeg|webp|svg|ico|mp4|webm)$">
+    <IfModule mod_headers.c>
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </IfModule>
+</FilesMatch>
+
+# Never cache index.html so a redeploy is picked up immediately
+<FilesMatch "^index\.html$">
+    <IfModule mod_headers.c>
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </IfModule>
+</FilesMatch>
+
+# Compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json image/svg+xml
+</IfModule>
+
+# Deny access to source-map files if any are ever uploaded by accident
+<FilesMatch "\.map$">
+    Require all denied
+</FilesMatch>
