@@ -109,6 +109,17 @@ const uploadArEffectFile = async (file) => {
   const fd = new FormData();
   fd.append("arEffect", file);
   const res = await authorizedFetch("/admin/upload-ar-effect", { method: "POST", body: fd });
+  // A backend that hasn't been updated with this route yet returns Express's
+  // default HTML 404 page here, not JSON — res.json() would throw a cryptic
+  // "Unexpected token '<'" in that case, so detect it and say what's
+  // actually wrong instead.
+  if (!res.headers.get("content-type")?.includes("application/json")) {
+    throw new Error(
+      res.status === 404
+        ? "Upload endpoint not found — this server needs to be updated to the latest backend code."
+        : `Unexpected server response (status ${res.status}).`
+    );
+  }
   const data = await res.json();
   if (!res.ok || !data.success) throw new Error(data.error || "AR effect upload failed");
   return data.filename;
