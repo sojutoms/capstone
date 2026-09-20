@@ -1,13 +1,10 @@
 import { Platform } from "react-native";
 
+import { BASE_URL } from "./config";
 // ─── CONFIG ────────────────────────────────────────────────────────────────────
 // On web (Expo web), use localhost directly — no ngrok header needed.
 // On native (iOS/Android), use your ngrok URL.
 const IS_WEB = Platform.OS === "web";
-
-const BASE_URL = IS_WEB
-  ? "http://localhost:4000"
-  : "https://lifting-manpower-corral.ngrok-free.dev";
 
 // NOTE: The "ngrok-skip-browser-warning" header causes CORS preflight to fail
 // when running on web (localhost:8081) because the backend doesn't whitelist it.

@@ -140,7 +140,8 @@
 
 .sku-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 320px));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 300px));
+  justify-content: center;
   gap: 24px;
   min-height: 400px;
   position: relative;
@@ -348,6 +349,7 @@
   border-radius: var(--radius-xl);
   max-width: 1000px;
   width: 100%;
+  max-height: calc(100vh - 80px);
   display: grid;
   grid-template-columns: 400px 1fr;
   overflow: hidden;
@@ -355,13 +357,19 @@
   box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8);
 }
 
+.sku-modal > .modal-sidebar,
+.sku-modal > .modal-main-content {
+  overflow-y: auto;
+  max-height: calc(100vh - 80px);
+}
+
 .modal-close {
   position: absolute;
   top: 24px;
   right: 24px;
-  background: rgba(255, 255, 255, 0.05);
-  border: none;
-  color: #fff;
+  background: var(--glass-hover);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -373,7 +381,10 @@
   transition: all 0.2s;
 }
 
-.modal-close:hover { background: rgba(255, 255, 255, 0.1); }
+.modal-close:hover {
+  background: var(--border-light);
+  color: var(--text-primary);
+}
 
 .modal-back {
   position: absolute;
@@ -411,6 +422,11 @@
   display: flex;
   flex-direction: column;
   gap: 32px;
+}
+
+.modal-image-section {
+  display: flex;
+  justify-content: center;
 }
 
 .modal-image-wrap {
@@ -499,7 +515,7 @@
   margin-bottom: 12px;
 }
 
-.m-value.price { font-size: 24px; font-weight: 800; color: #fff; }
+.m-value.price { font-size: 24px; font-weight: 800; color: var(--text-primary); }
 
 .m-sizes-grid {
   display: flex;
@@ -916,16 +932,22 @@
 @media (max-width: 1000px) {
   .sku-modal {
     grid-template-columns: 1fr;
-    max-height: 90vh;
+    max-height: calc(100vh - 80px);
     overflow-y: auto;
   }
-  
+
+  .sku-modal > .modal-sidebar,
+  .sku-modal > .modal-main-content {
+    overflow-y: visible;
+    max-height: none;
+  }
+
   .modal-sidebar {
     padding: 30px;
     border-right: none;
     border-bottom: 1px solid var(--border-subtle);
   }
-  
+
   .modal-image-wrap {
     max-width: 300px;
     margin: 0 auto;

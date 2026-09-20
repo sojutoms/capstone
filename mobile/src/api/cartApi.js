@@ -1,10 +1,6 @@
 import { Platform } from "react-native";
 
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
-
+import { BASE_URL } from "./config";
 // 🔥 GET CART
 export const getCart = async (token) => {
   const res = await fetch(`${BASE_URL}/getcart`, {

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 
 // Plate number regex: PH format e.g. ABC 1234 or ABC-1234 or ABC1234
-const PLATE_REGEX = /^[A-Z]{2,3}[\s-]?\d{3,4}$/i;
+const PLATE_REGEX = /^[A-Z]{2,3}[\s-]?\d{3,4}$/;
 // PH mobile: exactly 11 digits, must start with 09
 const PHONE_REGEX = /^09\d{9}$/;
-// Name: letters, spaces, hyphens, apostrophes only
-const NAME_REGEX = /^[A-Za-z\s'-]+$/;
+// Name: Latin letters (incl. ñ and common accents), spaces, hyphens, apostrophes, periods
+const NAME_REGEX = /^[A-Za-zÑñÁÉÍÓÚáéíóúÜü.\s'-]+$/;
+// At least one actual letter (prevents "--" or "''" from passing)
+const NAME_HAS_LETTER = /[A-Za-zÑñÁÉÍÓÚáéíóú]/;
 
 const initialForm = { name: "", plate: "", phone: "" };
 
@@ -25,7 +27,9 @@ const RiderModal = ({ open, orderNumber, onConfirm, onCancel }) => {
       !f.name.trim()
         ? "Rider name is required."
         : !NAME_REGEX.test(f.name.trim())
-        ? "Name must contain letters only."
+        ? "Name may only contain letters, spaces, hyphens, and apostrophes."
+        : !NAME_HAS_LETTER.test(f.name)
+        ? "Name must contain at least one letter."
         : f.name.trim().length < 2
         ? "Name must be at least 2 characters."
         : f.name.trim().length > 54
@@ -34,18 +38,16 @@ const RiderModal = ({ open, orderNumber, onConfirm, onCancel }) => {
     plate:
       !f.plate.trim()
         ? "Plate number is required."
-        : !PLATE_REGEX.test(f.plate.trim())
+        : !PLATE_REGEX.test(f.plate.trim().toUpperCase())
         ? "Enter a valid PH plate number (e.g. ABC 1234)."
         : null,
     phone:
       !f.phone.trim()
         ? "Phone number is required."
-        : !/^\d+$/.test(f.phone.trim())
-        ? "Phone number must contain digits only."
-        : f.phone.trim().length !== 11
-        ? "Phone number must be exactly 11 digits."
-        : !f.phone.trim().startsWith("09")
-        ? "Phone number must start with 09."
+        : !PHONE_REGEX.test(f.phone.trim())
+        ? f.phone.trim().length !== 11
+          ? "Phone number must be exactly 11 digits."
+          : "Phone number must start with 09 and contain digits only."
         : null,
   });
 
@@ -53,7 +55,15 @@ const RiderModal = ({ open, orderNumber, onConfirm, onCancel }) => {
   const isValid = !Object.values(errors).some(Boolean);
 
   const handleChange = (field) => (e) => {
-    setForm((p) => ({ ...p, [field]: e.target.value }));
+    let value = e.target.value;
+    if (field === "phone") {
+      value = value.replace(/\D/g, "").slice(0, 11);
+    } else if (field === "plate") {
+      value = value.toUpperCase().replace(/[^A-Z0-9\s-]/g, "").slice(0, 10);
+    } else if (field === "name") {
+      value = value.replace(/[^A-Za-zÑñÁÉÍÓÚáéíóúÜü.\s'-]/g, "").replace(/\s{2,}/g, " ").slice(0, 54);
+    }
+    setForm((p) => ({ ...p, [field]: value }));
   };
 
   const handleBlur = (field) => () => {

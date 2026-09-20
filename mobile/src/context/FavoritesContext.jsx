@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
+import { BASE_URL } from "../api/config";
 import { useAuth } from "./AuthContext";
 import {
   getFavoritesAPI,
@@ -7,11 +8,6 @@ import {
   clearFavoritesAPI,
 } from "../api/favoritesApi";
 import { Platform } from "react-native";
-
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 const FavoritesContext = createContext();
 

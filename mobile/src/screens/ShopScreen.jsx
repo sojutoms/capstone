@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { BASE_URL } from "../api/config";
 import {
   View,
   Text,
@@ -24,11 +25,6 @@ import { isOutOfStock } from "../utils/productHelpers";
 import Toast from "react-native-toast-message";
 
 const { width } = Dimensions.get("window");
-
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 // Same category-membership rules each dedicated category screen uses to
 // filter the shared /allproducts pool, so these previews always match what

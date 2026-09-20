@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { BASE_URL } from "../api/config";
 import {
   View,
   Text,
@@ -28,11 +29,6 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const { width } = Dimensions.get("window");
-
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 /* ─────────────────── CONFIG ─────────────────── */
 

@@ -1,6 +1,9 @@
 ﻿import React, { useEffect, useState, useRef, useCallback } from "react";
 import "./Settings.css";
 import API_BASE_URL from "../../services/api";
+import { censorProfanity } from "../../utils/profanity";
+
+const BIO_MAX = 64;
 
 // Converts a legacy 09XXXXXXXXX number (still the format most existing
 // accounts/checkout have saved) into the +63XXXXXXXXXX format the register
@@ -212,7 +215,7 @@ const Settings = () => {
           phone: normalizePhone(user.phone || ""),
           photo: user.photo || "",
           place: user.place || "",
-          bio: user.bio || "",
+          bio: censorProfanity(user.bio || "").slice(0, BIO_MAX),
         };
         setProfile(prof);
         setOriginalProfile(prof);
@@ -758,9 +761,9 @@ const Settings = () => {
                   <div className="bio-label-row">
                     <label>Bio</label>
                     <span
-                      className={`bio-word-count${(profile.bio || "").trim().split(/\s+/).filter(Boolean).length > 15 ? " bio-word-count-over" : ""}`}
+                      className={`bio-word-count${(profile.bio || "").length >= BIO_MAX ? " bio-word-count-over" : ""}`}
                     >
-                      {(profile.bio || "").trim().split(/\s+/).filter(Boolean).length}/15 words
+                      {(profile.bio || "").length}/{BIO_MAX}
                     </span>
                   </div>
                   <textarea
@@ -769,12 +772,18 @@ const Settings = () => {
                     disabled={!editing}
                     value={profile.bio}
                     rows={4}
-                    placeholder="Tell us a bit about yourself (max. 15 words)…"
-                    onChange={(e) => setProfile((p) => ({ ...p, bio: e.target.value }))}
+                    maxLength={BIO_MAX}
+                    placeholder={`Tell us a bit about yourself (max. ${BIO_MAX} characters)…`}
+                    onChange={(e) =>
+                      setProfile((p) => ({
+                        ...p,
+                        bio: censorProfanity(e.target.value).slice(0, BIO_MAX),
+                      }))
+                    }
                   />
-                  {editing && (profile.bio || "").trim().split(/\s+/).filter(Boolean).length > 15 && (
+                  {editing && (profile.bio || "").length > BIO_MAX && (
                     <span className="field-error">
-                      15 words max (currently {(profile.bio || "").trim().split(/\s+/).filter(Boolean).length})
+                      {BIO_MAX} characters max (currently {(profile.bio || "").length})
                     </span>
                   )}
                 </div>
@@ -785,7 +794,7 @@ const Settings = () => {
                     className="save-btn"
                     disabled={
                       !!(profile.phone && !/^\+63\d{10}$/.test(profile.phone)) ||
-                      (profile.bio || "").trim().split(/\s+/).filter(Boolean).length > 15
+                      (profile.bio || "").length > BIO_MAX
                     }
                   >
                     Submit

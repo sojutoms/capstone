@@ -1,10 +1,6 @@
 import { Platform } from "react-native";
 
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
-
+import { BASE_URL } from "./config";
 // 🔹 GET ADDRESSES
 export const getSavedAddresses = async (token) => {
   const res = await fetch(`${BASE_URL}/getsavedaddresses`, {

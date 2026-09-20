@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { BASE_URL } from "../api/config";
 import {
   View,
   Text,
@@ -277,11 +278,6 @@ const getGreeting = () => {
   if (hour >= 12 && hour < 17) return "GOOD AFTERNOON";
   return "GOOD EVENING";
 };
-
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 /* ─────────────────── SECTION HEADER ─────────────────── */
 

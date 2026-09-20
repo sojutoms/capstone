@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
+import { BASE_URL } from "../api/config";
 import {
   View,
   Text,
@@ -14,11 +15,9 @@ import { useAuth } from "../context/AuthContext";
 import { fonts, radius, typography } from "../theme";
 import { useTheme } from "../context/ThemeContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
+import { censorProfanity } from "../utils/profanity";
 
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
+const BIO_MAX = 64;
 
 // Converts a legacy 09XXXXXXXXX number (still the format most existing
 // accounts have saved) into the +63XXXXXXXXXX format the register form now
@@ -98,7 +97,7 @@ export default function EditProfileScreen({ navigation }) {
             email: u.email || "",
             phone: normalizePhone(u.phone || ""),
             place: u.place || "",
-            bio: u.bio || "",
+            bio: censorProfanity(u.bio || "").slice(0, BIO_MAX),
           });
         }
       } catch {
@@ -117,19 +116,19 @@ export default function EditProfileScreen({ navigation }) {
       if (!digits.startsWith("63")) digits = "63" + digits.replace(/^6?3?/, "");
       digits = digits.slice(0, 12);
       value = "+" + digits;
+    } else if (name === "bio") {
+      value = censorProfanity(value).slice(0, BIO_MAX);
     }
     setForm((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
-
-  const countWords = (text) => text.trim().split(/\s+/).filter(Boolean).length;
 
   const validate = () => {
     const e = {};
     if (!form.firstName.trim()) e.firstName = "First name is required";
     if (!form.lastName.trim()) e.lastName = "Last name is required";
     if (form.phone && !/^\+63\d{10}$/.test(form.phone)) e.phone = "Phone number must start with +63 and be followed by exactly 10 digits.";
-    if (countWords(form.bio) > 15) e.bio = `15 words max (currently ${countWords(form.bio)})`;
+    if (form.bio && form.bio.length > BIO_MAX) e.bio = `${BIO_MAX} characters max (currently ${form.bio.length})`;
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -448,17 +447,18 @@ export default function EditProfileScreen({ navigation }) {
       <View style={s.fieldGroup}>
         <View style={s.bioLabelRow}>
           <Label text="Bio" s={s} />
-          <Text style={[s.wordCount, countWords(form.bio) > 15 && s.wordCountLow]}>
-            {countWords(form.bio)}/15 words
+          <Text style={[s.wordCount, (form.bio || "").length >= BIO_MAX && s.wordCountLow]}>
+            {(form.bio || "").length}/{BIO_MAX}
           </Text>
         </View>
         <TextInput
           style={[s.input, s.bioInput, errors.bio && s.inputError]}
           value={form.bio}
           onChangeText={(v) => handleChange("bio", v)}
-          placeholder="Tell us a bit about yourself (max. 15 words)…"
+          placeholder={`Tell us a bit about yourself (max. ${BIO_MAX} characters)…`}
           placeholderTextColor={colors.bgTertiary}
           multiline
+          maxLength={BIO_MAX}
           textAlignVertical="top"
         />
         <FieldError msg={errors.bio} s={s} />

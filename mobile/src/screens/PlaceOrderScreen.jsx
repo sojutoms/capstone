@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { BASE_URL } from "../api/config";
 import {
   View,
   Text,
@@ -31,11 +32,6 @@ const NCR_REGION_CODE = "1300000000";
 const { width } = Dimensions.get("window");
 const isSmall  = width < 380;
 const isTablet = width > 768;
-
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 /* ─── tiny helpers ─────────────────────────────────────────────────────────── */
 

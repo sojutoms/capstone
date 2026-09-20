@@ -5,6 +5,9 @@ const { OtpModel } = require("../models/index");
 const LoginAttempt = require("../models/LoginAttempt");
 const sendEmail = require("../config/mailer");
 const { recordLoginAttempt, getCallerInfo } = require("./securityController");
+const { censorProfanity } = require("../utils/profanity");
+
+const BIO_MAX = 64;
 
 const JWT_SECRET = require("../config/jwt");
 
@@ -459,14 +462,14 @@ const updateUserProfile = async (req, res) => {
         return res.status(400).json({ success: false, error: "Phone number is already in use." });
     }
 
-    // Bio is optional, but capped — matches the 15-word max enforced
-    // client-side on mobile.
+    // Bio is optional. Cap at BIO_MAX characters and censor profanity so a
+    // client bypass (curl / third-party client) can't slip either through.
     let trimmedBio;
     if (bio !== undefined) {
       trimmedBio = String(bio || "").trim();
-      const wordCount = trimmedBio.split(/\s+/).filter(Boolean).length;
-      if (trimmedBio && wordCount > 15)
-        return res.status(400).json({ success: false, error: "Bio must be 15 words or fewer." });
+      if (trimmedBio.length > BIO_MAX)
+        return res.status(400).json({ success: false, error: `Bio must be ${BIO_MAX} characters or fewer.` });
+      trimmedBio = censorProfanity(trimmedBio);
     }
 
     // This endpoint is used both for full profile-info saves (web, mobile's

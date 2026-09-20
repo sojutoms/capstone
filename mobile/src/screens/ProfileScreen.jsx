@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from "react";
+import { BASE_URL } from "../api/config";
 import {
   View,
   Text,
@@ -26,11 +27,6 @@ import { fonts, radius, typography } from "../theme";
 import { useTheme } from "../context/ThemeContext";
 import { useChatSettings } from "../context/ChatSettingsContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
-
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 function MenuItem({ icon, label, sublabel, onPress, rightElement, danger, styles, colors }) {
   return (
@@ -120,18 +116,52 @@ export default function ProfileScreen({ navigation }) {
 
   const validatePhoto = async (asset) => {
     const uri = asset?.uri || asset;
-    const filename = String(uri).split("/").pop() || "";
-    const ext = (filename.split(".").pop() || "").toLowerCase();
-    const mime = String(asset?.mimeType || "").toLowerCase();
+    const uriName  = String(uri).split("/").pop() || "";
+    const origName = String(asset?.fileName || "").toLowerCase();
+    const mime     = String(asset?.mimeType || "").toLowerCase();
+    const extOf    = (n) => (n.split(".").pop() || "").toLowerCase();
+    const uriExt   = extOf(uriName);
+    const origExt  = extOf(origName);
 
-    const allowedExts = ["jpg", "jpeg", "png", "webp"];
-    const allowedMimes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    const extOk  = allowedExts.includes(ext);
-    const mimeOk = mime ? allowedMimes.includes(mime) : true;
-    if (!extOk || !mimeOk) {
+    // Reject animated / unsupported formats up front — GIF/HEIC/BMP etc.
+    // Check the ORIGINAL filename too because expo-image-picker on Android
+    // often renames the cropped output to .jpg even when the source was GIF.
+    const disallowedExts  = ["gif", "heic", "heif", "bmp", "tiff", "svg", "avif"];
+    const disallowedMimes = ["image/gif", "image/heic", "image/heif", "image/bmp", "image/tiff", "image/svg+xml", "image/avif"];
+    if (
+      (origExt && disallowedExts.includes(origExt)) ||
+      (uriExt  && disallowedExts.includes(uriExt))  ||
+      (mime    && disallowedMimes.includes(mime))
+    ) {
       Alert.alert("Unsupported file type", "Please upload a JPG, PNG, or WEBP photo.");
       return false;
     }
+
+    // Positive allowlist check. mime OR any extension must match; if both are
+    // empty we fall back to the file's magic bytes below.
+    const allowedExts  = ["jpg", "jpeg", "png", "webp"];
+    const allowedMimes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const extOk  = allowedExts.includes(uriExt) || allowedExts.includes(origExt);
+    const mimeOk = mime ? allowedMimes.includes(mime) : true;
+    if (!(extOk && mimeOk)) {
+      Alert.alert("Unsupported file type", "Please upload a JPG, PNG, or WEBP photo.");
+      return false;
+    }
+
+    // Magic-byte sniff to catch a GIF that's been mislabeled with a .jpg
+    // extension on disk. GIF89a/GIF87a starts with the ASCII bytes "GIF8".
+    try {
+      const head = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+        length: 6,
+        position: 0,
+      });
+      const magic = atob(head).slice(0, 4);
+      if (magic === "GIF8") {
+        Alert.alert("Unsupported file type", "Animated GIFs aren't supported. Please upload a JPG, PNG, or WEBP photo.");
+        return false;
+      }
+    } catch {}
 
     let size = Number(asset?.fileSize) || 0;
     if (!size) {
@@ -207,7 +237,7 @@ export default function ProfileScreen({ navigation }) {
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
@@ -225,7 +255,7 @@ export default function ProfileScreen({ navigation }) {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.7,
