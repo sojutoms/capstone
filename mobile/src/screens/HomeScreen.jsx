@@ -18,7 +18,7 @@ import {
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { CommonActions, useFocusEffect } from "@react-navigation/native";
+import { CommonActions, useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { useFavorites } from "../context/FavoritesContext";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
@@ -250,15 +250,15 @@ const StoreMapSection = ({ mapStyles, colors }) => {
         </View>
         <View style={mapStyles.divider} />
         <View style={mapStyles.infoRow}>
-          <Ionicons name="location-outline" size={14} color={colors.textMuted} style={mapStyles.infoIcon} />
+          <Ionicons name="location-outline" size={14} color="#ffffff" style={mapStyles.infoIcon} />
           <Text style={mapStyles.infoText}>{STORE.address}</Text>
         </View>
         <View style={mapStyles.infoRow}>
-          <Ionicons name="time-outline" size={14} color={colors.textMuted} style={mapStyles.infoIcon} />
+          <Ionicons name="time-outline" size={14} color="#ffffff" style={mapStyles.infoIcon} />
           <Text style={mapStyles.infoText}>{STORE.hours}</Text>
         </View>
         <View style={mapStyles.infoRow}>
-          <Ionicons name="call-outline" size={14} color={colors.textMuted} style={mapStyles.infoIcon} />
+          <Ionicons name="call-outline" size={14} color="#ffffff" style={mapStyles.infoIcon} />
           <TouchableOpacity onPress={callStore}>
             <Text style={[mapStyles.infoText, mapStyles.infoTextLink]}>{STORE.phone}</Text>
           </TouchableOpacity>
@@ -304,7 +304,7 @@ export default function HomeScreen({ navigation }) {
   const { colors, isDark } = useTheme();
   const s = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
   const tileStyles = useMemo(() => makeTileStyles(colors), [colors]);
-  const mapStyles = useMemo(() => makeMapStyles(colors), [colors]);
+  const mapStyles = useMemo(() => makeMapStyles(colors, isDark), [colors, isDark]);
 
   // iOS-only header sizing: derived from the real device safe-area inset
   // (root is a plain View, not SafeAreaView, so nothing else adds this
@@ -424,6 +424,8 @@ export default function HomeScreen({ navigation }) {
   // lives outside this fading group entirely so it keeps floating on its
   // own with no panel behind it.
   const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef);
   const HEADER_COLLAPSE_RANGE = 170;
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, HEADER_COLLAPSE_RANGE],
@@ -462,6 +464,7 @@ export default function HomeScreen({ navigation }) {
 
   const trendingProducts = products.slice(0, 6);
   const droppedProducts  = products.slice(0, 2);
+  const arProducts       = products.filter((p) => p?.model3d?.deeparEffect);
 
   return (
     // Plain View, not SafeAreaView — matches ProfileScreen's root exactly.
@@ -509,6 +512,7 @@ export default function HomeScreen({ navigation }) {
       </View>
 
       <Animated.ScrollView
+        ref={scrollRef}
         style={s.container}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingTop: scrollClearance, paddingBottom: TAB_BAR_CLEARANCE }}
@@ -559,6 +563,36 @@ export default function HomeScreen({ navigation }) {
             ))}
           </ScrollView>
         </View>
+
+        {/* ── VIRTUAL TRY ON (AR-enabled products only) ── */}
+        {arProducts.length > 0 && (
+          <View style={s.trendingSection}>
+            <SectionHeader
+              eyebrow="STEP INTO THE FUTURE"
+              title="Virtual Try On"
+              s={s}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
+            >
+              {arProducts.map((item, index) => (
+                <FadeInItem key={item._id || index} index={index}>
+                  <ProductCard
+                    item={item}
+                    index={index}
+                    onPress={() => navigation.navigate("ProductDetail", { product: item })}
+                    favorited={isFavorite(item.id)}
+                    onToggleFavorite={() => toggleFavorite(item.id)}
+                    arMode
+                    onARPress={(p) => navigation.navigate("ARTryOn", { product: p })}
+                  />
+                </FadeInItem>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* ── TRENDING NOW ── */}
         {(loading || trendingProducts.length > 0) && (
@@ -921,7 +955,7 @@ const makeTileStyles = (colors) => StyleSheet.create({
 
 /* ─────────────────── STORE MAP STYLES (moved from ShopScreen.jsx) ─────────────────── */
 
-const makeMapStyles = (colors) => StyleSheet.create({
+const makeMapStyles = (colors, isDark = false) => StyleSheet.create({
   container:      { marginTop: 32, marginHorizontal: 4, paddingHorizontal: 12 },
   sectionHeader:  { marginBottom: 14, paddingHorizontal: 4 },
   sectionEyebrow: { fontSize: 9, letterSpacing: 3, color: colors.textMuted, fontFamily: fonts.bodyRegular, marginBottom: 2 },
@@ -964,17 +998,19 @@ const makeMapStyles = (colors) => StyleSheet.create({
   },
   mapHintText:  { fontSize: 8, letterSpacing: 1.5, color: colors.textSecondary, fontFamily: fonts.bodySemibold },
   infoCard: {
-    backgroundColor: colors.bgCard, borderRadius: radius.xl, borderWidth: 1,
-    borderColor: colors.borderLight, padding: 16, marginBottom: 12,
+    backgroundColor: isDark ? "#000000" : "#404040",
+    borderRadius: radius.xl,
+    padding: 16,
+    marginBottom: 12,
     ...shadows.sm,
   },
   storeNameRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
   liveDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
-  storeName:    { fontSize: 17, color: colors.textPrimary, letterSpacing: 0.5, fontFamily: fonts.display },
-  divider:      { height: 1, backgroundColor: colors.bgTertiary, marginBottom: 12 },
+  storeName:    { fontSize: 17, color: "#ffffff", letterSpacing: 0.5, fontFamily: fonts.display },
+  divider:      { height: 1, backgroundColor: "rgba(255,255,255,0.12)", marginBottom: 12 },
   infoRow:      { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 10 },
   infoIcon:     { marginTop: 2 },
-  infoText:     { fontSize: 12, color: colors.textSecondary, flex: 1, lineHeight: 18, letterSpacing: 0.3, fontFamily: fonts.bodyRegular },
+  infoText:     { fontSize: 12, color: "rgba(255,255,255,0.85)", flex: 1, lineHeight: 18, letterSpacing: 0.3, fontFamily: fonts.bodyRegular },
   infoTextLink: { color: colors.accentGold, textDecorationLine: "underline" },
   // Same shape/size as Cart's checkout button — radius.lg, centered rather
   // than full-width, no arrow — so buttons read as one consistent system.

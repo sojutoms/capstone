@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { fonts, radius } from "../theme";
 import { useTheme } from "../context/ThemeContext";
@@ -59,6 +60,7 @@ function FAQItem({ q, a, open, onToggle, s, colors }) {
 
 export default function FAQScreen({ navigation }) {
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const s = useMemo(() => makeStyles(colors), [colors]);
   const [openKey, setOpenKey] = useState(null);
 
@@ -66,7 +68,7 @@ export default function FAQScreen({ navigation }) {
     <View style={s.root}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 14 }]}>
         <TouchableOpacity
           onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate("ProfileScreen"))}
           style={s.backBtn}

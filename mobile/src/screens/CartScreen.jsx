@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useMemo } from "react";
+import React, { useCallback, useState, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -11,8 +11,9 @@ import {
   RefreshControl,
   Platform,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Feather from "@expo/vector-icons/Feather";
 import { Alert } from "../utils/customAlert";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
@@ -25,11 +26,13 @@ export default function CartScreen({ navigation }) {
   const { cart, addToCart, decreaseQuantity, removeFromCart, refreshCart } = useCart();
   const { refreshFavorites } = useFavorites();
   const { colors, isDark } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
   // iOS only: root is a plain View, not SafeAreaView (matches ProfileScreen),
   // so the header needs its own inset-derived padding here instead.
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef);
 
   // Picks up anything added/removed from the web app while this tab wasn't
   // in focus, instead of showing whatever was last fetched at login.
@@ -84,12 +87,15 @@ export default function CartScreen({ navigation }) {
       <View style={styles.root}>
         <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.emptyContainer}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
           }
         >
-          <Text style={styles.emptyIcon}>🛒</Text>
+          <View style={styles.emptyIconWrap}>
+            <Feather name="shopping-bag" size={24} color={colors.textMuted} />
+          </View>
           <Text style={styles.emptyTitle}>YOUR CART IS EMPTY</Text>
           <Text style={styles.emptySubtitle}>
             Looks like you haven't added anything yet.
@@ -97,8 +103,10 @@ export default function CartScreen({ navigation }) {
           <TouchableOpacity
             style={styles.shopBtn}
             onPress={() => navigation.goBack()}
+            activeOpacity={0.85}
           >
-            <Text style={styles.shopBtnText}>EXPLORE PRODUCTS →</Text>
+            <Text style={styles.shopBtnText}>EXPLORE PRODUCTS</Text>
+            <Feather name="arrow-right" size={16} color={colors.textInverse} />
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -121,6 +129,7 @@ export default function CartScreen({ navigation }) {
           not position:absolute, so it's never separated from a short list
           by a big fixed paddingBottom hack. */}
       <FlatList
+        ref={scrollRef}
         style={styles.list}
         contentContainerStyle={styles.listContent}
         data={cart}
@@ -263,7 +272,7 @@ export default function CartScreen({ navigation }) {
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const makeStyles = (colors, isDark = false) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bgPrimary,
@@ -279,8 +288,14 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 40,
     paddingBottom: TAB_BAR_CLEARANCE,
   },
-  emptyIcon: {
-    fontSize: 52,
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 20,
   },
   emptyTitle: {
@@ -300,15 +315,17 @@ const makeStyles = (colors) => StyleSheet.create({
     marginBottom: 36,
   },
   shopBtn: {
-    borderWidth: 1,
-    borderColor: colors.textPrimary,
+    backgroundColor: colors.textPrimary,
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: radius.full,
+    borderRadius: radius.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   shopBtnText: {
     ...typography.button,
-    color: colors.textPrimary,
+    color: colors.textInverse,
     fontSize: 13,
   },
 
@@ -497,7 +514,7 @@ const makeStyles = (colors) => StyleSheet.create({
     ...shadows.md,
   },
   summaryTitle: {
-    color: colors.textMuted,
+    color: isDark ? "#ffffff" : colors.textMuted,
     fontSize: 10,
     fontFamily: fonts.bodyBold,
     letterSpacing: 2.5,
@@ -510,12 +527,12 @@ const makeStyles = (colors) => StyleSheet.create({
     marginBottom: 14,
   },
   summaryLabel: {
-    color: colors.textSecondary,
+    color: isDark ? "#ffffff" : colors.textSecondary,
     fontSize: 13,
     letterSpacing: 0.5,
   },
   summaryValue: {
-    color: colors.textSecondary,
+    color: isDark ? "#ffffff" : colors.textSecondary,
     fontSize: 13,
     fontFamily: fonts.bodyBold,
   },

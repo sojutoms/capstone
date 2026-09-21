@@ -19,6 +19,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { Alert } from "../utils/customAlert";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -532,7 +533,7 @@ function RadioGroup({ options, value, onChange, styles }) {
   );
 }
 
-function ReviewModal({ visible, product, onClose, onSubmit, submitting, styles, colors }) {
+function ReviewModal({ visible, product, onClose, onSubmit, submitting, styles, colors, isDark }) {
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState("");
   const [fit, setFit] = useState("");
@@ -589,7 +590,7 @@ function ReviewModal({ visible, product, onClose, onSubmit, submitting, styles, 
             <View style={{ flexDirection: "row", gap: 6, marginBottom: errors.rating ? 4 : 14 }}>
               {[1, 2, 3, 4, 5].map((i) => (
                 <TouchableOpacity key={i} onPress={() => { setRating(i); clearError("rating"); }}>
-                  <Text style={{ fontSize: 28, color: i <= rating ? colors.accentGold : colors.bgTertiary }}>★</Text>
+                  <Text style={{ fontSize: 28, color: i <= rating ? colors.accentGold : (isDark ? colors.textMuted : colors.bgTertiary) }}>★</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -826,8 +827,9 @@ export default function OrderHistoryScreen({ navigation }) {
   const { userToken } = useAuth();
   const { refreshCart } = useCart();
   const { refreshFavorites } = useFavorites();
-  const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
 
   const [reviewVisible, setReviewVisible]       = useState(false);
   const [reviewProduct, setReviewProduct]       = useState(null);
@@ -1269,7 +1271,7 @@ export default function OrderHistoryScreen({ navigation }) {
       </View>
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
         <Text style={styles.headerTitle}>YOUR ORDERS</Text>
         {!loading && (
           <TouchableOpacity onPress={() => fetchOrders(currentPage, statusFilter)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -1322,7 +1324,7 @@ export default function OrderHistoryScreen({ navigation }) {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
           }
           ListFooterComponent={totalPages > 1 ? <Pagination /> : null}
-          ItemSeparatorComponent={() => <View style={{ height: 1, backgroundColor: colors.borderSubtle }} />}
+          ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
         />
       )}
 
@@ -1371,6 +1373,7 @@ export default function OrderHistoryScreen({ navigation }) {
         submitting={reviewSubmitting}
         styles={styles}
         colors={colors}
+        isDark={isDark}
       />
 
       {/* Waiting on external browser payment */}
@@ -1394,7 +1397,7 @@ export default function OrderHistoryScreen({ navigation }) {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const makeStyles = (colors) => StyleSheet.create({
+const makeStyles = (colors, isDark = false) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgPrimary },
 
   // ── Toast ──
@@ -1666,7 +1669,7 @@ const makeStyles = (colors) => StyleSheet.create({
 
   // Refund modal
   inputLabel: {
-    color: colors.textMuted,
+    color: isDark ? colors.textPrimary : colors.textMuted,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 2,
@@ -1690,7 +1693,7 @@ const makeStyles = (colors) => StyleSheet.create({
     borderColor: colors.borderLight,
   },
   radioCircleFilled: { borderColor: colors.accentGold, backgroundColor: colors.accentGold },
-  reasonText:         { color: colors.textMuted, fontSize: 13 },
+  reasonText:         { color: isDark ? colors.textPrimary : colors.textMuted, fontSize: 13 },
   reasonTextSelected: { color: colors.textPrimary, fontWeight: "700" },
 
   modalActions: { flexDirection: "row", gap: 10, marginTop: 8 },
@@ -1744,7 +1747,7 @@ writeRatingRow: {
   justifyContent: "space-between",
   alignItems: "center",
 },
-writeMuted: { color: colors.textMuted, fontSize: 12 },
+writeMuted: { color: isDark ? colors.textPrimary : colors.textMuted, fontSize: 12 },
 reviewInput: {
   backgroundColor: colors.bgPrimary,
   borderWidth: 1,

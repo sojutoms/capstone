@@ -13,6 +13,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../context/AuthContext";
 import { fonts, radius } from "../theme";
 import { useTheme } from "../context/ThemeContext";
@@ -29,6 +30,7 @@ const Stars = ({ rating, colors }) => (
 export default function MyReviewsScreen({ navigation }) {
   const { userToken } = useAuth();
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const s = useMemo(() => makeStyles(colors), [colors]);
   const [reviews, setReviews]   = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -87,7 +89,7 @@ export default function MyReviewsScreen({ navigation }) {
     <View style={s.root}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 14 }]}>
         <TouchableOpacity
           onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate("ProfileScreen")}
           style={s.backBtn}

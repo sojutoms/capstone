@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { BASE_URL } from "../api/config";
 import {
   View,
@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useScrollToTop } from "@react-navigation/native";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
 import { fonts, radius } from "../theme";
@@ -118,6 +119,8 @@ export default function ShopScreen({ navigation }) {
   const { favorites, toggleFavorite, isFavorite, refreshFavorites } = useFavorites();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef);
   // iOS only: root is a plain View, not SafeAreaView (matches ProfileScreen),
   // so the top content needs its own inset-derived padding here instead.
   const insets = useSafeAreaInsets();
@@ -188,6 +191,7 @@ export default function ShopScreen({ navigation }) {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,

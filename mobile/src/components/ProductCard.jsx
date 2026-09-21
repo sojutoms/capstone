@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
 import { Image } from "expo-image";
 import Feather from "@expo/vector-icons/Feather";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { fonts, radius, typography } from "../theme";
 import { useTheme } from "../context/ThemeContext";
 import { toNumber, getLowestPrice, getBadge } from "../utils/productHelpers";
@@ -17,7 +18,7 @@ export const PRODUCT_CARD_WIDTH = (width - 48) / 2;
 // four near-identical copies that had quietly drifted apart (Home's cards
 // had no working heart/add-to-cart at all). One component now, so a style
 // or behavior fix lands everywhere at once.
-export default function ProductCard({ item, index = 0, onPress, onAddToCart, favorited, onToggleFavorite }) {
+export default function ProductCard({ item, index = 0, onPress, onAddToCart, favorited, onToggleFavorite, arMode = false, onARPress }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const price       = getLowestPrice(item);
@@ -76,17 +77,30 @@ export default function ProductCard({ item, index = 0, onPress, onAddToCart, fav
             )}
           </View>
           {!comingSoon && (
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={(e) => {
-                hapticSuccess();
-                triggerFlyToCart({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY, width: 0, height: 0 });
-                onAddToCart(item);
-              }}
-              hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-            >
-              <Feather name="shopping-bag" size={14} color={colors.textInverse} />
-            </TouchableOpacity>
+            arMode ? (
+              <TouchableOpacity
+                style={[styles.addBtn, styles.arBtn]}
+                onPress={() => {
+                  hapticTap();
+                  onARPress?.(item);
+                }}
+                hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+              >
+                <MaterialCommunityIcons name="augmented-reality" size={22} color={colors.textInverse} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.addBtn}
+                onPress={(e) => {
+                  hapticSuccess();
+                  triggerFlyToCart({ x: e.nativeEvent.pageX, y: e.nativeEvent.pageY, width: 0, height: 0 });
+                  onAddToCart(item);
+                }}
+                hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+              >
+                <Feather name="shopping-bag" size={14} color={colors.textInverse} />
+              </TouchableOpacity>
+            )
           )}
         </View>
       </View>
@@ -138,4 +152,5 @@ const makeStyles = (colors) => StyleSheet.create({
   newPrice: { fontSize: 13, fontWeight: "700", color: colors.accentGold },
   comingSoonText: { fontSize: 11, color: colors.textMuted, fontFamily: fonts.bodyMedium, letterSpacing: 0.3 },
   addBtn: { width: 28, height: 28, backgroundColor: colors.textPrimary, borderRadius: 7, justifyContent: "center", alignItems: "center" },
+  arBtn: { backgroundColor: colors.accentGold },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import { BASE_URL } from "../api/config";
 import {
   View,
@@ -15,7 +15,7 @@ import {
   Modal,
   Alert,
 } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
@@ -36,7 +36,7 @@ function MenuItem({ icon, label, sublabel, onPress, rightElement, danger, styles
       activeOpacity={0.6}
     >
       <View style={[styles.menuIcon, danger && styles.menuIconDanger]}>
-        <Ionicons name={icon} size={17} color={danger ? colors.danger : colors.textPrimary} />
+        <Ionicons name={icon} size={17} color={danger ? colors.danger : "#ffffff"} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.menuLabel, danger && styles.menuLabelDanger]}>
@@ -66,10 +66,12 @@ export default function ProfileScreen({ navigation }) {
   const { favorites, refreshFavorites } = useFavorites();
   const { colors, isDark, toggleTheme } = useTheme();
   const { showEverywhere, setShowEverywhere } = useChatSettings();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
   // iOS only: root here is a plain View (no SafeAreaView), so without this
   // the top content renders straight under the status bar/notch.
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef(null);
+  useScrollToTop(scrollRef);
   const [refreshing, setRefreshing] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState(false);
@@ -302,6 +304,7 @@ export default function ProfileScreen({ navigation }) {
     <View style={styles.root}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.scroll,
           Platform.OS === "ios" && { paddingTop: insets.top + 16 },
@@ -460,7 +463,7 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const makeStyles = (colors, isDark = false) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bgPrimary },
   scroll: { paddingBottom: TAB_BAR_CLEARANCE },
   heroSection: {
@@ -496,24 +499,24 @@ const makeStyles = (colors) => StyleSheet.create({
   heroEmail: { color: colors.textMuted, fontSize: 13, letterSpacing: 0.3, marginBottom: 4 },
   heroPlace: { color: colors.textSecondary, fontSize: 12, marginBottom: 8 },
   heroBio: { color: colors.textSecondary, fontSize: 13, lineHeight: 19, textAlign: "center", paddingHorizontal: 24 },
-  editBtn: { borderWidth: 1, borderColor: colors.borderLight, paddingVertical: 8, paddingHorizontal: 24, borderRadius: radius.sm, marginBottom: 28 },
-  editBtnText: { color: colors.textSecondary, fontSize: 10, fontWeight: "900", letterSpacing: 2.5 },
-  statsRow: { flexDirection: "row", width: "100%", backgroundColor: colors.bgCard, borderRadius: radius.md, paddingVertical: 18, paddingHorizontal: 10 },
+  editBtn: { backgroundColor: isDark ? "#000000" : "#404040", paddingVertical: 10, paddingHorizontal: 28, borderRadius: radius.sm, marginBottom: 28 },
+  editBtnText: { color: "#ffffff", fontSize: 10, fontWeight: "900", letterSpacing: 2.5 },
+  statsRow: { flexDirection: "row", width: "100%", backgroundColor: isDark ? "#000000" : "#404040", borderRadius: radius.md, paddingVertical: 18, paddingHorizontal: 10 },
   statItem: { flex: 1, alignItems: "center" },
-  statValue: { color: colors.accentGold, fontSize: 22, fontWeight: "900", letterSpacing: 1 },
-  statLabel: { color: colors.textMuted, fontSize: 9, fontWeight: "800", letterSpacing: 2, marginTop: 3 },
-  statDivider: { width: 1, backgroundColor: colors.borderLight, marginVertical: 4 },
+  statValue: { color: "#ffffff", fontSize: 22, fontWeight: "900", letterSpacing: 1 },
+  statLabel: { color: "#ffffff", fontSize: 9, fontWeight: "800", letterSpacing: 2, marginTop: 3 },
+  statDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.15)", marginVertical: 4 },
   section: { marginHorizontal: 16, marginTop: 20 },
   sectionTitle: { color: colors.textMuted, fontSize: 9, fontWeight: "900", letterSpacing: 3, marginBottom: 10, marginLeft: 2 },
-  sectionCard: { backgroundColor: colors.bgCard, borderRadius: radius.md, overflow: "hidden" },
+  sectionCard: { backgroundColor: isDark ? "#000000" : "#404040", borderRadius: radius.md, overflow: "hidden" },
   menuItem: { flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16, gap: 14 },
-  menuIcon: { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.bgTertiary, justifyContent: "center", alignItems: "center" },
-  menuIconDanger: { backgroundColor: "rgba(229, 72, 77, 0.1)" },
-  menuLabel: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.bodyBold, letterSpacing: 0.3 },
+  menuIcon: { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: "rgba(255,255,255,0.08)", justifyContent: "center", alignItems: "center" },
+  menuIconDanger: { backgroundColor: "rgba(229, 72, 77, 0.15)" },
+  menuLabel: { color: "#ffffff", fontSize: 14, fontFamily: fonts.bodyBold, letterSpacing: 0.3 },
   menuLabelDanger: { color: colors.danger },
-  menuSublabel: { color: colors.textMuted, fontSize: 11, marginTop: 2 },
-  menuArrow: { color: colors.textMuted, fontSize: 22, fontWeight: "300" },
-  itemDivider: { height: 1, backgroundColor: colors.borderSubtle, marginLeft: 66 },
+  menuSublabel: { color: "rgba(255,255,255,0.7)", fontSize: 11, marginTop: 2 },
+  menuArrow: { color: "rgba(255,255,255,0.7)", fontSize: 22, fontWeight: "300" },
+  itemDivider: { height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginLeft: 66 },
   version: { color: colors.bgTertiary, fontSize: 10, letterSpacing: 1, textAlign: "center", marginTop: 30 },
 
   photoViewerOverlay: {

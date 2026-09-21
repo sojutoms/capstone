@@ -11,6 +11,7 @@ import {
   Platform,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import Toast from "react-native-toast-message";
 import { useAuth } from "../context/AuthContext";
@@ -23,6 +24,7 @@ const TABS = ["unused", "used", "expired"];
 export default function VouchersScreen({ navigation }) {
   const { userToken } = useAuth();
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const s = useMemo(() => makeStyles(colors), [colors]);
 
   const [points, setPoints] = useState(0);
@@ -117,7 +119,7 @@ export default function VouchersScreen({ navigation }) {
     <View style={s.root}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 14 }]}>
         <TouchableOpacity
           onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate("ProfileScreen"))}
           style={s.backBtn}

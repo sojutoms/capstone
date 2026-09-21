@@ -143,7 +143,7 @@ function Dropdown({
       >
         {loading ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <ActivityIndicator size="small" color={colors.textMuted} />
+            <ActivityIndicator size="small" color={colors.textPrimary} />
             <Text style={s.loadingText}>Loading {label.toLowerCase()}…</Text>
           </View>
         ) : (
@@ -154,7 +154,7 @@ function Dropdown({
             {displayText}
           </Text>
         )}
-        <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+        <Ionicons name="chevron-down" size={16} color={colors.textPrimary} />
       </TouchableOpacity>
       <FieldError msg={error} s={s} />
 
@@ -218,8 +218,8 @@ function Dropdown({
 export default function PlaceOrderScreen({ navigation, route }) {
   const { cart, clearCart } = useCart();
   const { userToken }       = useAuth();
-  const { colors }  = useTheme();
-  const s = useMemo(() => makeStyles(colors), [colors]);
+  const { colors, isDark }  = useTheme();
+  const s = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
 
   // "Buy Now" from ProductDetail passes a single item here directly,
   // bypassing the cart entirely — checkout works off that instead of the
@@ -660,7 +660,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
       ════════════════════════════════ */}
       <View style={s.sectionCard}>
         <View style={s.sectionHeadRow}>
-          <Ionicons name="location-outline" size={16} color={colors.textMuted} />
+          <Ionicons name="location-outline" size={16} color={colors.textPrimary} />
           <Text style={s.sectionTitle}>Delivery Information</Text>
         </View>
 
@@ -834,7 +834,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
       {!!userToken && (
         <View style={s.sectionCard}>
           <View style={s.sectionHeadRow}>
-            <Ionicons name="pricetag-outline" size={16} color={colors.textMuted} />
+            <Ionicons name="pricetag-outline" size={16} color={colors.textPrimary} />
             <Text style={s.sectionTitle}>Vouchers</Text>
           </View>
 
@@ -848,7 +848,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
           {voucherOpen && (
             <View style={s.voucherDropdown}>
               {loadingVouchers ? (
-                <ActivityIndicator size="small" color={colors.textMuted} style={{ paddingVertical: 14 }} />
+                <ActivityIndicator size="small" color={colors.textPrimary} style={{ paddingVertical: 14 }} />
               ) : voucherError ? (
                 <Text style={s.voucherEmptyText}>{voucherError}</Text>
               ) : vouchers.length === 0 ? (
@@ -890,7 +890,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
       ════════════════════════════════ */}
       <View style={s.sectionCard}>
         <View style={s.sectionHeadRow}>
-          <Ionicons name="card-outline" size={16} color={colors.textMuted} />
+          <Ionicons name="card-outline" size={16} color={colors.textPrimary} />
           <Text style={s.sectionTitle}>Payment</Text>
         </View>
 
@@ -929,7 +929,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
       ════════════════════════════════ */}
       <View style={s.sectionCard}>
         <View style={s.sectionHeadRow}>
-          <Ionicons name="receipt-outline" size={16} color={colors.textMuted} />
+          <Ionicons name="receipt-outline" size={16} color={colors.textPrimary} />
           <Text style={s.sectionTitle}>Order Summary</Text>
         </View>
 
@@ -1033,7 +1033,12 @@ export default function PlaceOrderScreen({ navigation, route }) {
    STYLES  — dark premium matching ProductDetailScreen vibe
 ═══════════════════════════════════════════════════════════════════════════ */
 
-const makeStyles = (colors) => StyleSheet.create({
+const makeStyles = (colors, isDark = false) => {
+  // In dark mode, swap dim greys for readable whites so text isn't lost
+  // against the dark surfaces.
+  const dim = isDark ? "#ffffff" : colors.textMuted;
+  const body = isDark ? "#ffffff" : colors.textSecondary;
+  return StyleSheet.create({
   root:    { flex: 1, backgroundColor: colors.bgPrimary },
   // No SafeAreaView on this screen — paddingTop covers the status bar/notch
   // clearance that used to come "for free" from the Back button sitting
@@ -1085,7 +1090,7 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 13,
     fontFamily: fonts.bodyBold,
     letterSpacing: 2,
-    color: colors.textMuted,
+    color: dim,
     textTransform: "uppercase",
   },
 
@@ -1112,8 +1117,8 @@ const makeStyles = (colors) => StyleSheet.create({
     gap: 2,
   },
   savedName:  { fontSize: 14, fontFamily: fonts.bodyBold, color: colors.textPrimary },
-  savedMeta:  { fontSize: 12, color: colors.textSecondary },
-  savedPhone: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  savedMeta:  { fontSize: 12, color: body },
+  savedPhone: { fontSize: 12, color: body, marginTop: 2 },
 
   /* ── form ── */
   row:       { flexDirection: "row", gap: 10 },
@@ -1123,7 +1128,7 @@ const makeStyles = (colors) => StyleSheet.create({
     fontSize: 11,
     fontFamily: fonts.bodyBold,
     letterSpacing: 1.5,
-    color: colors.textMuted,
+    color: dim,
     marginBottom: 7,
     textTransform: "uppercase",
   },
@@ -1165,9 +1170,9 @@ const makeStyles = (colors) => StyleSheet.create({
     marginRight: 8,
   },
   dropdownPlaceholder: {
-    color: colors.textMuted,
+    color: dim,
   },
-  loadingText: { fontSize: 13, color: colors.textMuted },
+  loadingText: { fontSize: 13, color: dim },
 
   dropdownBackdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -1250,7 +1255,7 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   checkboxOn: { backgroundColor: colors.accentGold, borderColor: colors.accentGold },
   checkmark:  { color: colors.textInverse, fontSize: 13, fontWeight: "800" },
-  checkLabel: { fontSize: 13, color: colors.textMuted, flex: 1 },
+  checkLabel: { fontSize: 13, color: body, flex: 1 },
 
   /* ── payment methods ── */
   methodRow: {
@@ -1266,9 +1271,9 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.bgTertiary,
   },
   methodChipActive:     { borderWidth: 1, borderColor: colors.accentGold, backgroundColor: colors.accentGoldWash },
-  methodChipText:       { fontSize: 12, fontFamily: fonts.bodyBold, color: colors.textMuted, letterSpacing: 0.5 },
+  methodChipText:       { fontSize: 12, fontFamily: fonts.bodyBold, color: body, letterSpacing: 0.5 },
   methodChipTextActive: { color: colors.accentGoldLight },
-  methodNote:           { fontSize: 12, color: colors.textMuted, fontFamily: fonts.bodyRegular, marginTop: 12, lineHeight: 18 },
+  methodNote:           { fontSize: 12, color: dim, fontFamily: fonts.bodyRegular, marginTop: 12, lineHeight: 18 },
 
   /* ── order summary ── */
   summaryItem: {
@@ -1281,10 +1286,10 @@ const makeStyles = (colors) => StyleSheet.create({
     gap: 10,
   },
   summaryLeft:  { flex: 1, gap: 3 },
-  summaryName:  { fontSize: 13, fontFamily: fonts.bodySemibold, color: colors.textSecondary },
-  summarySize:  { fontSize: 11, color: colors.textMuted, letterSpacing: 0.5 },
+  summaryName:  { fontSize: 13, fontFamily: fonts.bodySemibold, color: body },
+  summarySize:  { fontSize: 11, color: dim, letterSpacing: 0.5 },
   summaryRight: { alignItems: "flex-end", gap: 2 },
-  summaryQty:   { fontSize: 11, color: colors.textMuted },
+  summaryQty:   { fontSize: 11, color: dim },
   summaryPrice: { fontSize: 14, fontFamily: fonts.bodyBold, color: colors.textPrimary },
 
   divider: { height: 1, backgroundColor: colors.borderSubtle, marginVertical: 14 },
@@ -1295,8 +1300,8 @@ const makeStyles = (colors) => StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  subLabel: { fontSize: 12, color: colors.textSecondary },
-  subValue: { fontSize: 13, fontFamily: fonts.bodySemibold, color: colors.textSecondary },
+  subLabel: { fontSize: 12, color: body },
+  subValue: { fontSize: 13, fontFamily: fonts.bodySemibold, color: body },
   discountValue: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.danger },
 
   /* ── vouchers ── */
@@ -1307,7 +1312,7 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 16,
   },
   voucherTriggerApplied: { borderWidth: 1, borderColor: colors.accentGold, backgroundColor: colors.accentGoldWash },
-  voucherTriggerLabel: { fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: colors.textMuted },
+  voucherTriggerLabel: { fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: dim },
   voucherTriggerValue: { fontSize: 14, fontFamily: fonts.bodyBold, color: colors.textPrimary, marginTop: 3 },
   voucherDropdown: {
     marginTop: 10,
@@ -1315,7 +1320,7 @@ const makeStyles = (colors) => StyleSheet.create({
     overflow: "hidden",
     backgroundColor: colors.bgTertiary,
   },
-  voucherEmptyText: { fontSize: 12, color: colors.textMuted, padding: 14, textAlign: "center" },
+  voucherEmptyText: { fontSize: 12, color: dim, padding: 14, textAlign: "center" },
   voucherItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -1327,8 +1332,8 @@ const makeStyles = (colors) => StyleSheet.create({
   voucherItemActive: { backgroundColor: colors.accentGoldWash },
   voucherItemUsed: { opacity: 0.4 },
   voucherItemDiscount: { fontSize: 13, fontFamily: fonts.display, color: colors.accentGoldLight, letterSpacing: 0.5 },
-  voucherItemTitle: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  voucherItemAction: { fontSize: 11, fontFamily: fonts.bodyBold, color: colors.textMuted, letterSpacing: 0.5 },
+  voucherItemTitle: { fontSize: 12, color: body, marginTop: 2 },
+  voucherItemAction: { fontSize: 11, fontFamily: fonts.bodyBold, color: dim, letterSpacing: 0.5 },
   voucherRemoveText: { fontSize: 12, color: colors.danger, textAlign: "center", fontFamily: fonts.bodyBold },
 
   totalRow: {
@@ -1336,7 +1341,7 @@ const makeStyles = (colors) => StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  totalLabel:  { fontSize: 14, fontFamily: fonts.display, color: colors.textSecondary, letterSpacing: 1 },
+  totalLabel:  { fontSize: 14, fontFamily: fonts.display, color: body, letterSpacing: 1 },
   totalAmount: { fontSize: 22, fontWeight: "900", color: colors.accentGold, letterSpacing: 0.3 },
 
   /* ── CTA ── */
@@ -1362,5 +1367,6 @@ const makeStyles = (colors) => StyleSheet.create({
     gap: 14,
     paddingHorizontal: 40,
   },
-  verifyText: { color: colors.textSecondary, fontSize: 13, letterSpacing: 0.5, textAlign: "center" },
+  verifyText: { color: body, fontSize: 13, letterSpacing: 0.5, textAlign: "center" },
 });
+};

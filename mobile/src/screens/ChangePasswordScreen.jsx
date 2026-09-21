@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Alert } from "../utils/customAlert";
 import { useAuth } from "../context/AuthContext";
 import { fonts, radius, typography } from "../theme";
@@ -62,6 +63,7 @@ function PasswordField({ label, value, onChangeText, visible, onToggleVisible, e
 export default function ChangePasswordScreen({ navigation }) {
   const { userToken, userProfile, resendOtp } = useAuth();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const s = useMemo(() => makeStyles(colors), [colors]);
 
   const [step, setStep] = useState("form"); // "form" | "otp"
@@ -198,7 +200,7 @@ export default function ChangePasswordScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={s.root} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+    <ScrollView style={s.root} contentContainerStyle={[s.content, { paddingTop: insets.top + 14 }]} keyboardShouldPersistTaps="handled">
       <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
         <Text style={s.backArrow}>←</Text>
         <Text style={s.backLabel}>Back</Text>
