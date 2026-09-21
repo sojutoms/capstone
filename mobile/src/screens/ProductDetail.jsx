@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { BASE_URL } from "../api/config";
 import {
   View,
   Text,
@@ -35,11 +36,6 @@ import { hapticTap, hapticSuccess } from "../utils/haptics";
 import { isOutOfStock } from "../utils/productHelpers";
 
 const { width } = Dimensions.get("window");
-
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 /* ─────────────────── HELPERS ─────────────────── */
 

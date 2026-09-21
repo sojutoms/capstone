@@ -41,6 +41,21 @@
           "cameraPermission": "GoodSoles PH needs camera access so you can try shoes on with AR."
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "GoodSoles PH needs photo library access so you can upload a profile picture and receipt images.",
+          "cameraPermission": "GoodSoles PH needs camera access so you can take a photo for your profile."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "GoodSoles PH needs photo library access so you can save order receipts and shared images.",
+          "savePhotosPermission": "GoodSoles PH needs permission to save receipts and images to your photo library.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
       "expo-image",
       "expo-sharing"
     ],

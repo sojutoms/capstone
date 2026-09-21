@@ -15,7 +15,6 @@ const CATEGORY_META = {
 
 const SLIDER_MIN = 0;
 const SLIDER_MAX = 30000;
-const PAGE_SIZE  = 10;
 
 const priceRanges = [
   { label: "All Prices",       min: 0,     max: Infinity },
@@ -56,6 +55,9 @@ const ShopCategory = (props) => {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showFilters,  setShowFilters]  = useState(true);
   const [currentPage,  setCurrentPage]  = useState(1);
+  const PAGE_SIZE = showFilters ? 8 : 10;
+
+  useEffect(() => { setCurrentPage(1); }, [showFilters]);
   const [animState,    setAnimState]    = useState("idle");
 
   const [apiSubcats, setApiSubcats] = useState([]);
@@ -207,7 +209,7 @@ const ShopCategory = (props) => {
   const currentItems = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
     return sortedProducts.slice(start, start + PAGE_SIZE);
-  }, [sortedProducts, currentPage]);
+  }, [sortedProducts, currentPage, PAGE_SIZE]);
 
   const changePage = useCallback((next, dir) => {
     if (locked.current) return;

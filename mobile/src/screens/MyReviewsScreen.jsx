@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useMemo } from "react";
+import { BASE_URL } from "../api/config";
 import {
   View,
   Text,
@@ -16,11 +17,6 @@ import { useAuth } from "../context/AuthContext";
 import { fonts, radius } from "../theme";
 import { useTheme } from "../context/ThemeContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
-
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 const Stars = ({ rating, colors }) => (
   <View style={{ flexDirection: "row", gap: 2 }}>

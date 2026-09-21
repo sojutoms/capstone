@@ -784,30 +784,18 @@
     padding-bottom: 20px;
     margin-bottom: 24px;
     display: flex;
-    gap: 20px;
-    overflow-x: auto;
-    scrollbar-width: none;
+    flex-direction: column;
+    gap: 24px;
   }
-  .shopcategory-sidebar-inner::-webkit-scrollbar { display: none; }
   .shopcategory-sidebar-section {
-    flex-shrink: 0;
     border-bottom: none;
-    border-right: 1px solid var(--sc-border);
-    padding-right: 20px;
+    border-right: none;
+    padding-right: 0;
     padding-bottom: 0;
     margin-bottom: 0;
-    min-width: 140px;
+    width: 100%;
   }
-  .shopcategory-sidebar-section:last-child { border-right: none; }
-  .shopcategory-brand-chips { flex-direction: row; flex-wrap: wrap; gap: 8px; }
-  .shopcategory-brand-chip {
-    width: auto;
-    border: 1px solid var(--sc-border) !important;
-    border-radius: 20px !important;
-    padding: 8px 16px;
-    border-left: 1px solid var(--sc-border) !important;
-  }
-  .shopcategory-brand-chip.active { border-left: 1px solid var(--sc-gold) !important; }
+  .shopcategory-brand-chips { flex-direction: column; }
   .sidebar-page-indicator { display: none; }
   .shopcategory-main { padding-left: 0; }
   .shopcategory-sort-btn { min-width: 160px; }

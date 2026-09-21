@@ -341,7 +341,7 @@ const AdminSales = () => {
         </button>
       </div>
 
-      <div className="sales-grid-layout" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 32, alignItems: "start", width: "100%" }}>
+      <div className="sales-grid-layout" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 420px", gap: 32, alignItems: "start", width: "100%" }}>
         
         <div className="sales-left-col">
           {/* ── Transaction Log ── */}

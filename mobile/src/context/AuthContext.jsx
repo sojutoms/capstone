@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { BASE_URL } from "../api/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import {
@@ -10,11 +11,6 @@ import {
   resetPassword,
   resendOtp as resendOtpApi,
 } from "../api/authApi";
-
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 const AuthContext = createContext();
 

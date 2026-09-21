@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { BASE_URL } from "../api/config";
 import {
   View,
   Text,
@@ -31,11 +32,6 @@ import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const { width } = Dimensions.get("window");
 const isSmall = width < 380;
-
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 const ORDERS_PER_PAGE = 5;
 
@@ -405,7 +401,7 @@ function RefundModal({ visible, order, onClose, onSubmit, submitting, styles, co
     const remaining = MAX_REFUND_MEDIA - media.length;
     if (remaining <= 0) return;
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsMultipleSelection: true,
       selectionLimit: remaining,
       quality: 0.7,

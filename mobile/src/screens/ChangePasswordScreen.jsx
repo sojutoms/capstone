@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { BASE_URL } from "../api/config";
 import {
   View,
   Text,
@@ -15,11 +16,6 @@ import { useAuth } from "../context/AuthContext";
 import { fonts, radius, typography } from "../theme";
 import { useTheme } from "../context/ThemeContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
-
-const BASE_URL =
-  Platform.OS === "web"
-    ? "http://localhost:4000"
-    : "https://lifting-manpower-corral.ngrok-free.dev";
 
 // Same rules as the web Settings page, so a password accepted here is
 // accepted there too.

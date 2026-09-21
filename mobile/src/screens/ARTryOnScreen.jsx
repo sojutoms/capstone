@@ -16,11 +16,7 @@ import Toast from 'react-native-toast-message';
 import { fonts, radius, typography } from '../theme';
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
-
-const BASE_URL =
-  Platform.OS === 'web'
-    ? 'http://localhost:4000'
-    : 'https://lifting-manpower-corral.ngrok-free.dev';
+import { AR_BASE_URL, AR_IS_AVAILABLE } from '../api/config';
 
 // Real foot-tracked AR via DeepAR's Web SDK, loaded in a WebView — ported
 // from testing/shoetryon-web-js (a working DeepAR demo) and served as
@@ -40,11 +36,6 @@ const ARTryOnScreen = ({ route, navigation }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [arReady, setArReady] = useState(false);
   const [arError, setArError] = useState(null);
-
-  const formatPrice = (p) => {
-    const n = typeof p === 'object' ? Math.min(...Object.values(p).map(Number).filter(isFinite)) : Number(p);
-    return isFinite(n) ? n.toLocaleString('en-PH', { minimumFractionDigits: 2 }) : '—';
-  };
 
   // Same "select a size first" gate as Product Details — if the user
   // opened Try On without picking one there, bounce them back to pick one
@@ -66,7 +57,9 @@ const ARTryOnScreen = ({ route, navigation }) => {
   // when this is missing; this guard covers any other way the screen could
   // be reached (deep link, back/forward nav, etc.).
   const effectFile = product?.model3d?.deeparEffect || null;
-  const arUrl = effectFile ? `${BASE_URL}/artryon/index.html?effect=${encodeURIComponent(effectFile)}` : null;
+  const arUrl = effectFile && AR_IS_AVAILABLE
+    ? `${AR_BASE_URL}/artryon/index.html?effect=${encodeURIComponent(effectFile)}`
+    : null;
 
   const handleMessage = useCallback((event) => {
     try {
@@ -81,6 +74,26 @@ const ARTryOnScreen = ({ route, navigation }) => {
       <View style={s.center}>
         <Text style={s.permTitle}>AR Try-On Not Available</Text>
         <Text style={s.permText}>This item doesn't have an AR model yet.</Text>
+        <TouchableOpacity style={s.permBtn} onPress={() => navigation.goBack()}>
+          <Text style={s.permBtnText}>GO BACK</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // iOS/WebKit requires HTTPS for camera access inside a WebView. When the
+  // backend is on plain HTTP (LAN dev), AR can't start — show a clear message
+  // instead of letting DeepAR crash with an opaque error.
+  if (!AR_IS_AVAILABLE) {
+    return (
+      <View style={s.center}>
+        <Text style={s.permTitle}>AR Requires HTTPS</Text>
+        <Text style={s.permText}>
+          The AR try-on needs the backend served over HTTPS. Set{"\n"}
+          <Text style={{ fontWeight: '700' }}>AR_BASE_URL_OVERRIDE</Text> in{"\n"}
+          <Text style={{ fontWeight: '700' }}>mobile/src/api/config.js</Text> to an{"\n"}
+          HTTPS tunnel URL, or deploy the backend.
+        </Text>
         <TouchableOpacity style={s.permBtn} onPress={() => navigation.goBack()}>
           <Text style={s.permBtnText}>GO BACK</Text>
         </TouchableOpacity>
@@ -175,8 +188,7 @@ const ARTryOnScreen = ({ route, navigation }) => {
             <Image source={{ uri: product.image }} style={s.thumbImg} resizeMode="contain" />
           )}
           <View style={s.productInfo}>
-            <Text style={s.productName} numberOfLines={1}>{product?.name}</Text>
-            <Text style={s.productPrice}>₱{formatPrice(product?.new_price || product?.price)}</Text>
+            <Text style={s.productName} numberOfLines={2}>{product?.name}</Text>
           </View>
         </View>
 
