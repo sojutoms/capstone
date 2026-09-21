@@ -62,11 +62,18 @@
     // tracking at all — this reuses the proven-working web implementation
     // as-is rather than reimplementing foot tracking natively.
 
-    // Lets the RN side pick which shoe's effect to load per-product, e.g.
-    // .../index.html?effect=Shoe_PBR.deepar — falls back to the demo effect
-    // when no per-shoe .deepar has been exported yet for that product.
+    // Lets the RN side pick which shoe's effect to load per-product. The
+    // `effect` param is now the full Cloudinary HTTPS URL for that product's
+    // .deepar file (e.g. https://res.cloudinary.com/.../foo.deepar), since
+    // effects are stored on Cloudinary — Render's filesystem is ephemeral
+    // and can't hold uploaded files reliably. Legacy filename-only values
+    // (used before the Cloudinary switch) still resolve against the local
+    // ./effects/ folder so old dev data keeps working.
     const params = new URLSearchParams(window.location.search);
-    const effectFile = params.get('effect') || 'Shoe_PBR.deepar';
+    const effectParam = params.get('effect') || 'Shoe_PBR.deepar';
+    const isAbsolute = /^https?:\/\//i.test(effectParam);
+    const effectUrl = isAbsolute ? effectParam : `./effects/${effectParam}`;
+    const effectFile = effectParam; // used only for the postMessage payload
 
     // Native RN WebView bridge — no-ops harmlessly if opened in a plain
     // browser tab (e.g. while testing this page directly) instead of the app.
@@ -116,7 +123,7 @@
           },
         });
 
-        await deepAR.switchEffect(`./effects/${effectFile}`);
+        await deepAR.switchEffect(effectUrl);
         notifyApp({ type: 'effectLoaded', effect: effectFile });
         document.getElementById('loader-wrapper').style.display = 'none';
 

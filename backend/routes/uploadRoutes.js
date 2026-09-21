@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const path = require("path");
-const fs = require("fs");
 const multer = require("multer");
 const upload = require("../config/multer");
 const { cloudinary } = upload;
@@ -108,22 +107,13 @@ router.post("/check-duplicate-images-multiple", uploadAuth, (req, res) => {
 });
 
 // ─── DeepAR .deepar effect upload (shoe products only) ────────────────────────
-// Saved to disk (not Cloudinary) directly into backend/public/artryon/effects/,
-// which is where the mobile AR try-on WebView loads effect files from by
-// filename (see server.js's /artryon static mount and ARTryOnScreen.jsx).
-const effectsDir = path.join(__dirname, "../public/artryon/effects");
-fs.mkdirSync(effectsDir, { recursive: true });
-
-const arEffectStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, effectsDir),
-  filename: (req, file, cb) => {
-    const safeBase = path.basename(file.originalname, ".deepar").replace(/[^a-zA-Z0-9_-]/g, "_");
-    cb(null, `${Date.now()}-${safeBase}.deepar`);
-  },
-});
-
+// Uploaded to Cloudinary as a `raw` resource, since Render's filesystem is
+// ephemeral (every redeploy wipes local writes). Cloudinary hands back a
+// permanent HTTPS URL that we store on the Product as `model3d.deeparEffect`;
+// the mobile AR WebView loads it directly (see artryon/index.html and
+// mobile/src/screens/ARTryOnScreen.jsx).
 const uploadArEffect = multer({
-  storage: arEffectStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 }, // 25MB — largest existing effect is ~7MB
   fileFilter: (req, file, cb) => {
     if (!file.originalname.toLowerCase().endsWith(".deepar")) {
@@ -133,11 +123,42 @@ const uploadArEffect = multer({
   },
 });
 
+const uploadDeeparBufferToCloudinary = (buffer, originalName) =>
+  new Promise((resolve, reject) => {
+    const safeBase = path
+      .basename(originalName, ".deepar")
+      .replace(/[^a-zA-Z0-9_-]/g, "_");
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: "raw",
+        folder: "goodsoles/artryon",
+        public_id: `${Date.now()}-${safeBase}.deepar`,
+        use_filename: false,
+        unique_filename: false,
+        overwrite: false,
+      },
+      (err, result) => (err ? reject(err) : resolve(result))
+    );
+    stream.end(buffer);
+  });
+
 router.post("/admin/upload-ar-effect", uploadAuth, (req, res) => {
-  uploadArEffect.single("arEffect")(req, res, (err) => {
+  uploadArEffect.single("arEffect")(req, res, async (err) => {
     if (err) return res.status(400).json({ success: false, error: err.message });
     if (!req.file) return res.status(400).json({ success: false, error: "No file received" });
-    res.json({ success: true, filename: req.file.filename });
+    try {
+      const result = await uploadDeeparBufferToCloudinary(
+        req.file.buffer,
+        req.file.originalname
+      );
+      // Return `filename` (the full HTTPS URL) so existing admin code that
+      // stashes the response's `filename` into product.deeparEffect keeps
+      // working with no changes.
+      res.json({ success: true, filename: result.secure_url });
+    } catch (uploadErr) {
+      console.error(">>> Cloudinary AR effect upload error:", uploadErr);
+      res.status(500).json({ success: false, error: uploadErr.message || "Upload failed" });
+    }
   });
 });
 
