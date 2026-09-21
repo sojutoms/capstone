@@ -307,6 +307,8 @@ const forgotPassword = async (req, res) => {
 // Lets the forgot-password form confirm the code is correct *before* showing
 // the new-password fields, without consuming it — /reset-password still does
 // its own full check and is what actually deletes the OTP record.
+// On a successful verify, extend expiry by 10 minutes so the user has time
+// to type and submit the new password without the OTP expiring mid-flow.
 const verifyResetOtp = async (req, res) => {
   const { email, otp } = req.body;
   if (!/^\d{6}$/.test(otp || ""))
@@ -316,6 +318,10 @@ const verifyResetOtp = async (req, res) => {
     const record = await OtpModel.findOne({ email, otp });
     if (!record) return res.json({ success: false, errors: "Invalid OTP" });
     if (record.expiresAt < Date.now()) return res.json({ success: false, errors: "Expired OTP" });
+
+    record.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await record.save();
+
     res.json({ success: true });
   } catch (err) {
     console.error("Verify reset OTP error:", err);

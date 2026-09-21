@@ -61,8 +61,8 @@ const Hero = () => {
           <a href="/shoes" className="hero-btn-primary">
             Shop Now
           </a>
-          <a href="/collectibles" className="hero-btn-ghost">
-            View Collections
+          <a href="/shoes?sort=newest" className="hero-btn-ghost">
+            New Arrivals
           </a>
         </div>
 

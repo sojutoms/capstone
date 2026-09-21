@@ -101,6 +101,7 @@ const Profile = () => {
   const [orderCount, setOrderCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
   const [viewingPhoto, setViewingPhoto] = useState(false);
+  const [bioExpanded, setBioExpanded] = useState(false);
 
   const token = localStorage.getItem("auth-token");
 
@@ -132,10 +133,8 @@ const Profile = () => {
   }, [token]);
 
   const handleLogout = () => {
-    if (window.confirm("Are you sure you want to log out?")) {
-      localStorage.removeItem("auth-token");
-      window.location.replace("/");
-    }
+    localStorage.removeItem("auth-token");
+    window.location.replace("/");
   };
 
   const firstName = user?.firstName || (user?.name || "").split(" ")[0] || "";
@@ -175,6 +174,22 @@ const Profile = () => {
               <h2>{displayName}</h2>
               <p>{user.email}</p>
               {!!user.place && <p className="profile-place">📍 {user.place}</p>}
+              {!!user.bio && (
+                <p className="profile-bio">
+                  {user.bio.length > 140 && !bioExpanded
+                    ? `${user.bio.slice(0, 140)}… `
+                    : `${user.bio} `}
+                  {user.bio.length > 140 && (
+                    <button
+                      type="button"
+                      className="profile-bio-toggle"
+                      onClick={() => setBioExpanded((v) => !v)}
+                    >
+                      {bioExpanded ? "See less" : "See more"}
+                    </button>
+                  )}
+                </p>
+              )}
             </div>
           </div>
 

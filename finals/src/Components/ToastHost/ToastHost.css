@@ -1,6 +1,6 @@
 .global-toast-container {
   position: fixed;
-  bottom: 24px;
+  top: 24px;
   right: 24px;
   z-index: 10010;
   display: flex;
@@ -50,7 +50,7 @@
 
 @media (max-width: 768px) {
   .global-toast-container {
-    bottom: 16px;
+    top: 16px;
     right: 16px;
     left: 16px;
     max-width: unset;

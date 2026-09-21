@@ -4,6 +4,8 @@ import "./Navbar.css";
 import { ShopContext } from "../../Context/ShopContext";
 import { useTheme } from "../../Context/ThemeContext";
 import API_BASE_URL from "../../services/api";
+import { showToast } from "../../utils/toast";
+import { getAvailableStock } from "../../utils/stock";
 
 const SearchIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -175,7 +177,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("auth-token");
-    window.location.replace("/login");
+    window.location.replace("/");
   };
 
   const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
@@ -484,7 +486,14 @@ const Navbar = () => {
                       <div className="drawer-item-controls">
                         <button onClick={() => removeFromCart(key)}>-</button>
                         <span>{qty}</span>
-                        <button onClick={() => addToCart(p.id, sz || null)}>+</button>
+                        <button
+                          onClick={() => {
+                            const availableStock = getAvailableStock(p, sz);
+                            if (availableStock <= 0) { showToast("error", "Out of stock."); return; }
+                            if (qty >= availableStock) { showToast("error", "Max stock reached."); return; }
+                            addToCart(p.id, sz || null);
+                          }}
+                        >+</button>
                         <span className="price">₱{(getSizePrice(p, sz) * qty).toLocaleString()}</span>
                       </div>
                     </div>

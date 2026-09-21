@@ -113,22 +113,21 @@
 .utility-btn {
   margin-left: auto;
   background: transparent;
-  border: 1px solid var(--glass-border);
-  font-family: var(--font-body);
+  border: 1.5px solid var(--text-primary);
+  font-family: var(--font-display);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-weight: 700;
+  letter-spacing: 0.12em;
   cursor: pointer;
   color: var(--text-primary);
-  padding: 8px 14px;
-  border-radius: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 .utility-btn:hover {
-  background: var(--glass-bg-hover);
-  border-color: var(--accent-gold);
-  color: var(--accent-gold);
+  background: var(--text-primary);
+  color: var(--bg-primary);
 }
 
 .input-grid {
@@ -306,6 +305,187 @@
   margin-bottom: 24px;
   max-height: 400px;
   overflow-y: auto;
+}
+
+/* When the user is editing a saved address inline, drop the scroll and
+   let the panel expand naturally so it looks like the main checkout form. */
+.innovative-dropdown:has(.saved-address-edit-panel) {
+  max-height: none;
+  overflow: visible;
+  background: transparent;
+  border: none;
+}
+
+.saved-address-edit-panel {
+  padding: 24px 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.saved-address-edit-panel .input-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.saved-address-edit-panel .field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.saved-address-edit-panel .field-group input,
+.saved-address-edit-panel .field-group select {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+@media (max-width: 640px) {
+  .saved-address-edit-panel .input-grid { grid-template-columns: 1fr; }
+}
+
+/* Shipping banner — stacks label + sub on two lines. */
+.shipping-banner {
+  margin-top: 20px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+
+.shipping-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shipping-banner-label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.shipping-banner-sub {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.shipping-banner--free .shipping-banner-label {
+  color: #16a34a;
+}
+
+/* "Already saved" pill — visible confirmation that this address is in the
+   user's saved list. Used in place of the Save Address toggle. */
+.address-already-saved-note {
+  margin-top: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: rgba(22, 163, 74, 0.10);
+  border: 1px solid rgba(22, 163, 74, 0.35);
+  color: #16a34a;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Small "Clear form" button at the top-right of the form section — matches
+   the "STORED ADDRESSES" utility button style. */
+.form-top-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.clear-form-link {
+  background: transparent;
+  border: 1.5px solid var(--text-primary);
+  color: var(--text-primary);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-form-link:hover {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
+/* Large, prominent Save Address toggle button. */
+.save-address-btn-big {
+  margin-top: 24px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 2px dashed var(--text-primary);
+  border-radius: 12px;
+  padding: 18px 24px;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.save-address-btn-big:hover {
+  background: var(--glass-bg-hover);
+  transform: translateY(-1px);
+}
+
+.save-address-btn-big.active {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-style: solid;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+.save-address-btn-big.active:hover {
+  opacity: 0.9;
+}
+
+.save-address-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  font-weight: 900;
+  font-size: 0.9rem;
+}
+
+.save-address-btn-big.active .save-address-check {
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .saved-address-row {

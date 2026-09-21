@@ -1,4 +1,5 @@
 import React, { useContext, useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ShopContext } from "../Context/ShopContext";
 import Item from "../Components/Item/Item";
 import CategorySkeleton from "../Components/Skeleton/CategorySkeleton";
@@ -14,7 +15,7 @@ const CATEGORY_META = {
 
 const SLIDER_MIN = 0;
 const SLIDER_MAX = 30000;
-const PAGE_SIZE  = 9;
+const PAGE_SIZE  = 10;
 
 const priceRanges = [
   { label: "All Prices",       min: 0,     max: Infinity },
@@ -48,7 +49,10 @@ const ShopCategory = (props) => {
 
   const [filters,      setFilters]      = useState({ priceRange: priceRanges[0], subCategory: "All" });
   const [sliderValues, setSliderValues] = useState([SLIDER_MIN, SLIDER_MAX]);
-  const [sortOption,   setSortOption]   = useState("featured");
+  const [searchParams] = useSearchParams();
+  const validSortValues = ["featured", "newest", "price-low", "price-high", "name-asc", "name-desc"];
+  const initialSort = validSortValues.includes(searchParams.get("sort")) ? searchParams.get("sort") : "featured";
+  const [sortOption,   setSortOption]   = useState(initialSort);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showFilters,  setShowFilters]  = useState(true);
   const [currentPage,  setCurrentPage]  = useState(1);

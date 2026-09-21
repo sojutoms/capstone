@@ -360,6 +360,20 @@
   cursor: pointer;
 }
 
+.manifest-reviewed-tag {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(22, 163, 74, 0.10);
+  border: 1px solid rgba(22, 163, 74, 0.35);
+  color: #16a34a;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .details-footer-summary {
   margin-top: 60px;
   padding-top: 40px;
@@ -812,17 +826,45 @@
 }
 
 @media print {
-  .order-history-container, .certificate-backdrop, .cert-actions {
-    display: none !important;
-  }
+  /* Constrain the printed page and remove browser default margins. */
+  @page { size: A4 portrait; margin: 12mm; }
+  html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+
+  /* Hide everything, then show only the certificate content.
+     Using visibility (not display) keeps layout in place so the modal renders correctly. */
+  body * { visibility: hidden !important; }
+  .certificate-modal,
+  .certificate-modal * { visibility: visible !important; }
+
+  /* Take the modal out of its overlay so it prints at the top of the page. */
   .certificate-modal {
-    position: static;
-    padding: 0;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    background: #fff !important;
+    display: block !important;
   }
+  .certificate-backdrop,
+  .cert-actions { display: none !important; }
   .certificate-paper {
-    box-shadow: none;
-    border: none;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    background: #fff !important;
+    page-break-inside: avoid !important;
   }
+  .certificate-border {
+    padding: 24px !important;
+    page-break-inside: avoid !important;
+  }
+  .certificate-header,
+  .certificate-body,
+  .certificate-footer { page-break-inside: avoid !important; }
 }
 
 @media (max-width: 900px) {

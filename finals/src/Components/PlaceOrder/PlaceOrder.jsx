@@ -98,13 +98,15 @@ const VoucherPanel = ({ subtotal, onApply, onRemove, appliedCode }) => {
 
   const handleRemove = () => { setError(""); onRemove(); };
 
+  const activeVouchers = vouchers.filter((v) => v.active);
+
   return (
     <div className="voucher-dropdown-root" style={{ position: 'relative', marginTop: '24px', zIndex: 100 }}>
       <div className={`voucher-select-trigger ${appliedCode ? 'applied' : ''}`} onClick={() => setOpen(!open)}>
         <div className="trigger-content">
           <div className="trigger-text-group">
             <span className="trigger-label">{appliedCode ? "Voucher Applied" : "Available Vouchers"}</span>
-            <span className="trigger-value">{appliedCode ? appliedCode : (loading ? "Loading..." : `${vouchers.length} available`)}</span>
+            <span className="trigger-value">{appliedCode ? appliedCode : (loading ? "Loading..." : `${activeVouchers.length} available`)}</span>
           </div>
         </div>
       </div>
@@ -115,15 +117,15 @@ const VoucherPanel = ({ subtotal, onApply, onRemove, appliedCode }) => {
             <div className="dropdown-loading">Scanning for rewards...</div>
           ) : error ? (
             <div className="dropdown-error">{error}</div>
-          ) : vouchers.length === 0 ? (
+          ) : activeVouchers.length === 0 ? (
             <div className="dropdown-empty">You don't have any vouchers yet.</div>
           ) : (
             <div className="dropdown-vouchers-list">
-              {vouchers.map((v) => (
-                <div 
-                  key={v._id} 
-                  className={`dropdown-voucher-item ${appliedCode === v.code ? 'active' : ''} ${v.used ? 'used' : ''}`}
-                  onClick={() => !v.used && handleApply(v.code)}
+              {activeVouchers.map((v) => (
+                <div
+                  key={v._id}
+                  className={`dropdown-voucher-item ${appliedCode === v.code ? 'active' : ''}`}
+                  onClick={() => handleApply(v.code)}
                 >
                   <div className="v-item-left">
                     <span className="v-item-discount">
@@ -581,8 +583,12 @@ const PlaceOrder = () => {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (data.success) { setSavedAddresses(data.addresses || []); setEditingIndex(null); setEditFormData(null); }
-      else addToast('error', data.error || 'Failed to update address.');
+      if (data.success) {
+        setSavedAddresses(data.addresses || []);
+        setEditingIndex(null);
+        setEditFormData(null);
+        addToast('success', 'Address updated.');
+      } else addToast('error', data.error || 'Failed to update address.');
     } catch (err) { console.error(err); addToast('error', 'Failed to update address.'); }
     finally { setEditLoading((p) => ({ ...p, saving: false })); }
   };
@@ -594,8 +600,11 @@ const PlaceOrder = () => {
     try {
       const res = await fetch(`${API_BASE_URL}/deleteaddress/${idx}`, { method: 'DELETE', headers: { 'auth-token': token } });
       const data = await res.json();
-      if (data.success) { setSavedAddresses(data.addresses || []); if (editingIndex === idx) { setEditingIndex(null); setEditFormData(null); } }
-      else addToast('error', data.error || 'Failed to delete address.');
+      if (data.success) {
+        setSavedAddresses(data.addresses || []);
+        if (editingIndex === idx) { setEditingIndex(null); setEditFormData(null); }
+        addToast('success', 'Address deleted.');
+      } else addToast('error', data.error || 'Failed to delete address.');
     } catch (err) { console.error(err); addToast('error', 'Failed to delete address.'); }
     finally { setDeletingIndex(null); }
   };
@@ -820,57 +829,88 @@ const PlaceOrder = () => {
                 </div>
               )}
 
-              <div className="input-grid">
-                <div className="field-group"><label>First Name</label><input name="firstName" value={formData.firstName} onChange={handleInputChange} placeholder="GIVEN NAME" required /></div>
-                <div className="field-group"><label>Last Name</label><input name="lastName" value={formData.lastName} onChange={handleInputChange} placeholder="SURNAME" required /></div>
-              </div>
-              <div className="field-group"><label>Email Address</label><input name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="AUTHORIZED EMAIL" required /></div>
-              <div className="field-group"><label>Street Address</label><input name="street" value={formData.street} onChange={handleInputChange} placeholder="RESIDENCE / UNIT / STREET" maxLength={64} required /></div>
-              <div className="input-grid">
-                <div className="field-group">
-                  <label>Region</label>
-                  <select name="region" value={formData.region} onChange={handleInputChange} required>
-                    <option value="">{loadingStates.regions ? 'SYNCING...' : 'SELECT REGION'}</option>
-                    {regions.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
-                  </select>
-                </div>
-                <div className="field-group">
-                  <label>Province</label>
-                  {hasProvinces ? (
-                    <select name="province" value={formData.province} onChange={handleInputChange} disabled={!formData.region} required>
-                      <option value="">{loadingStates.provinces ? 'SYNCING...' : 'SELECT PROVINCE'}</option>
-                      {provinces.map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
-                    </select>
-                  ) : <input value="METRO MANILA" disabled className="disabled-input" />}
-                </div>
-              </div>
-              <div className="input-grid">
-                <div className="field-group">
-                  <label>City / Municipality</label>
-                  <select name="cityOrMunicipality" value={formData.cityOrMunicipality} onChange={handleInputChange} disabled={!formData.region} required>
-                    <option value="">{loadingStates.cities ? 'SYNCING...' : 'SELECT CITY'}</option>
-                    {cities.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div className="field-group">
-                  <label>Barangay</label>
-                  <select name="barangay" value={formData.barangay} onChange={handleInputChange} disabled={!formData.cityOrMunicipality} required>
-                    <option value="">{loadingStates.barangays ? 'SYNCING...' : 'SELECT BARANGAY'}</option>
-                    {barangays.map((b) => <option key={b.code} value={b.code}>{b.name}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="field-group"><label>Phone Number</label><input name="phone" type="text" inputMode="numeric" value={formData.phone} onChange={handleInputChange} placeholder="+639XXXXXXXXX" maxLength={13} required /></div>
+              {editingIndex === null && (
+                <>
+                  <div className="form-top-actions">
+                    <button
+                      type="button"
+                      className="clear-form-link"
+                      onClick={() => {
+                        setFormData({
+                          firstName: '', lastName: '', email: '', street: '',
+                          region: '', province: '', cityOrMunicipality: '', barangay: '',
+                          phone: '+63',
+                        });
+                        setProvinces([]);
+                        setCities([]);
+                        setBarangays([]);
+                        setHasProvinces(true);
+                        setErrors({});
+                        setSaveAddress(false);
+                      }}
+                    >
+                      [ CLEAR FORM ]
+                    </button>
+                  </div>
+                  <div className="input-grid">
+                    <div className="field-group"><label>First Name</label><input name="firstName" value={formData.firstName} onChange={handleInputChange} placeholder="GIVEN NAME" required /></div>
+                    <div className="field-group"><label>Last Name</label><input name="lastName" value={formData.lastName} onChange={handleInputChange} placeholder="SURNAME" required /></div>
+                  </div>
+                  <div className="field-group"><label>Email Address</label><input name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="AUTHORIZED EMAIL" required /></div>
+                  <div className="field-group"><label>Street Address</label><input name="street" value={formData.street} onChange={handleInputChange} placeholder="RESIDENCE / UNIT / STREET" maxLength={64} required /></div>
+                  <div className="input-grid">
+                    <div className="field-group">
+                      <label>Region</label>
+                      <select name="region" value={formData.region} onChange={handleInputChange} required>
+                        <option value="">{loadingStates.regions ? 'SYNCING...' : 'SELECT REGION'}</option>
+                        {regions.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="field-group">
+                      <label>Province</label>
+                      {hasProvinces ? (
+                        <select name="province" value={formData.province} onChange={handleInputChange} disabled={!formData.region} required>
+                          <option value="">{loadingStates.provinces ? 'SYNCING...' : 'SELECT PROVINCE'}</option>
+                          {provinces.map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
+                        </select>
+                      ) : <input value="METRO MANILA" disabled className="disabled-input" />}
+                    </div>
+                  </div>
+                  <div className="input-grid">
+                    <div className="field-group">
+                      <label>City / Municipality</label>
+                      <select name="cityOrMunicipality" value={formData.cityOrMunicipality} onChange={handleInputChange} disabled={!formData.region} required>
+                        <option value="">{loadingStates.cities ? 'SYNCING...' : 'SELECT CITY'}</option>
+                        {cities.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="field-group">
+                      <label>Barangay</label>
+                      <select name="barangay" value={formData.barangay} onChange={handleInputChange} disabled={!formData.cityOrMunicipality} required>
+                        <option value="">{loadingStates.barangays ? 'SYNCING...' : 'SELECT BARANGAY'}</option>
+                        {barangays.map((b) => <option key={b.code} value={b.code}>{b.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="field-group"><label>Phone Number</label><input name="phone" type="text" inputMode="numeric" value={formData.phone} onChange={handleInputChange} placeholder="+639XXXXXXXXX" maxLength={13} required /></div>
 
-              <ShippingBanner regionCode={formData.region} />
+                  <ShippingBanner regionCode={formData.region} />
 
-              {isAlreadySaved ? (
-                <p className="address-already-saved-note">✓ This address is already saved</p>
-              ) : (
-                <label className="save-checkbox-innovative">
-                  <input type="checkbox" checked={saveAddress} onChange={(e) => setSaveAddress(e.target.checked)} />
-                  <span>SAVE ADDRESS FOR LATER</span>
-                </label>
+                  {isAlreadySaved ? (
+                    <p className="address-already-saved-note">✓ This address is already saved</p>
+                  ) : (
+                    <button
+                      type="button"
+                      className={`save-address-btn-big ${saveAddress ? 'active' : ''}`}
+                      onClick={() => setSaveAddress(!saveAddress)}
+                    >
+                      <span className="save-address-check">{saveAddress ? '✓' : '+'}</span>
+                      <span className="save-address-label">
+                        {saveAddress ? 'Address will be saved' : 'Save this address for later'}
+                      </span>
+                    </button>
+                  )}
+                </>
               )}
             </section>
 

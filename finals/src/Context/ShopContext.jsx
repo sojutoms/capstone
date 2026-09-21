@@ -102,47 +102,46 @@ const ShopContextProvider = (props) => {
         if (data.success) {
           setCartItems((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
           setCartSizes((prev) => ({ ...prev, [key]: size }));
-        } else {
-          showToast("error", data.error || data.message || "Failed to add to cart.");
+          return { success: true };
         }
+        showToast("error", data.error || data.message || "Failed to add to cart.");
+        return { success: false };
       } catch (err) {
         console.error("Failed to sync cart with backend:", err);
         showToast("error", "Error adding to cart. Please try again.");
+        return { success: false };
       }
-
-    } else {
-      const product = all_product.find((p) => p.id === Number(itemId));
-      if (!product) { showToast("error", "Product not found"); return; }
-
-      let availableStock = 0;
-      const targetSize = String(size || "").trim();
-      
-      if (Array.isArray(product.sizes)) {
-        const sizeEntry = product.sizes.find(s => {
-          const sSize = String(s.size || "").trim();
-          return sSize === targetSize || (parseFloat(sSize) === parseFloat(targetSize) && !isNaN(parseFloat(targetSize)));
-        });
-        availableStock = sizeEntry ? Number(sizeEntry.quantity || 0) : Number(product.stock || 0);
-      } else if (product.sizes && typeof product.sizes === "object") {
-        const sizeEntry = product.sizes[size] || product.sizes[targetSize];
-        availableStock = typeof sizeEntry === "object" ? Number(sizeEntry.quantity || 0) : Number(sizeEntry || product.stock || 0);
-      } else {
-        availableStock = Number(product.stock || 0);
-      }
-
-
-
-      const currentQtyInCart = cartItems[key] || 0;
-
-      if (currentQtyInCart + 1 > availableStock) {
-        showToast("error", `Only ${availableStock} item(s) available in size ${size}. You already have ${currentQtyInCart} in your cart.`);
-        return;
-      }
-
-      setCartItems((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
-      setCartSizes((prev) => ({ ...prev, [key]: size }));
-      showToast("success", "Product added to cart!");
     }
+
+    const product = all_product.find((p) => p.id === Number(itemId));
+    if (!product) { showToast("error", "Product not found"); return { success: false }; }
+
+    let availableStock = 0;
+    const targetSize = String(size || "").trim();
+
+    if (Array.isArray(product.sizes)) {
+      const sizeEntry = product.sizes.find(s => {
+        const sSize = String(s.size || "").trim();
+        return sSize === targetSize || (parseFloat(sSize) === parseFloat(targetSize) && !isNaN(parseFloat(targetSize)));
+      });
+      availableStock = sizeEntry ? Number(sizeEntry.quantity || 0) : Number(product.stock || 0);
+    } else if (product.sizes && typeof product.sizes === "object") {
+      const sizeEntry = product.sizes[size] || product.sizes[targetSize];
+      availableStock = typeof sizeEntry === "object" ? Number(sizeEntry.quantity || 0) : Number(sizeEntry || product.stock || 0);
+    } else {
+      availableStock = Number(product.stock || 0);
+    }
+
+    const currentQtyInCart = cartItems[key] || 0;
+
+    if (currentQtyInCart + 1 > availableStock) {
+      showToast("error", `Only ${availableStock} item(s) available in size ${size}. You already have ${currentQtyInCart} in your cart.`);
+      return { success: false };
+    }
+
+    setCartItems((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+    setCartSizes((prev) => ({ ...prev, [key]: size }));
+    return { success: true };
   };
 
   const removeFromCart = async (key) => {

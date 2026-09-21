@@ -424,10 +424,10 @@ const LoginSignup = () => {
     if (!agreed) { setErr("agreed", "You must read and agree to both documents to continue."); return; }
     let bad = false;
     if (!firstName) { setErr("firstName", "First name required."); bad = true; }
-    else if (!/^[A-Za-z\s'-]+$/.test(firstName)) { setErr("firstName", "No numbers or special characters allowed."); bad = true; }
+    else if (!/^[A-Za-z]+$/.test(firstName)) { setErr("firstName", "Only letters are allowed."); bad = true; }
     else if (firstName.length < 2) { setErr("firstName", "At least 2 characters."); bad = true; }
     if (!lastName) { setErr("lastName", "Last name required."); bad = true; }
-    else if (!/^[A-Za-z\s'-]+$/.test(lastName)) { setErr("lastName", "No numbers or special characters allowed."); bad = true; }
+    else if (!/^[A-Za-z]+$/.test(lastName)) { setErr("lastName", "Only letters are allowed."); bad = true; }
     else if (lastName.length < 2) { setErr("lastName", "At least 2 characters."); bad = true; }
     if (!email) { setErr("email", "Email is required."); bad = true; }
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErr("email", "Enter a valid email."); bad = true; }
@@ -569,12 +569,24 @@ const LoginSignup = () => {
         <div className="ls-fields-grid">
           <Field error={errors.firstName}>
             <input name="firstName" type="text" placeholder="First name" value={formData.firstName} onKeyDown={handleSignupKey}
-              onChange={(e) => { const v = e.target.value.replace(/[^A-Za-z\s'-]/g, "").slice(0, MAX_NAME); setErrors((p) => ({ ...p, firstName: "" })); setFormData((p) => ({ ...p, firstName: v })); }}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const v = raw.replace(/[^A-Za-z]/g, "").slice(0, MAX_NAME);
+                const stripped = raw.length > v.length;
+                setErrors((p) => ({ ...p, firstName: stripped ? "Only letters are allowed." : "" }));
+                setFormData((p) => ({ ...p, firstName: v }));
+              }}
             />
           </Field>
           <Field error={errors.lastName}>
             <input name="lastName" type="text" placeholder="Last name" value={formData.lastName} onKeyDown={handleSignupKey}
-              onChange={(e) => { const v = e.target.value.replace(/[^A-Za-z\s'-]/g, "").slice(0, MAX_NAME); setErrors((p) => ({ ...p, lastName: "" })); setFormData((p) => ({ ...p, lastName: v })); }}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const v = raw.replace(/[^A-Za-z]/g, "").slice(0, MAX_NAME);
+                const stripped = raw.length > v.length;
+                setErrors((p) => ({ ...p, lastName: stripped ? "Only letters are allowed." : "" }));
+                setFormData((p) => ({ ...p, lastName: v }));
+              }}
             />
           </Field>
         </div>

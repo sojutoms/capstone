@@ -15,6 +15,7 @@ import AdminTrigger from "./Components/AdminTrigger/AdminTrigger";
 import Loader from "./Components/Loader/Loader";
 import ChatWidget from "./Components/Chatbot/ChatWidget";
 import ToastHost from "./Components/ToastHost/ToastHost";
+import IdleGuard from "./Components/IdleGuard/IdleGuard";
 
 import ShopContextProvider from "./Context/ShopContext";
 import FavoritesProvider from "./Context/FavoritesContext";
@@ -102,6 +103,7 @@ function App() {
               </div>
               <Footer />
               <ChatWidget />
+              <IdleGuard />
             </FavoritesProvider>
           </ShopContextProvider>
         </BrowserRouter>

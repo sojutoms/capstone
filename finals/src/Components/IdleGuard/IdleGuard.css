@@ -1,0 +1,80 @@
+.cust-idle-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.cust-idle-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 420px;
+  width: calc(100% - 32px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.cust-idle-modal__body {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.cust-idle-modal__icon {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: #fef3c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cust-idle-modal__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111;
+  margin: 0 0 6px 0;
+}
+
+.cust-idle-modal__subtitle {
+  font-size: 13px;
+  color: #555;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cust-idle-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.cust-idle-modal__btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  background: #111;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+}
+
+.cust-idle-modal__btn:hover {
+  background: #000;
+}
+
+@media (prefers-color-scheme: dark) {
+  .cust-idle-modal {
+    background: #1a1a1a;
+  }
+  .cust-idle-modal__title { color: #fff; }
+  .cust-idle-modal__subtitle { color: #bbb; }
+  .cust-idle-modal__btn { background: #fff; color: #111; }
+  .cust-idle-modal__btn:hover { background: #e6e6e6; }
+}

@@ -134,6 +134,36 @@
   white-space: normal !important;
 }
 
+.profile-bio {
+  color: var(--text-secondary) !important;
+  margin-top: 10px !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  font-size: 0.9rem !important;
+  line-height: 1.5 !important;
+  max-width: 60ch !important;
+}
+
+.profile-bio-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.profile-bio-toggle:hover {
+  opacity: 0.7;
+}
+
 .profile-overview-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

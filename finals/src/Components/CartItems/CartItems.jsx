@@ -4,8 +4,8 @@ import { ShopContext } from "../../Context/ShopContext";
 import { useNavigate } from "react-router-dom";
 import API_BASE_URL from "../../services/api";
 import { showToast } from "../../utils/toast";
+import { SIMPLE_CATEGORIES, getAvailableStock } from "../../utils/stock";
 
-const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 const WATCH_CATEGORIES  = ["watch"];
 
 const CartItems = () => {
@@ -41,29 +41,6 @@ const CartItems = () => {
     }
     return Number(product.new_price ?? product.price ?? 0) || 0;
   };
-
-  const getAvailableStock = (product, size) => {
-    if (!product) return 0;
-    const isSimple = product.category && SIMPLE_CATEGORIES.includes(String(product.category).toLowerCase());
-    if (isSimple) return Math.max(0, Number(product.stock || 0));
-
-    const targetSize = String(size || "").trim();
-    if (Array.isArray(product.sizes)) {
-      const sizeData = product.sizes.find(s => {
-        const sSize = String(s.size || "").trim();
-        return sSize === targetSize || (parseFloat(sSize) === parseFloat(targetSize) && !isNaN(parseFloat(targetSize)));
-      });
-      if (sizeData) return Math.max(0, Number(sizeData.quantity || 0));
-    } else if (product.sizes && typeof product.sizes === "object") {
-      const sizeData = product.sizes[size] || product.sizes[targetSize];
-      const q = typeof sizeData === "object" ? sizeData.quantity : sizeData;
-      return Number.isFinite(Number(q)) ? Math.max(0, Number(q)) : 0;
-    }
-    return 0;
-  };
-
-
-
 
   const cartItemsArray = Object.entries(cartItems).filter(([key, quantity]) => {
     if (!quantity || quantity <= 0) return false;

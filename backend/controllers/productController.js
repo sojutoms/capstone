@@ -295,10 +295,10 @@ const getFeatured = async (req, res) => {
 const addReview = async (req, res) => {
   try {
     const { productId, rating, review, title, fit, comfort, recommend } = req.body;
-    
+
     let userName = "Anonymous";
     let userId = "";
-    
+
     const token = req.header("auth-token");
     if (token) {
       try {
@@ -314,6 +314,19 @@ const addReview = async (req, res) => {
         }
       } catch (err) {
         console.error("Review auth error:", err);
+      }
+    }
+
+    // Guest reviews are still allowed (userId = ""), but a logged-in user
+    // can only leave one review per product — the storefront also filters
+    // "Write Review" out once one exists, this is the server-side backstop.
+    if (userId) {
+      const existing = await Review.findOne({ productId: Number(productId), userId });
+      if (existing) {
+        return res.status(409).json({
+          success: false,
+          message: "You have already reviewed this product.",
+        });
       }
     }
 

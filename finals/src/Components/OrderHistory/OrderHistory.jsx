@@ -47,6 +47,49 @@ const DigitalCertificate = ({ order, onClose }) => {
   if (!order) return null;
   const serialNumber = `GS-${order.orderNumber.toString().padStart(6, '0')}-${order.timestamp.toString().slice(-4)}`;
 
+  const downloadDigitalCopy = () => {
+    const itemName = order.items[0]?.name || "Premium Selection";
+    const acquisitionDate = new Date(order.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const printWindow = window.open("", "_blank", "width=800,height=900");
+    if (!printWindow) return;
+    printWindow.document.write(`<!doctype html><html><head><title>Certificate - Order #${order.orderNumber}</title>
+      <style>
+        @page { size: A4 portrait; margin: 12mm; }
+        html, body { margin: 0; padding: 0; background: #fff; color: #111; font-family: 'Outfit', system-ui, sans-serif; }
+        .paper { max-width: 720px; margin: 0 auto; padding: 4px; border: 1px solid #d4d4d4; }
+        .border { border: 2px solid #999; padding: 40px; text-align: center; }
+        .seal { font-size: 12px; letter-spacing: 0.3em; color: #444; margin-bottom: 24px; }
+        h3 { margin: 0 0 8px; font-size: 26px; letter-spacing: 0.15em; }
+        .subtitle { font-size: 11px; letter-spacing: 0.25em; color: #666; margin-bottom: 32px; }
+        .row { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 0; border-bottom: 1px dashed #ccc; text-align: left; }
+        .label { font-size: 10px; letter-spacing: 0.2em; color: #666; text-transform: uppercase; }
+        .value { font-weight: 700; font-size: 14px; color: #111; }
+        .statement { margin-top: 24px; font-size: 12px; line-height: 1.6; color: #444; text-align: center; padding: 0 12px; }
+        .footer { margin-top: 40px; display: flex; justify-content: space-between; align-items: center; }
+        .sig-line { display: block; width: 200px; border-top: 1px solid #333; margin-bottom: 6px; }
+        .sig-label { font-size: 10px; letter-spacing: 0.2em; color: #666; }
+        .hologram { width: 80px; height: 80px; border-radius: 50%; border: 2px solid #333; display: flex; align-items: center; justify-content: center; font-size: 9px; letter-spacing: 0.15em; font-weight: 700; }
+      </style>
+    </head><body>
+      <div class="paper"><div class="border">
+        <div class="seal">GOODSOLES.PH</div>
+        <h3>CERTIFICATE OF AUTHENTICITY</h3>
+        <div class="subtitle">PREMIUM COLLECTOR SERIES</div>
+        <div class="row"><span class="label">Item Identifier</span><span class="value">${itemName}</span></div>
+        <div class="row"><span class="label">Acquisition Date</span><span class="value">${acquisitionDate}</span></div>
+        <div class="row"><span class="label">Verification ID</span><span class="value">${serialNumber}</span></div>
+        <div class="statement">This digital certificate verifies that the aforementioned item has undergone a rigorous multi-point inspection by GoodSoles experts and is guaranteed 100% authentic.</div>
+        <div class="footer">
+          <div><span class="sig-line"></span><span class="sig-label">AUTHORIZED SIGNATURE</span></div>
+          <div class="hologram">AUTHENTIC</div>
+        </div>
+      </div></div>
+    </body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
   return (
     <div className="certificate-modal">
       <div className="certificate-backdrop" onClick={onClose} />
@@ -84,7 +127,7 @@ const DigitalCertificate = ({ order, onClose }) => {
             </div>
           </div>
           <div className="cert-actions">
-            <button className="cert-btn cert-btn--primary" onClick={() => window.print()}>DOWNLOAD DIGITAL COPY</button>
+            <button className="cert-btn cert-btn--primary" onClick={downloadDigitalCopy}>DOWNLOAD DIGITAL COPY</button>
             <button className="cert-btn" onClick={onClose}>CLOSE DOCUMENT</button>
           </div>
         </div>
@@ -112,6 +155,23 @@ const OrderHistory = () => {
   const ordersPerPage = 10;
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewProduct, setReviewProduct] = useState(null);
+  const [reviewedIds, setReviewedIds] = useState(new Set());
+
+  const fetchReviewedIds = useCallback(async () => {
+    const token = localStorage.getItem("auth-token");
+    if (!token) { setReviewedIds(new Set()); return; }
+    try {
+      const res = await fetch(`${API_BASE_URL}/myreviews`, { headers: { "auth-token": token } });
+      const data = await res.json().catch(() => ({}));
+      if (data.success) {
+        setReviewedIds(new Set((data.reviews || []).map((r) => Number(r.productId))));
+      }
+    } catch (err) {
+      console.error("Failed to load reviewed product ids:", err);
+    }
+  }, []);
+
+  useEffect(() => { fetchReviewedIds(); }, [fetchReviewedIds]);
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundOrder, setRefundOrder] = useState(null);
   const [refundSubmitting, setRefundSubmitting] = useState(false);
@@ -505,8 +565,11 @@ const OrderHistory = () => {
                           <span className="manifest-item-price">₱{formatPrice(item.price * item.quantity)}</span>
                         </div>
                         <p className="manifest-sub">SIZE: {item.size || 'N/A'} • QTY: {item.quantity}</p>
-                        {effectiveStatus(selected) === "completed" && (
+                        {effectiveStatus(selected) === "completed" && !reviewedIds.has(Number(item.id)) && (
                           <button className="manifest-review-btn" onClick={() => { setReviewProduct(item); setReviewOpen(true); }}>WRITE REVIEW</button>
+                        )}
+                        {effectiveStatus(selected) === "completed" && reviewedIds.has(Number(item.id)) && (
+                          <span className="manifest-reviewed-tag">✓ Reviewed</span>
                         )}
                       </div>
                     </div>
@@ -541,7 +604,7 @@ const OrderHistory = () => {
         </main>
       </div>
 
-      {reviewOpen && <ReviewModal open={reviewOpen} onClose={closeReview} product={reviewProduct} orderId={selected?._id} />}
+      {reviewOpen && <ReviewModal open={reviewOpen} onClose={closeReview} product={reviewProduct} orderId={selected?._id} onReviewSubmit={fetchReviewedIds} />}
       {refundOpen && <RefundModal open={refundOpen} onClose={closeRefundModal} onSubmit={submitRefund} loading={refundSubmitting} order={selected} />}
       {certOrder && <DigitalCertificate order={certOrder} onClose={() => setCertOrder(null)} />}
       

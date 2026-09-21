@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useState, useRef, useCallback } from "react";
 import "./Settings.css";
 import API_BASE_URL from "../../services/api";
+import PH_CITIES from "../../utils/phCities";
 
 // Converts a legacy 09XXXXXXXXX number (still the format most existing
 // accounts/checkout have saved) into the +63XXXXXXXXXX format the register
@@ -657,7 +658,7 @@ const Settings = () => {
                           placeholder="EMAIL ADDRESS"
                           style={{ flex: 1 }}
                         />
-                        {editing && !emailEditing && (
+                        {!emailEditing && (
                           <button
                             type="button"
                             className="edit-toggle"
@@ -666,7 +667,7 @@ const Settings = () => {
                             Change
                           </button>
                         )}
-                        {editing && emailEditing && (
+                        {emailEditing && (
                           <>
                             <button
                               type="button"
@@ -741,16 +742,28 @@ const Settings = () => {
                     )}
                   </div>
                   <div className="input-group" style={{ flex: 1 }}>
-                    <label>Place (City / Province)</label>
+                    <label>City</label>
                     <input
                       name="place"
+                      list="ph-cities"
                       className={editing ? "editing" : ""}
                       disabled={!editing}
                       value={profile.place}
                       maxLength={80}
-                      placeholder="e.g. Quezon City"
+                      placeholder="Type or pick a Philippine city"
                       onChange={(e) => setProfile((p) => ({ ...p, place: e.target.value }))}
                     />
+                    <datalist id="ph-cities">
+                      {PH_CITIES.map((c) => (
+                        <option key={c} value={c} />
+                      ))}
+                    </datalist>
+                    {editing && (profile.place || "").trim() &&
+                      !PH_CITIES.some((c) => c.toLowerCase() === profile.place.trim().toLowerCase()) && (
+                      <span className="field-error">
+                        Please pick a city from the list.
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -758,9 +771,9 @@ const Settings = () => {
                   <div className="bio-label-row">
                     <label>Bio</label>
                     <span
-                      className={`bio-word-count${(profile.bio || "").trim().split(/\s+/).filter(Boolean).length > 15 ? " bio-word-count-over" : ""}`}
+                      className={`bio-word-count${(profile.bio || "").length > 500 ? " bio-word-count-over" : ""}`}
                     >
-                      {(profile.bio || "").trim().split(/\s+/).filter(Boolean).length}/15 words
+                      {(profile.bio || "").length}/500 characters
                     </span>
                   </div>
                   <textarea
@@ -769,12 +782,12 @@ const Settings = () => {
                     disabled={!editing}
                     value={profile.bio}
                     rows={4}
-                    placeholder="Tell us a bit about yourself (max. 15 words)…"
+                    placeholder="Tell us a bit about yourself (max. 500 characters)…"
                     onChange={(e) => setProfile((p) => ({ ...p, bio: e.target.value }))}
                   />
-                  {editing && (profile.bio || "").trim().split(/\s+/).filter(Boolean).length > 15 && (
+                  {editing && (profile.bio || "").length > 500 && (
                     <span className="field-error">
-                      15 words max (currently {(profile.bio || "").trim().split(/\s+/).filter(Boolean).length})
+                      500 characters max (currently {(profile.bio || "").length})
                     </span>
                   )}
                 </div>
@@ -785,7 +798,9 @@ const Settings = () => {
                     className="save-btn"
                     disabled={
                       !!(profile.phone && !/^\+63\d{10}$/.test(profile.phone)) ||
-                      (profile.bio || "").trim().split(/\s+/).filter(Boolean).length > 15
+                      (profile.bio || "").length > 500 ||
+                      (!!(profile.place || "").trim() &&
+                        !PH_CITIES.some((c) => c.toLowerCase() === profile.place.trim().toLowerCase()))
                     }
                   >
                     Submit
@@ -808,7 +823,7 @@ const Settings = () => {
                     <div className="pwd-input-wrapper">
                       <input
                         type={showCurrentPwd ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder="Enter current password"
                         value={passwords.current}
                         onChange={(e) => { setPasswords({ ...passwords, current: e.target.value }); setPwdErrors((p) => ({ ...p, current: "" })); }}
                         onCopy={blockClipboard} onPaste={blockClipboard} onCut={blockClipboard} onContextMenu={blockClipboard}
@@ -827,7 +842,7 @@ const Settings = () => {
                     <div className="pwd-input-wrapper">
                       <input
                         type={showNewPwd ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder="Enter new password"
                         value={passwords.newPass}
                         onChange={(e) => { setPasswords({ ...passwords, newPass: e.target.value }); setPwdErrors((p) => ({ ...p, newPass: "" })); }}
                         onCopy={blockClipboard} onPaste={blockClipboard} onCut={blockClipboard} onContextMenu={blockClipboard}
@@ -856,7 +871,7 @@ const Settings = () => {
                     <div className="pwd-input-wrapper">
                       <input
                         type={showConfirmPwd ? "text" : "password"}
-                        placeholder="••••••••"
+                        placeholder="Confirm new password"
                         value={passwords.confirm}
                         onChange={(e) => { setPasswords({ ...passwords, confirm: e.target.value }); setPwdErrors((p) => ({ ...p, confirm: "" })); }}
                         onCopy={blockClipboard} onPaste={blockClipboard} onCut={blockClipboard} onContextMenu={blockClipboard}
