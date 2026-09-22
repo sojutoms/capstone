@@ -34,10 +34,15 @@ const { width } = Dimensions.get("window");
 
 const SORT_OPTIONS = [
   { label: "Newest",             value: "newest" },
+  { label: "Best Sellers",       value: "best_sellers" },
   { label: "Price: Low to High", value: "price_asc" },
   { label: "Price: High to Low", value: "price_desc" },
   { label: "Name A–Z",           value: "name_asc" },
 ];
+
+// Product `id` is a monotonically-increasing counter assigned at creation,
+// so id-desc is the reliable "newest first" sort. Matches web (ShopCategory.jsx).
+const productSortKey = (p) => Number(p?.id) || 0;
 
 /* ─────────────────── MAIN SCREEN ─────────────────── */
 
@@ -133,9 +138,11 @@ export default function BagsScreen({ navigation }) {
 
     // ── SORT ──────────────────────────────────────────────────────────
     switch (sortBy) {
-      case "price_asc":  result.sort((a, b) => (getLowestPrice(a) || 0) - (getLowestPrice(b) || 0)); break;
-      case "price_desc": result.sort((a, b) => (getLowestPrice(b) || 0) - (getLowestPrice(a) || 0)); break;
-      case "name_asc":   result.sort((a, b) => (a.name || "").localeCompare(b.name || "")); break;
+      case "newest":        result.sort((a, b) => productSortKey(b) - productSortKey(a)); break;
+      case "best_sellers":  result.sort((a, b) => (b?.salesCount || 0) - (a?.salesCount || 0)); break;
+      case "price_asc":     result.sort((a, b) => (getLowestPrice(a) || 0) - (getLowestPrice(b) || 0)); break;
+      case "price_desc":    result.sort((a, b) => (getLowestPrice(b) || 0) - (getLowestPrice(a) || 0)); break;
+      case "name_asc":      result.sort((a, b) => (a.name || "").localeCompare(b.name || "")); break;
       default: break;
     }
 

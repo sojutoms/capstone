@@ -47,7 +47,7 @@ const BRANDS = [
   { label: "Nike", value: "nike", logo: require("../../assets/nike_logo.jpg") },
   { label: "Adidas", value: "adidas", logo: require("../../assets/adidas_logo.png") },
   { label: "New Balance", value: "nb", logo: require("../../assets/nb_logo.png") },
-  { label: "On Cloud", value: "on", logo: require("../../assets/oncloud_logo.png") },
+  { label: "On Cloud", value: "on-cloud", logo: require("../../assets/oncloud_logo.png") },
   { label: "Puma", value: "puma", logo: require("../../assets/puma_logo.png") },
 ];
 

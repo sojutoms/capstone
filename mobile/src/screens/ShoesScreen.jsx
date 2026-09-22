@@ -32,16 +32,33 @@ const { width } = Dimensions.get("window");
 
 /* ─────────────────── CONFIG ─────────────────── */
 
-const SHOE_BRAND_VALUES = ["nike", "adidas", "puma", "nb"];
+const SHOE_BRAND_VALUES = ["nike", "adidas", "puma", "nb", "on-cloud"];
+
+// Turns a product's brand field (usually the display name like "On Cloud" or
+// "New Balance") into the slug we compare against ("on-cloud", "new-balance").
+// Handles the "New Balance" ↔ "nb" alias explicitly so the existing icon
+// keeps working.
+const brandSlug = (raw) => {
+  const s = (raw || "").toLowerCase().trim();
+  if (s === "new balance" || s === "nb") return "nb";
+  return s.replace(/\s+/g, "-");
+};
 
 const SUBCATEGORIES = ["All", "Lifestyle", "Basketball", "Running"];
 
 const SORT_OPTIONS = [
-  { label: "Newest",          value: "newest" },
+  { label: "Newest",             value: "newest" },
+  { label: "Best Sellers",       value: "best_sellers" },
   { label: "Price: Low to High", value: "price_asc" },
   { label: "Price: High to Low", value: "price_desc" },
-  { label: "Name A–Z",        value: "name_asc" },
+  { label: "Name A–Z",           value: "name_asc" },
 ];
+
+// Product `id` is a monotonically-increasing counter assigned at creation,
+// so id-desc is the reliable "newest first" sort. The `date` / `createdAt`
+// timestamps are unreliable — newer products don't have them set. Matches
+// finals/src/Pages/ShopCategory.jsx.
+const productSortKey = (p) => Number(p?.id) || 0;
 
 /* ─────────────────── MAIN SCREEN ─────────────────── */
 
@@ -123,21 +140,9 @@ export default function ShoesScreen({ navigation, route }) {
 
     // ── BRAND FILTER ──────────────────────────────────────────────────────
     if (selectedBrand === "all") {
-      result = result.filter((p) => {
-        const brand = (p.brand || p.category || "").toLowerCase().trim();
-        return (
-          SHOE_BRAND_VALUES.includes(brand) ||
-          brand === "new balance"
-        );
-      });
+      result = result.filter((p) => SHOE_BRAND_VALUES.includes(brandSlug(p.brand || p.category)));
     } else {
-      result = result.filter((p) => {
-        const brand = (p.brand || p.category || "").toLowerCase().trim();
-        if (selectedBrand === "nb") {
-          return brand === "nb" || brand === "new balance";
-        }
-        return brand === selectedBrand;
-      });
+      result = result.filter((p) => brandSlug(p.brand || p.category) === selectedBrand);
     }
 
     // ── SUBCATEGORY FILTER ────────────────────────────────────────────────
@@ -163,9 +168,11 @@ export default function ShoesScreen({ navigation, route }) {
 
     // ── SORT ──────────────────────────────────────────────────────────────
     switch (sortBy) {
-      case "price_asc":  result.sort((a, b) => (getLowestPrice(a) || 0) - (getLowestPrice(b) || 0)); break;
-      case "price_desc": result.sort((a, b) => (getLowestPrice(b) || 0) - (getLowestPrice(a) || 0)); break;
-      case "name_asc":   result.sort((a, b) => (a.name || "").localeCompare(b.name || "")); break;
+      case "newest":        result.sort((a, b) => productSortKey(b) - productSortKey(a)); break;
+      case "best_sellers":  result.sort((a, b) => (b?.salesCount || 0) - (a?.salesCount || 0)); break;
+      case "price_asc":     result.sort((a, b) => (getLowestPrice(a) || 0) - (getLowestPrice(b) || 0)); break;
+      case "price_desc":    result.sort((a, b) => (getLowestPrice(b) || 0) - (getLowestPrice(a) || 0)); break;
+      case "name_asc":      result.sort((a, b) => (a.name || "").localeCompare(b.name || "")); break;
       default: break;
     }
 
