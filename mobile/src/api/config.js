@@ -52,22 +52,18 @@ export const BASE_URL = resolveBaseUrl();
 
 // ─── AR-specific URL ─────────────────────────────────────────────────────────
 // AR Try-On uses navigator.mediaDevices.getUserMedia inside a WebView, which
-// iOS/WebKit only exposes on HTTPS or localhost. Plain-HTTP LAN URLs won't work.
+// iOS/WebKit and Android WebView both only expose on HTTPS (or localhost).
 //
-// While testing on a phone against a locally-running backend, AR loads the
-// /artryon/index.html WebView through an ngrok HTTPS tunnel to that same
-// backend. Product images don't depend on this — they're served directly
-// from Cloudinary URLs stored on each product — so only the AR page routes
-// through the tunnel. Override via EXPO_PUBLIC_AR_URL in .env when the
-// tunnel URL changes.
-const AR_DEV_TUNNEL = "https://lifting-manpower-corral.ngrok-free.dev";
-
+// Whenever BASE_URL is HTTPS (the default — points at the deployed backend),
+// AR uses it directly. If someone flips EXPO_PUBLIC_API_URL to a plain-HTTP
+// LAN backend for local backend work, they can also set EXPO_PUBLIC_AR_URL
+// to an HTTPS tunnel URL just for the AR page.
 export const AR_BASE_URL_OVERRIDE = process.env.EXPO_PUBLIC_AR_URL || "";
 
 const isHttps = (u) => typeof u === "string" && u.startsWith("https://");
 
 export const AR_BASE_URL = AR_BASE_URL_OVERRIDE
-  || (__DEV__ ? AR_DEV_TUNNEL : (isHttps(BASE_URL) ? BASE_URL : ""));
+  || (isHttps(BASE_URL) ? BASE_URL : "");
 
 export const AR_IS_AVAILABLE = !!AR_BASE_URL;
 

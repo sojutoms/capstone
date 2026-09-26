@@ -294,7 +294,7 @@ export default function ProductDetailScreen({ route }) {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       {/* ══ TOP NAV BAR ══ */}
-      <View style={[s.topBar, Platform.OS === "ios" && { paddingTop: insets.top + 8 }]}>
+      <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.navBtn}>
           <Text style={s.navArrow}>←</Text>
         </TouchableOpacity>

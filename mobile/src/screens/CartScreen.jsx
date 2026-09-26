@@ -118,7 +118,7 @@ export default function CartScreen({ navigation }) {
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bgPrimary} />
 
       {/* ── HEADER ── */}
-      <View style={[styles.header, Platform.OS === "ios" && { paddingTop: insets.top + 20 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <Text style={styles.headerLabel}>YOUR CART</Text>
         <Text style={styles.headerCount}>{cart.length} item{cart.length !== 1 ? "s" : ""}</Text>
       </View>

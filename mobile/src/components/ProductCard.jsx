@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Image } from "expo-image";
 import Feather from "@expo/vector-icons/Feather";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -9,9 +9,7 @@ import { toNumber, getLowestPrice, getBadge } from "../utils/productHelpers";
 import PressScale from "./PressScale";
 import { triggerFlyToCart } from "../utils/flyToCartBus";
 import { hapticTap, hapticSuccess } from "../utils/haptics";
-
-const { width } = Dimensions.get("window");
-export const PRODUCT_CARD_WIDTH = (width - 48) / 2;
+import { useProductCardWidth } from "../utils/responsive";
 
 // The one product card used everywhere a product grid/row shows up (Home's
 // Trending/Just Dropped rows, and all four category grids) — previously
@@ -20,7 +18,8 @@ export const PRODUCT_CARD_WIDTH = (width - 48) / 2;
 // or behavior fix lands everywhere at once.
 export default function ProductCard({ item, index = 0, onPress, onAddToCart, favorited, onToggleFavorite, arMode = false, onARPress }) {
   const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { cardWidth } = useProductCardWidth();
+  const styles = useMemo(() => makeStyles(colors, cardWidth), [colors, cardWidth]);
   const price       = getLowestPrice(item);
   const hasMultiple = item.sizes && Object.keys(item.sizes).length > 1;
   const badge       = getBadge(item, index);
@@ -108,9 +107,9 @@ export default function ProductCard({ item, index = 0, onPress, onAddToCart, fav
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const makeStyles = (colors, cardWidth) => StyleSheet.create({
   card: {
-    width: PRODUCT_CARD_WIDTH,
+    width: cardWidth,
     backgroundColor: colors.bgCard,
     borderRadius: radius.lg,
     borderWidth: 1,

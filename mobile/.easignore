@@ -1,0 +1,46 @@
+# EAS Build only needs the source, config, and lockfile — everything below is
+# either regenerated on the build server (node_modules, native folders) or
+# irrelevant to the build (logs, editor caches, git history). Shipping a
+# smaller archive cuts upload time and Compressed-project-files size.
+
+# Dependencies — EAS runs `npm install` on the build server
+node_modules/
+
+# Native folders — EAS runs `expo prebuild` on the build server
+/ios
+/android
+
+# Metro / Expo / bundler caches
+.expo/
+.metro-health-check*
+dist/
+web-build/
+
+# Git history
+.git/
+.github/
+
+# Local env files (secrets)
+.env
+.env*.local
+
+# OS junk / editor state
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs and debug output
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Test / coverage artifacts
+coverage/
+*.tsbuildinfo
+
+# Any zipped / tar'd exports left in the tree
+*.zip
+*.tar
+*.tgz

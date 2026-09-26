@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Alert } from "../utils/customAlert";
 import { useAuth } from "../context/AuthContext";
 import { fonts, radius, typography } from "../theme";
@@ -37,6 +38,7 @@ const FieldError = ({ msg, s }) => (msg ? <Text style={s.errorText}>⚠ {msg}</T
 export default function EditProfileScreen({ navigation }) {
   const { userToken, refreshUserProfile } = useAuth();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const s = useMemo(() => makeStyles(colors), [colors]);
 
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", place: "", bio: "" });
@@ -267,7 +269,11 @@ export default function EditProfileScreen({ navigation }) {
   }
 
   return (
-    <ScrollView style={s.root} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={s.root}
+      contentContainerStyle={[s.content, { paddingTop: insets.top + 12 }]}
+      keyboardShouldPersistTaps="handled"
+    >
       <TouchableOpacity
         onPress={() => navigation.goBack()}
         style={s.backBtn}

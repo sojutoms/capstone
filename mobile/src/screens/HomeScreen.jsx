@@ -311,8 +311,11 @@ export default function HomeScreen({ navigation }) {
   // automatically). Android is untouched, still using its own flat,
   // previously-tuned numbers below.
   const insets = useSafeAreaInsets();
-  const headerExtraPad   = Platform.OS === "ios" ? insets.top + 56 : 48;
-  const scrollClearance  = Platform.OS === "ios" ? headerExtraPad + 95 : FLOATING_HEADER_CLEARANCE;
+  // Padding derives from the real status-bar / notch inset on both platforms so
+  // the header clears the clock on any device (Android edge-to-edge, iPhone
+  // notch, iPhone Dynamic Island, iPad without notch, etc.).
+  const headerExtraPad   = insets.top + 56;
+  const scrollClearance  = headerExtraPad + 95;
 
   const handleAddToCart = (item) => {
     if (isOutOfStock(item)) {
@@ -489,7 +492,7 @@ export default function HomeScreen({ navigation }) {
               bell icon placement. */}
           <TouchableOpacity
             ref={chatBtnRef}
-            style={[s.chatBtnTopRight, Platform.OS === "ios" && { top: insets.top + 14 }]}
+            style={[s.chatBtnTopRight, { top: insets.top + 14 }]}
             onPress={handleOpenChat}
             activeOpacity={0.8}
           >

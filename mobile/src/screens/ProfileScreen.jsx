@@ -307,7 +307,7 @@ export default function ProfileScreen({ navigation }) {
         ref={scrollRef}
         contentContainerStyle={[
           styles.scroll,
-          Platform.OS === "ios" && { paddingTop: insets.top + 16 },
+          { paddingTop: insets.top + 16 },
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={

@@ -195,7 +195,7 @@ export default function ShopScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.scrollContent,
-          Platform.OS === "ios" && { paddingTop: insets.top + 16 },
+          { paddingTop: insets.top + 16 },
         ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accentGold} />
