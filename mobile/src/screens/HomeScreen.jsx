@@ -147,9 +147,12 @@ const AccordionTile = ({ category, onBrandSelect, onDirectNav, tileStyles }) => 
     ]).start();
   };
 
+  // 90deg = › rotated to point down (collapsed), 270deg = pointing up
+  // (expanded). Shoes is the only accordion; every other tile is a direct link
+  // and keeps the unrotated › instead.
   const rotate = animRotate.interpolate({
     inputRange: [0, 1],
-    outputRange: ["0deg", "180deg"],
+    outputRange: ["90deg", "270deg"],
   });
 
   const maxH = animHeight.interpolate({
@@ -915,7 +918,9 @@ const makeTileStyles = (colors) => StyleSheet.create({
     color: "#ffffff",
     fontWeight: "300",
     lineHeight: 30,
-    transform: [{ rotate: "90deg" }],
+    // No base rotation — the raw › points right, which is what the directNav
+    // tiles want. AccordionTile overrides transform entirely to point its
+    // own chevron down (90deg) and flip it up (270deg) when expanded.
   },
   comingSoon: {
     fontSize: 8,

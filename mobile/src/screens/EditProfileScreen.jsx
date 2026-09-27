@@ -17,8 +17,15 @@ import { fonts, radius, typography } from "../theme";
 import { useTheme } from "../context/ThemeContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 import { censorProfanity } from "../utils/profanity";
+import PH_CITIES from "../utils/phCities";
 
 const BIO_MAX = 64;
+
+// The Place field accepts only a city from PH_CITIES, matched exactly and
+// case-insensitively — identical to the web Settings page, so a profile saved
+// on either client validates the same way.
+const isKnownCity = (v) =>
+  PH_CITIES.some((c) => c.toLowerCase() === String(v || "").trim().toLowerCase());
 
 // Converts a legacy 09XXXXXXXXX number (still the format most existing
 // accounts have saved) into the +63XXXXXXXXXX format the register form now
@@ -130,6 +137,7 @@ export default function EditProfileScreen({ navigation }) {
     if (!form.firstName.trim()) e.firstName = "First name is required";
     if (!form.lastName.trim()) e.lastName = "Last name is required";
     if (form.phone && !/^\+63\d{10}$/.test(form.phone)) e.phone = "Phone number must start with +63 and be followed by exactly 10 digits.";
+    if ((form.place || "").trim() && !isKnownCity(form.place)) e.place = "Please pick a city from the list.";
     if (form.bio && form.bio.length > BIO_MAX) e.bio = `${BIO_MAX} characters max (currently ${form.bio.length})`;
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -234,6 +242,15 @@ export default function EditProfileScreen({ navigation }) {
     setEmailOtp("");
     setEmailOtpError("");
   };
+
+  // React Native has no <datalist>, so the web dropdown becomes an inline
+  // list under the input. It disappears on its own once the text is an exact
+  // city, which is also what happens right after picking one.
+  const citySuggestions = useMemo(() => {
+    const q = (form.place || "").trim().toLowerCase();
+    if (!q || isKnownCity(q)) return [];
+    return PH_CITIES.filter((c) => c.toLowerCase().includes(q)).slice(0, 6);
+  }, [form.place]);
 
   const handleSave = async () => {
     if (!validate()) return;
@@ -441,13 +458,28 @@ export default function EditProfileScreen({ navigation }) {
       <View style={s.fieldGroup}>
         <Label text="Place (City / Province)" s={s} />
         <TextInput
-          style={s.input}
+          style={[s.input, errors.place && s.inputError]}
           value={form.place}
           onChangeText={(v) => handleChange("place", v)}
-          placeholder="e.g. Quezon City"
+          placeholder="Type or pick a Philippine city"
           placeholderTextColor={colors.bgTertiary}
           maxLength={80}
+          autoCorrect={false}
         />
+        {citySuggestions.length > 0 && (
+          <View style={s.suggestionList}>
+            {citySuggestions.map((city, i) => (
+              <TouchableOpacity
+                key={city}
+                style={[s.suggestionRow, i === citySuggestions.length - 1 && s.suggestionRowLast]}
+                onPress={() => handleChange("place", city)}
+              >
+                <Text style={s.suggestionText}>{city}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+        <FieldError msg={errors.place} s={s} />
       </View>
 
       <View style={s.fieldGroup}>
@@ -497,6 +529,22 @@ const makeStyles = (colors) => StyleSheet.create({
 
   row: { flexDirection: "row", gap: 10 },
   fieldGroup: { marginBottom: 14 },
+  suggestionList: {
+    marginTop: 6,
+    backgroundColor: colors.bgCard,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: radius.md,
+    overflow: "hidden",
+  },
+  suggestionRow: {
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.bgTertiary,
+  },
+  suggestionRowLast: { borderBottomWidth: 0 },
+  suggestionText: { fontSize: 13, color: colors.textPrimary, letterSpacing: 0.2 },
 
   bioLabelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   wordCount: { fontSize: 11, color: colors.textMuted, marginBottom: 7 },
