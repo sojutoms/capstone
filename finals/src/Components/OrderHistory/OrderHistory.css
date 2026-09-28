@@ -483,12 +483,13 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  opacity: 0.3;
+  color: var(--text-muted);
 }
 
 .empty-icon {
   font-size: 64px;
   margin-bottom: 20px;
+  opacity: 0.3;
 }
 
 .details-empty-state h3 {

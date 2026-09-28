@@ -178,6 +178,11 @@
   margin-top: 16px;
 }
 
+[data-theme='light'] .logout-trigger {
+  color: #b91c1c;
+  border-color: #b91c1c;
+}
+
 .logout-trigger:hover {
   background: var(--settings-danger);
   color: #ffffff;

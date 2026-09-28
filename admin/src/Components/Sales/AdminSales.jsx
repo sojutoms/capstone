@@ -292,7 +292,7 @@ const AdminSales = () => {
       <div className="sales-control-bar animate-in">
         <div className="filter-group">
           <label>View Period</label>
-          <select value={period} onChange={(e) => setPeriod(e.target.value)}>
+          <select aria-label="View period" value={period} onChange={(e) => setPeriod(e.target.value)}>
             <option value="day">Daily</option>
             <option value="week">Weekly</option>
             <option value="month">Monthly</option>
@@ -303,7 +303,7 @@ const AdminSales = () => {
         {(period === "year" || period === "month") && (
           <div className="filter-group">
             <label>Select Year</label>
-            <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}>
+            <select aria-label="Select year" value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}>
               {years.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
@@ -312,7 +312,7 @@ const AdminSales = () => {
         {period === "month" && (
           <div className="filter-group">
             <label>Select Month</label>
-            <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
+            <select aria-label="Select month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
               <option value="">Full Year</option>
               {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => (
                 <option key={i + 1} value={String(i + 1)}>{m}</option>
@@ -362,6 +362,7 @@ const AdminSales = () => {
                   />
                 </div>
                 <select
+                  aria-label="Filter by payment method"
                   value={filterPayment}
                   onChange={(e) => { setFilterPayment(e.target.value); setPage(1); }}
                   style={{ background: "var(--bg-dark)", border: "1px solid var(--border-subtle)", color: "var(--text-primary)", borderRadius: 8, padding: "6px 10px", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", cursor: "pointer" }}
@@ -430,10 +431,10 @@ const AdminSales = () => {
                       return (
                         <tr key={row.id}>
                           <td style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "12px" }}>{row.orderId}</td>
-                          <td style={{ fontSize: "11px", opacity: 0.7 }}>{formatDateTime(row.soldAt)}</td>
+                          <td style={{ fontSize: "11px", color: "var(--text-tertiary)" }}>{formatDateTime(row.soldAt)}</td>
                           <td>
                             <div style={{ fontWeight: 600, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "300px" }} title={row.product}>{row.product}</div>
-                            <div style={{ fontSize: "10px", opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                            <div style={{ fontSize: "10px", color: "var(--text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                               {row.brand} · {row.size}
                             </div>
                           </td>
@@ -510,7 +511,7 @@ const AdminSales = () => {
                       <tr key={idx}>
                         <td style={{ fontWeight: 600 }}>{m.label || m.month || "—"}</td>
                         <td style={{ textAlign: "right", color: "#4ade80", fontWeight: 700 }}>{fmt(m.amount)}</td>
-                        <td style={{ textAlign: "right", opacity: 0.7 }}>{m.units}</td>
+                        <td style={{ textAlign: "right", color: "var(--text-tertiary)" }}>{m.units}</td>
                       </tr>
                     ))}
                 </tbody>

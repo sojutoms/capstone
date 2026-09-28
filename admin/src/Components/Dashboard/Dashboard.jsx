@@ -466,7 +466,6 @@ const Dashboard = () => {
               key={insight.id}
               className="insight-card insight-card--clickable"
               onClick={() => openInsight(insight)}
-              aria-label={`View details for ${insight.title}`}
             >
               <div className={`insight-icon ${insight.type}`}>{insight.icon}</div>
               <div className="insight-content">

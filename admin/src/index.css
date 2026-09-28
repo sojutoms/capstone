@@ -47,9 +47,9 @@
   --border-focus: rgba(255, 255, 255, 0.3);
 
   --text-primary: #ffffff;
-  --text-secondary: #a0a0a0;
-  --text-tertiary: #808080;
-  --text-muted: #666666;
+  --text-secondary: #b0b0b0;
+  --text-tertiary: #a3a3a3;
+  --text-muted: #8c8c8c;
 
   --accent-primary: #ffffff;
   --accent-white: #ffffff;
@@ -101,8 +101,8 @@
 
   --text-primary: #111111;
   --text-secondary: #444444;
-  --text-tertiary: #777777;
-  --text-muted: #666666;
+  --text-tertiary: #5c5c5c;
+  --text-muted: #555555;
 
   --accent-primary: #000000;
   --accent-white: #000000;
@@ -373,6 +373,49 @@ img {
 
 /* ── Responsiveness ── */
 
+/* Stop the whole app from horizontal-scrolling on narrow phones just because
+   one wide element (usually a data table) exists. Wide tables get their own
+   scroll wrapper below. */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Every native <table> auto-scrolls horizontally instead of overflowing the
+   viewport on phone widths. Components that need custom behavior can opt out
+   by wrapping the table in a container with .no-mobile-table-scroll. */
+@media (max-width: 900px) {
+  table:not(.no-mobile-table-scroll table) {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+}
+
+/* Prevent iOS Safari from zooming when a form input is focused. Input size
+   under 16px on iOS triggers the auto-zoom "helpful" behavior. Buttons stay
+   the design system's size. */
+@media (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* Minimum touch target size for interactive controls on phones — Apple HIG
+   and Google Material both recommend 44px. Only bumps controls that don't
+   already meet it (this rule doesn't override explicit smaller sizes on
+   components that opt in via .compact-touch). */
+@media (max-width: 900px) {
+  button:not(.compact-touch),
+  a:not(.compact-touch),
+  [role="button"]:not(.compact-touch) {
+    min-height: 40px;
+  }
+}
+
 @media (max-width: 1024px) {
   .dashboard-grid {
     grid-template-columns: 1fr 1fr;
@@ -394,17 +437,34 @@ img {
     overflow-x: auto;
     white-space: nowrap;
     padding: 4px;
+    -webkit-overflow-scrolling: touch;
   }
 
   .page-btn {
     padding: 8px 12px;
     font-size: 12px;
   }
+
+  /* Modal padding needs to be tighter on phones or content overflows the
+     viewport. Any modal centered with `padding` on the overlay works. */
+  .modal-overlay,
+  .voucher-overlay,
+  .sku-modal-overlay {
+    padding: 12px !important;
+  }
 }
 
 @media (max-width: 480px) {
   .product-management {
     padding: 16px 12px;
+  }
+
+  /* Stat card grids that were 4-col on desktop should collapse to 2 or 1 on
+     phones instead of stacking a single tall column that dominates screen. */
+  .stats-grid,
+  .sku-stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
   }
 }
 

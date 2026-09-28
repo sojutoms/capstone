@@ -73,6 +73,11 @@ const login = async (req, res) => {
       return res.status(401).json({ success: false, errors: "Invalid credentials" });
     }
 
+    if (user.status === "blocked") {
+      await recordLoginAttempt({ email, ip, userAgent, success: false, reason: "blocked" });
+      return res.status(403).json({ success: false, errors: "Your account has been restricted. Please contact support." });
+    }
+
     await recordLoginAttempt({ email, ip, userAgent, success: true, reason: "" });
 
     const token = jwt.sign({ user: { id: String(user._id) } }, JWT_SECRET);

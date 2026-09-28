@@ -60,8 +60,8 @@
   --text-primary-rgb: 255, 255, 255;
   --text-secondary: #a0a0a0;
   --text-secondary-rgb: 160, 160, 160;
-  --text-tertiary: #808080;
-  --text-muted: #666666;
+  --text-tertiary: #8f8f8f;
+  --text-muted: #8c8c8c;
   --text-inverse: #000000;
 
   --accent-gold: #ffffff;
@@ -111,8 +111,8 @@
   --text-primary-rgb: 17, 17, 17;
   --text-secondary: #444444;
   --text-secondary-rgb: 68, 68, 68;
-  --text-tertiary: #777777;
-  --text-muted: #666666;
+  --text-tertiary: #5c5c5c;
+  --text-muted: #555555;
   --text-inverse: #ffffff;
 
   --hero-overlay-start: rgba(255, 255, 255, 0.1);
@@ -200,6 +200,7 @@ body {
 
 .main-content {
   flex: 1;
+  min-height: 100vh;
   padding-top: var(--nav-height);
 }
 

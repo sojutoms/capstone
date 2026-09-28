@@ -39,6 +39,10 @@
   text-transform: uppercase;
 }
 
+.ls-deco::before {
+  content: attr(data-text);
+}
+
 .ls-deco-1 {
   font-size: 20vw;
   bottom: -4vw;

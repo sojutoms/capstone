@@ -12,6 +12,22 @@ const {
   getCallerInfo,
 } = require("./securityController");
 const AuditLog = require("../models/AuditLog");
+const LoginAttempt = require("../models/LoginAttempt");
+
+const ADMIN_MAX_FAILED_LOGINS = 5;
+const ADMIN_LOCKOUT_MS = 10 * 60 * 1000;
+
+const getAdminLockout = async (email) => {
+  const lastSuccess = await LoginAttempt.findOne({ email, success: true }).sort({ timestamp: -1 });
+  const since = lastSuccess ? lastSuccess.timestamp : new Date(0);
+  const failures = await LoginAttempt.find({ email, success: false, timestamp: { $gt: since } })
+    .sort({ timestamp: -1 })
+    .limit(ADMIN_MAX_FAILED_LOGINS)
+    .lean();
+  if (failures.length < ADMIN_MAX_FAILED_LOGINS) return null;
+  const unlockAt = new Date(failures[0].timestamp.getTime() + ADMIN_LOCKOUT_MS);
+  return Date.now() < unlockAt.getTime() ? unlockAt : null;
+};
 
 const JWT_SECRET = require("../config/jwt");
 const SIMPLE_CATEGORIES = ["bags", "collectibles"];
@@ -957,6 +973,15 @@ const adminLogin = async (req, res) => {
   try {
     if (!email || !password) {
       return res.status(400).json({ success: false, error: "Email and password required" });
+    }
+
+    const unlockAt = await getAdminLockout(String(email).toLowerCase().trim());
+    if (unlockAt) {
+      return res.status(429).json({
+        success: false,
+        error: "Too many failed login attempts. Please try again after 10 minutes.",
+        unlockAt,
+      });
     }
 
     const user = await Users.findOne({ email: String(email).toLowerCase().trim() });

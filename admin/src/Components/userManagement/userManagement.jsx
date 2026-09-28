@@ -268,11 +268,13 @@ const UserManagement = () => {
         { label: "Cancel", variant: "muted", onClick: () => {} },
         { label: "Delete", variant: "danger", onClick: async () => {
           try {
-            const res = await authorizedFetch(`/admin/deletereview/${rid}`, { method: "POST" });
+            const res = await authorizedFetch(`/admin/deletereview/${rid}`, { method: "DELETE" });
             const data = await res.json();
             if (data.success) {
               setReviews(prev => prev.filter(r => (r._id || r.id) !== rid));
               showToast({ message: "Review deleted", type: "success" });
+            } else {
+              showToast({ message: data.error || "Delete failed", type: "error" });
             }
           } catch { showToast({ message: "Delete failed", type: "error" }); }
         }},

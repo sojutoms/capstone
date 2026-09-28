@@ -86,7 +86,7 @@ const MyVouchers = () => {
           </div>
           
           <div className="redeem-section">
-            <h3>Redeem for Voucher</h3>
+            <h2>Redeem for Voucher</h2>
             <div className="redeem-controls">
               <button 
                 className="redeem-btn-circle" 

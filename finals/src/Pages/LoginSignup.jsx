@@ -797,8 +797,8 @@ const LoginSignup = () => {
   return (
     <>
       <div className="ls-page">
-        <div className="ls-deco ls-deco-1">SOLES</div>
-        <div className="ls-deco ls-deco-2">GS</div>
+        <div className="ls-deco ls-deco-1" data-text="SOLES" aria-hidden="true" />
+        <div className="ls-deco ls-deco-2" data-text="GS" aria-hidden="true" />
         <div className={`ls-card${animating ? " animating" : ""}`} style={{ flexDirection: brandLeft ? "row-reverse" : "row" }}>
           <div className="ls-brand"><BrandPanel /></div>
           <div className="ls-form"><div>{currentForm}</div></div>

@@ -102,6 +102,7 @@
   100% { box-shadow: 0 0 5px var(--accent-gold); }
 }
 
+.section-header-innovative h2,
 .section-header-innovative h3 {
   font-family: var(--font-display);
   font-size: 24px;

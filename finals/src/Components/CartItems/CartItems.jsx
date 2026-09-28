@@ -142,7 +142,7 @@ const CartItems = () => {
 
         <div className={`cart-info-zone${isOos ? " cart-info-zone--faded" : ""}`}>
           <div className="cart-info-header">
-            <h3>{product.name}</h3>
+            <h2>{product.name}</h2>
             {!isOos && availableStock > 0 && availableStock <= 5 && (
               <span className="stock-warning-badge">
                 {remaining === 0 ? "LAST ITEM" : `ONLY ${remaining} LEFT`}

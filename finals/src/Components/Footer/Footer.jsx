@@ -18,7 +18,7 @@ const Footer = () => {
                     </p>
                 </div>
                 <div className="footer-cell">
-                    <h3>Quick Links</h3>
+                    <h2>Quick Links</h2>
                     <ul className="footer-links-grid">
                         <li><Link to="/AboutUs">About Us</Link></li>
                         <li><Link to="/shoes">Shop</Link></li>
@@ -26,7 +26,7 @@ const Footer = () => {
                 </div>
 
                 <div className="footer-cell">
-                    <h3>Service</h3>
+                    <h2>Service</h2>
                     <ul className="footer-links-grid">
                         <li><Link to="/contact">Contact Us</Link></li>
                         <li><Link to="/shipping">Shipping Info</Link></li>
@@ -36,7 +36,7 @@ const Footer = () => {
                     </ul>
                 </div>
                 <div className="footer-cell comms-cell">
-                    <h3>Comms Link</h3>
+                    <h2>Comms Link</h2>
                     <div className="footer-contact-info">
                         <p><strong>E:</strong> goodsoles.ph@gmail.com</p>
                         <p><strong>P:</strong> 0967-442-6109</p>

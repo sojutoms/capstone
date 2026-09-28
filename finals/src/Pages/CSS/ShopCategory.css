@@ -611,7 +611,6 @@
   margin-bottom: 12px;
   color: var(--sc-muted);
   border-bottom: 1px solid var(--sc-border);
-  animation: sentinelFade 2.5s ease-in-out infinite;
 }
 
 .sc-sentinel--bottom {
@@ -619,6 +618,10 @@
   margin-top: 12px;
   color: var(--sc-muted);
   border-top: 1px solid var(--sc-border);
+}
+
+.sc-sentinel--top .sc-sentinel-arrow,
+.sc-sentinel--bottom .sc-sentinel-arrow {
   animation: sentinelFade 2.5s ease-in-out infinite;
 }
 

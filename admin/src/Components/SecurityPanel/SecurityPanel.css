@@ -1258,3 +1258,9 @@
         text-align: center;
     }
 }
+
+.sp-pagination .sp-btn {
+    color: var(--text-primary);
+    background: var(--glass-bg);
+    border: 1px solid var(--border-subtle);
+}

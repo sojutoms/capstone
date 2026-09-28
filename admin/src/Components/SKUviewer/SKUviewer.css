@@ -241,6 +241,7 @@
 
 .sku-product-name {
   font-size: 18px;
+  margin: 1em 0;
   font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;

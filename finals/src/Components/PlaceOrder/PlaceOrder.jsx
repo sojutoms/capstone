@@ -750,7 +750,7 @@ const PlaceOrder = () => {
             <section className="terminal-section">
               <div className="section-header-innovative">
                 <div className="indicator-dot"></div>
-                <h3>Shipping Details</h3>
+                <h2>Shipping Details</h2>
                 {savedAddresses.length > 0 && (
                   <button type="button" className="utility-btn" onClick={() => { setShowSaved(!showSaved); setEditingIndex(null); setEditFormData(null); }}>
                     {showSaved ? '[ CLOSE ]' : '[ STORED ADDRESSES ]'}
@@ -786,7 +786,7 @@ const PlaceOrder = () => {
                           <div className="input-grid">
                             <div className="field-group">
                               <label>Region</label>
-                              <select name="region" value={editFormData.region} onChange={handleEditChange}>
+                              <select name="region" aria-label="Region" value={editFormData.region} onChange={handleEditChange}>
                                 <option value="">SELECT REGION</option>
                                 {editRegions.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
                               </select>
@@ -794,7 +794,7 @@ const PlaceOrder = () => {
                             <div className="field-group">
                               <label>Province</label>
                               {editHasProvinces ? (
-                                <select name="province" value={editFormData.province} onChange={handleEditChange} disabled={!editFormData.region}>
+                                <select name="province" aria-label="Province" value={editFormData.province} onChange={handleEditChange} disabled={!editFormData.region}>
                                   <option value="">{editLoading.provinces ? 'SYNCING...' : 'SELECT PROVINCE'}</option>
                                   {editProvinces.map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
                                 </select>
@@ -804,14 +804,14 @@ const PlaceOrder = () => {
                           <div className="input-grid">
                             <div className="field-group">
                               <label>City / Municipality</label>
-                              <select name="cityOrMunicipality" value={editFormData.cityOrMunicipality} onChange={handleEditChange} disabled={!editFormData.region}>
+                              <select name="cityOrMunicipality" aria-label="City or municipality" value={editFormData.cityOrMunicipality} onChange={handleEditChange} disabled={!editFormData.region}>
                                 <option value="">{editLoading.cities ? 'SYNCING...' : 'SELECT CITY'}</option>
                                 {editCities.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
                               </select>
                             </div>
                             <div className="field-group">
                               <label>Barangay</label>
-                              <select name="barangay" value={editFormData.barangay} onChange={handleEditChange} disabled={!editFormData.cityOrMunicipality}>
+                              <select name="barangay" aria-label="Barangay" value={editFormData.barangay} onChange={handleEditChange} disabled={!editFormData.cityOrMunicipality}>
                                 <option value="">{editLoading.barangays ? 'SYNCING...' : 'SELECT BARANGAY'}</option>
                                 {editBarangays.map((b) => <option key={b.code} value={b.code}>{b.name}</option>)}
                               </select>
@@ -861,7 +861,7 @@ const PlaceOrder = () => {
                   <div className="input-grid">
                     <div className="field-group">
                       <label>Region</label>
-                      <select name="region" value={formData.region} onChange={handleInputChange} required>
+                      <select name="region" aria-label="Region" value={formData.region} onChange={handleInputChange} required>
                         <option value="">{loadingStates.regions ? 'SYNCING...' : 'SELECT REGION'}</option>
                         {regions.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
                       </select>
@@ -869,7 +869,7 @@ const PlaceOrder = () => {
                     <div className="field-group">
                       <label>Province</label>
                       {hasProvinces ? (
-                        <select name="province" value={formData.province} onChange={handleInputChange} disabled={!formData.region} required>
+                        <select name="province" aria-label="Province" value={formData.province} onChange={handleInputChange} disabled={!formData.region} required>
                           <option value="">{loadingStates.provinces ? 'SYNCING...' : 'SELECT PROVINCE'}</option>
                           {provinces.map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
                         </select>
@@ -879,14 +879,14 @@ const PlaceOrder = () => {
                   <div className="input-grid">
                     <div className="field-group">
                       <label>City / Municipality</label>
-                      <select name="cityOrMunicipality" value={formData.cityOrMunicipality} onChange={handleInputChange} disabled={!formData.region} required>
+                      <select name="cityOrMunicipality" aria-label="City or municipality" value={formData.cityOrMunicipality} onChange={handleInputChange} disabled={!formData.region} required>
                         <option value="">{loadingStates.cities ? 'SYNCING...' : 'SELECT CITY'}</option>
                         {cities.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
                       </select>
                     </div>
                     <div className="field-group">
                       <label>Barangay</label>
-                      <select name="barangay" value={formData.barangay} onChange={handleInputChange} disabled={!formData.cityOrMunicipality} required>
+                      <select name="barangay" aria-label="Barangay" value={formData.barangay} onChange={handleInputChange} disabled={!formData.cityOrMunicipality} required>
                         <option value="">{loadingStates.barangays ? 'SYNCING...' : 'SELECT BARANGAY'}</option>
                         {barangays.map((b) => <option key={b.code} value={b.code}>{b.name}</option>)}
                       </select>
@@ -918,7 +918,7 @@ const PlaceOrder = () => {
               <section className="terminal-section">
                 <div className="section-header-innovative">
                   <div className="indicator-dot"></div>
-                  <h3>Vouchers</h3>
+                  <h2>Vouchers</h2>
                 </div>
                 <VoucherPanel
                   subtotal={cartSubtotal}
@@ -938,7 +938,7 @@ const PlaceOrder = () => {
             <section className="terminal-section">
               <div className="section-header-innovative">
                 <div className="indicator-dot"></div>
-                <h3>Payment Method</h3>
+                <h2>Payment Method</h2>
               </div>
               <div className="innovative-payment-grid">
                 {[

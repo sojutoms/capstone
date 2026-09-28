@@ -89,10 +89,14 @@ const getAuditLog = async (req, res) => {
     const filter = {};
     if (action && action !== "all") filter.action = action;
     if (q) {
+      const safe = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const actionKey = safe.replace(/\s+/g, "_");
       filter.$or = [
-        { adminEmail: { $regex: q, $options: "i" } },
-        { adminName: { $regex: q, $options: "i" } },
-        { "details.productName": { $regex: q, $options: "i" } },
+        { adminEmail: { $regex: safe, $options: "i" } },
+        { adminName: { $regex: safe, $options: "i" } },
+        { action: { $regex: actionKey, $options: "i" } },
+        { "details.productName": { $regex: safe, $options: "i" } },
+        { "details.orderNumber": { $regex: safe, $options: "i" } },
       ];
     }
 

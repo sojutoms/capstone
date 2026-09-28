@@ -148,7 +148,7 @@ const Admin = () => {
       {showModal && <IdleModal onLogout={logout} />}
       <Toast toast={toast} onDismiss={dismissToast} />
 
-      <div className="admin">
+      <div className="admin-layout">
         <Sidebar />
         <div className="admin-content">
           <Routes>

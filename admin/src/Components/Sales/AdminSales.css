@@ -444,6 +444,12 @@ tr:last-child td {
     }
 }
 
+@media (max-width: 900px) {
+    .sales-grid-layout {
+        grid-template-columns: 1fr !important;
+    }
+}
+
 @media (max-width: 768px) {
     .admin-sales {
         padding: 0 16px 16px 16px;

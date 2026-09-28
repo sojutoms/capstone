@@ -284,9 +284,9 @@ const ShopCategory = (props) => {
           <aside className="shopcategory-sidebar">
             <div className="shopcategory-sidebar-inner">
               <div className="shopcategory-sidebar-section">
-                <h3 className="shopcategory-sidebar-heading">
+                <h2 className="shopcategory-sidebar-heading">
                   <span className="sidebar-heading-line" />Price Range
-                </h3>
+                </h2>
                 {priceRanges.map((range, idx) => {
                   const active = filters.priceRange.label === range.label;
                   return (
@@ -305,17 +305,17 @@ const ShopCategory = (props) => {
                   <div className="shopcategory-slider-track-container">
                     <div className="shopcategory-slider-track" />
                     <div className="shopcategory-slider-range" style={{ left: `${leftPct}%`, width: `${rightPct - leftPct}%` }} />
-                    <input ref={minThumbRef} type="range" className="shopcategory-slider-input" min={SLIDER_MIN} max={SLIDER_MAX} step={100} value={sliderValues[0]} onChange={handleSliderMin} />
-                    <input ref={maxThumbRef} type="range" className="shopcategory-slider-input" min={SLIDER_MIN} max={SLIDER_MAX} step={100} value={sliderValues[1]} onChange={handleSliderMax} />
+                    <input ref={minThumbRef} type="range" aria-label="Minimum price" className="shopcategory-slider-input" min={SLIDER_MIN} max={SLIDER_MAX} step={100} value={sliderValues[0]} onChange={handleSliderMin} />
+                    <input ref={maxThumbRef} type="range" aria-label="Maximum price" className="shopcategory-slider-input" min={SLIDER_MIN} max={SLIDER_MAX} step={100} value={sliderValues[1]} onChange={handleSliderMax} />
                   </div>
                 </div>
               </div>
 
               {availableSubCategories.length > 0 && (
                 <div className="shopcategory-sidebar-section">
-                  <h3 className="shopcategory-sidebar-heading">
+                  <h2 className="shopcategory-sidebar-heading">
                     <span className="sidebar-heading-line" />Style
-                  </h3>
+                  </h2>
                   <div className="shopcategory-brand-chips">
                     <button
                       onClick={() => setFilters((p) => ({ ...p, subCategory: "All" }))}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./AddProduct.css";
 import upload_area from "../../assets/upload_area.svg";
 import API_BASE_URL, { authorizedFetch } from "../../services/api";
+import { Toasts } from "../Shared/ToastManager";
 
 const FALLBACK_SHOE_SIZES  = ["6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13", "13.5", "14"];
 const FALLBACK_WATCH_SIZES = ["36", "38", "40", "42", "44", "46"];
@@ -573,6 +574,7 @@ const AddProduct = ({ onAdded }) => {
 
   return (
     <div className="add-product-container animate-in">
+      <Toasts toasts={toasts} removeToast={removeToast} />
       <div className="info-banner glass-medium">
         <div className="info-icon">💡</div>
         <div className="info-content">

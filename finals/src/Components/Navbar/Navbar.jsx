@@ -338,11 +338,11 @@ const Navbar = () => {
 
         <div className="nav-right">
           <div className="nav-search-wrap">
-            <button className="nav-search-icon-btn" onClick={openSearch}><SearchIcon /></button>
+            <button className="nav-search-icon-btn" onClick={openSearch} aria-label="Search products"><SearchIcon /></button>
           </div>
 
           <div className="theme-menu" ref={themeDropdownRef}>
-            <button className="nav-theme-btn" onClick={() => setThemeDropdownOpen(!themeDropdownOpen)}>
+            <button className="nav-theme-btn" onClick={() => setThemeDropdownOpen(!themeDropdownOpen)} aria-label="Change theme" aria-expanded={themeDropdownOpen}>
               {theme === 'light' ? <SunIcon /> : <MoonIcon />}
             </button>
             {themeDropdownOpen && (
@@ -388,8 +388,15 @@ const Navbar = () => {
             <Link to="/login"><button className="nav-login-btn">LOGIN</button></Link>
           )}
 
-          <div className="nav-cart-wrapper" onClick={() => setCartDrawerOpen(true)}>
-            <span className="nav-cart-icon" aria-label="Cart"><CartIcon /></span>
+          <div
+            className="nav-cart-wrapper"
+            role="button"
+            tabIndex={0}
+            aria-label={`Open bag, ${getTotalCartItems()} items`}
+            onClick={() => setCartDrawerOpen(true)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCartDrawerOpen(true); } }}
+          >
+            <span className="nav-cart-icon" aria-hidden="true"><CartIcon /></span>
             <div className="nav-cart-count">{getTotalCartItems()}</div>
           </div>
         </div>
@@ -462,7 +469,7 @@ const Navbar = () => {
       <div className={`cart-drawer ${cartDrawerOpen ? "open" : ""}`}>
         <div className="cart-drawer-header">
           <h3>BAG ({getTotalCartItems()})</h3>
-          <button className="close-drawer" onClick={() => setCartDrawerOpen(false)}><CloseIcon /></button>
+          <button className="close-drawer" onClick={() => setCartDrawerOpen(false)} aria-label="Close bag"><CloseIcon /></button>
         </div>
         <div className="cart-drawer-content">
           {cartItemsArray.length > 0 && (

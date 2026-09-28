@@ -623,7 +623,7 @@ const SKUViewer = () => {
                   {isWatch && <span className="watch-sku-badge" title="Watch — sized by case diameter">⌚</span>}
                 </div>
                 <div className="sku-info">
-                  <h3 className="sku-product-name">{group.name}</h3>
+                  <h2 className="sku-product-name">{group.name}</h2>
                   <div className="sku-meta">
                     <span className="sku-brand">{(group.category || "").toUpperCase()}</span>
                     {group.brand && <span className="sku-brand accent">{group.brand.toUpperCase()}</span>}

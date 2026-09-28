@@ -41,7 +41,7 @@ const OverviewCard = ({ icon, title, value, subtitle, trend, trendUp, sparkData 
     <div className="overview-card animate-in">
       <div className="card-header">
         <div className="card-title-group">
-          <h4 className="card-title">{title}</h4>
+          <h2 className="card-title">{title}</h2>
           {trend && (
             <span className={`trend-badge ${trendUp ? "trend-up" : "trend-down"}`}>
               {trendUp ? "↗" : "↘"} {trend}

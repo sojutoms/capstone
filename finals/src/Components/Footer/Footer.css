@@ -86,6 +86,7 @@
   max-width: 220px;
 }
 
+.footer-cell h2,
 .footer-cell h3 {
   font-family: var(--font-display);
   font-size: 10px;

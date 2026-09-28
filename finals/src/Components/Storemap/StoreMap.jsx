@@ -111,7 +111,7 @@ const StoreMap = () => {
       popupAnchor: [0, -44],
     });
 
-    const marker = L.marker([STORE.lat, STORE.lng], { icon: customIcon }).addTo(map);
+    const marker = L.marker([STORE.lat, STORE.lng], { icon: customIcon, title: "GoodSoles PH store location", alt: "GoodSoles PH store location" }).addTo(map);
 
     marker.bindPopup(`
       <div style="font-family: 'Segoe UI', system-ui, sans-serif; min-width: 160px;">

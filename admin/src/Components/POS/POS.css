@@ -916,3 +916,39 @@
   transition: opacity 0.15s;
 }
 .pos-new-sale-btn:hover { opacity: 0.88; }
+
+/* ─── Responsive ──────────────────────────────────────────────────────────── */
+/* POS is designed for tablet/desktop; on phones the split view collapses to
+   a stacked layout so it still works — cashier just scrolls between products
+   and the ticket instead of seeing both at once. */
+@media (max-width: 900px) {
+  .pos-root {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+  .pos-left,
+  .pos-right {
+    flex: none;
+    width: 100%;
+    border-right: none;
+  }
+  .pos-left {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .pos-product-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .pos-product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 10px 12px 16px;
+    gap: 8px;
+  }
+  .pos-left-header {
+    padding: 12px 12px 0;
+  }
+}

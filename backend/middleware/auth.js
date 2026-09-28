@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 
 const JWT_SECRET = require("../config/jwt");
+const Users = require("../models/Users");
 const { isTokenActive } = require("../controllers/securityController");
 
 /**
@@ -72,7 +73,7 @@ const requireRole = (...allowedRoles) => async (req, res, next) => {
  * Standard middleware for user-level routes.
  * Verifies token and attaches user info to req.user.
  */
-const fetchUser = (req, res, next) => {
+const fetchUser = async (req, res, next) => {
     try {
         const token = getTokenFromRequest(req);
         if (!token) {
@@ -91,6 +92,11 @@ const fetchUser = (req, res, next) => {
         // Ensure id and userId are both present
         if (req.user.userId && !req.user.id) req.user.id = req.user.userId;
         if (req.user.id && !req.user.userId) req.user.userId = req.user.id;
+
+        const account = await Users.findById(req.user.id).select("status").lean();
+        if (account && account.status === "blocked") {
+            return res.status(403).json({ success: false, blocked: true, error: "Your account has been restricted. Please contact support." });
+        }
 
         next();
     } catch (err) {

@@ -243,7 +243,7 @@ const OrderHistory = () => {
       if (ds === "delivered") {
         const deliveredAt = order.deliveredAt || order.updatedAt;
         if (daysElapsed(deliveredAt, DELIVERED_AUTO_COMPLETE_DAYS)) return "completed";
-        return "shipping";
+        return "delivered";
       }
       return ds;
     }
@@ -251,7 +251,7 @@ const OrderHistory = () => {
     if (raw === "delivered") {
       const deliveredAt = order.deliveredAt || order.updatedAt;
       if (daysElapsed(deliveredAt, DELIVERED_AUTO_COMPLETE_DAYS)) return "completed";
-      return "shipping";
+      return "delivered";
     }
     return raw;
   };
@@ -349,7 +349,7 @@ const OrderHistory = () => {
       { key: "delivered", label: "COMPLETED" }
     ];
 
-    const deliveryEff = eff === "completed" ? "delivered" : eff;
+    const deliveryEff = eff === "completed" ? "delivered" : eff === "delivered" ? "shipping" : eff;
     const activeIdx = luxurySteps.findIndex(s => s.key === deliveryEff);
 
     return (

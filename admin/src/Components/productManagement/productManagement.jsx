@@ -602,7 +602,7 @@ const ProductManagement = () => {
                 <span className="prod-sku-pill">#{product.id}</span>
                 {product.brand && <span className="prod-brand-pill">{product.brand}</span>}
               </div>
-              <h3 className="prod-title">{product.name}</h3>
+              <h2 className="prod-title">{product.name}</h2>
               <div className="product-prices">
                 <span className="prod-price-range">{minPrice > 0 ? `₱${minPrice.toLocaleString()}${minPrice !== maxPrice ? ` – ₱${maxPrice.toLocaleString()}` : ""}` : "—"}</span>
               </div>
@@ -671,15 +671,15 @@ const ProductManagement = () => {
           <div className="listproduct-controls glass">
             <div className="left-controls">
               <div className="view-mode-toggle">
-                <button className={`view-btn ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")}>
+                <button className={`view-btn ${viewMode === "grid" ? "active" : ""}`} onClick={() => setViewMode("grid")} aria-label="Grid view" aria-pressed={viewMode === "grid"}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                 </button>
-                <button className={`view-btn ${viewMode === "list" ? "active" : ""}`} onClick={() => setViewMode("list")}>
+                <button className={`view-btn ${viewMode === "list" ? "active" : ""}`} onClick={() => setViewMode("list")} aria-label="List view" aria-pressed={viewMode === "list"}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                 </button>
               </div>
               <label className="category-label">Category</label>
-              <select className="category-select" value={selectedCategory} onChange={(e) => handleCategoryChange(e.target.value)}>
+              <select className="category-select" aria-label="Filter by category" value={selectedCategory} onChange={(e) => handleCategoryChange(e.target.value)}>
                 <option value="all">All Categories</option>
                 {categories.map((cat) => <option key={cat.slug} value={cat.slug}>{cat.name}</option>)}
               </select>

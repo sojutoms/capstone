@@ -303,7 +303,7 @@ const RefundRowThumbs = ({ media, onThumbClick }) => {
 };
 
 // ─── Refunds Tab ──────────────────────────────────────────────────────────────
-const RefundsTab = ({ addToast, onSelectRefund, selectedRefundId, setAdminNote }) => {
+const RefundsTab = ({ addToast, onSelectRefund, selectedRefundId, setAdminNote, refreshKey }) => {
   const [refunds, setRefunds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -353,7 +353,7 @@ const RefundsTab = ({ addToast, onSelectRefund, selectedRefundId, setAdminNote }
     }
   }, [addToast]);
 
-  useEffect(() => { fetchRefunds(page, statusFilter, query); }, [page, statusFilter, query, fetchRefunds]);
+  useEffect(() => { fetchRefunds(page, statusFilter, query); }, [page, statusFilter, query, fetchRefunds, refreshKey]);
 
   const openRefund = async (refundId) => {
     try {
@@ -492,6 +492,7 @@ const Transactions = () => {
   const [selectedRefund, setSelectedRefund] = useState(null);
   const [adminNote, setAdminNote] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [refundsVersion, setRefundsVersion] = useState(0);
 
   const { toasts, add: addToast, remove: removeToast } = useToasts();
 
@@ -641,7 +642,7 @@ const Transactions = () => {
       if (data.success) {
         addToast({ message: `Refund ${action}.`, type: action === "rejected" ? "warning" : "success" });
         setSelectedRefund(null);
-        // The list will refresh via useEffect in RefundsTab if we pass a toggle or just depend on selectedRefund changing to null
+        setRefundsVersion((v) => v + 1);
       }
     } catch (err) {
       addToast({ message: `Error: ${err.message}`, type: "error" });
@@ -737,6 +738,7 @@ const Transactions = () => {
               onSelectRefund={setSelectedRefund} 
               selectedRefundId={selectedRefund?._id}
               setAdminNote={setAdminNote}
+              refreshKey={refundsVersion}
             />
           )}
         </div>
