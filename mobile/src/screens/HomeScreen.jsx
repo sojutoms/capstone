@@ -147,9 +147,12 @@ const AccordionTile = ({ category, onBrandSelect, onDirectNav, tileStyles }) => 
     ]).start();
   };
 
+  // 90deg = › rotated to point down (collapsed), 270deg = pointing up
+  // (expanded). Shoes is the only accordion; every other tile is a direct link
+  // and keeps the unrotated › instead.
   const rotate = animRotate.interpolate({
     inputRange: [0, 1],
-    outputRange: ["0deg", "180deg"],
+    outputRange: ["90deg", "270deg"],
   });
 
   const maxH = animHeight.interpolate({
@@ -259,9 +262,7 @@ const StoreMapSection = ({ mapStyles, colors }) => {
         </View>
         <View style={mapStyles.infoRow}>
           <Ionicons name="call-outline" size={14} color="#ffffff" style={mapStyles.infoIcon} />
-          <TouchableOpacity onPress={callStore}>
-            <Text style={[mapStyles.infoText, mapStyles.infoTextLink]}>{STORE.phone}</Text>
-          </TouchableOpacity>
+          <Text style={mapStyles.infoText}>{STORE.phone}</Text>
         </View>
       </View>
 
@@ -331,7 +332,7 @@ export default function HomeScreen({ navigation }) {
       addToCart(item, available[0]);
       Toast.show({ type: "success", text1: "Added to cart", text2: item.name });
     } else if (available.length > 1) {
-      Toast.show({ type: "info", text1: "Select a size first" });
+      Toast.show({ type: "info", text1: "Please select a size before adding it to cart." });
       navigation.navigate("ProductDetail", { product: item });
     } else {
       addToCart(item, null);
@@ -602,7 +603,7 @@ export default function HomeScreen({ navigation }) {
           <View style={s.trendingSection}>
             <SectionHeader
               eyebrow="MOST WANTED THIS WEEK"
-              title="Trending Now"
+              title="Popular Products"
               s={s}
             />
             <ScrollView
@@ -646,7 +647,7 @@ export default function HomeScreen({ navigation }) {
           <View>
             <SectionHeader
               eyebrow="FRESH ARRIVALS"
-              title="Just Dropped"
+              title="New Collections"
               s={s}
             />
             <ScrollView
@@ -915,7 +916,9 @@ const makeTileStyles = (colors) => StyleSheet.create({
     color: "#ffffff",
     fontWeight: "300",
     lineHeight: 30,
-    transform: [{ rotate: "90deg" }],
+    // No base rotation — the raw › points right, which is what the directNav
+    // tiles want. AccordionTile overrides transform entirely to point its
+    // own chevron down (90deg) and flip it up (270deg) when expanded.
   },
   comingSoon: {
     fontSize: 8,

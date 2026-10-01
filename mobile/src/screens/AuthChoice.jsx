@@ -252,7 +252,7 @@ const AuthChoice = ({ navigation }) => {
   <View style={{ marginTop: 10 }}>
     <ShimmerButton
       label="CREATE ACCOUNT"
-      onPress={() => navigation.navigate("SignupScreen")}
+      onPress={() => navigation.navigate("LoginScreen", { mode: "signup" })}
       ghost={true}
     />
   </View>

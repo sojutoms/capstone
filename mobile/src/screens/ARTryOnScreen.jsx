@@ -42,7 +42,7 @@ const ARTryOnScreen = ({ route, navigation }) => {
   // instead of adding a sizeless item.
   const handleAddToCart = () => {
     if (!selectedSize && product?.sizes) {
-      Toast.show({ type: 'error', text1: 'Select a size first' });
+      Toast.show({ type: 'error', text1: 'Please select a size before adding it to cart.' });
       navigation.goBack();
       return;
     }

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SystemUI from "expo-system-ui";
 import { lightColors, darkColors } from "../theme";
 
 const THEME_KEY = "theme-preference";
@@ -19,6 +20,16 @@ export const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     AsyncStorage.setItem(THEME_KEY, theme).catch(() => {});
+  }, [theme]);
+
+  // Keep the native root background in step with the JS theme. Without this
+  // the native layer stays whatever app.json's `userInterfaceStyle` declared
+  // (light), so a dark-mode user gets a white flash on resume and at
+  // navigation seams. This context is the only source of truth for theme —
+  // the app never reads the system colour scheme.
+  useEffect(() => {
+    const bg = theme === "dark" ? darkColors.bgPrimary : lightColors.bgPrimary;
+    SystemUI.setBackgroundColorAsync(bg).catch(() => {});
   }, [theme]);
 
   const value = useMemo(() => {

@@ -583,7 +583,9 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   resendLabel: { color: "rgba(255,255,255,0.4)", fontSize: 11 },
-  resendLink:  { color: colors.accentGold, fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
+  // Hardcoded white, not colors.accentGold — see LoginScreen: accentGold is
+  // #000000 in the light palette, invisible on this dark auth backdrop.
+  resendLink:  { color: "#ffffff", fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
   resendTimer: { color: "rgba(255,255,255,0.35)", fontSize: 11 },
 
   checklist: { marginTop: -2, marginBottom: 4, gap: 4, paddingHorizontal: 2 },
