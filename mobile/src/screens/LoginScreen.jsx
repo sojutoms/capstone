@@ -353,10 +353,10 @@ const av = StyleSheet.create({
 });
 
 // ─── Main Screen ───────────────────────────────────────────────────────────────
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, route }) {
   const { login, signup, confirmOtp, sendForgotOtp, confirmForgotOtp, confirmResetPassword, resendOtp } = useAuth();
 
-  const [mode, setMode] = useState("login"); // login | signup | forgot | reset
+  const [mode, setMode] = useState(route?.params?.mode || "login"); // login | signup | forgot | reset
   const [resetOtpVerified, setResetOtpVerified] = useState(false);
 
   const [formData, setFormData] = useState({

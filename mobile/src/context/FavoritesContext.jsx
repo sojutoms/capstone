@@ -8,6 +8,7 @@ import {
   clearFavoritesAPI,
 } from "../api/favoritesApi";
 import { Platform } from "react-native";
+import Toast from "react-native-toast-message";
 
 const FavoritesContext = createContext();
 
@@ -100,6 +101,7 @@ export const FavoritesProvider = ({ children }) => {
 
     if (isFavorite(productId)) {
       await removeFromFavorites(productId);
+      Toast.show({ type: "info", text1: "Removed from your favorites" });
     } else {
       // We only have the id here — fetch the full product from current state if available
       // ProductDetailScreen passes the full product, but toggleFavorite only gets the id.
@@ -114,6 +116,7 @@ export const FavoritesProvider = ({ children }) => {
           if (product) {
             setFavorites((prev) => [...prev, product]);
           }
+          Toast.show({ type: "success", text1: "Added to favorites" });
         }
       } catch (err) {
         console.log("Toggle favorite error:", err);

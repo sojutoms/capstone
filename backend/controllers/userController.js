@@ -670,10 +670,10 @@ const confirmEmailChange = async (req, res) => {
     if (!user) return res.status(404).json({ success: false, message: "User not found." });
 
     const record = await OtpModel.findOne({ email: user.email, otp: Number(otp), newEmail });
-    if (!record) return res.json({ success: false, message: "Invalid OTP." });
+    if (!record) return res.json({ success: false, message: "Invalid OTP" });
     if (record.expiresAt < Date.now()) {
       await OtpModel.deleteOne({ _id: record._id });
-      return res.json({ success: false, message: "OTP has expired. Please try again." });
+      return res.json({ success: false, message: "Invalid or expired OTP" });
     }
 
     const existing = await Users.findOne({ email: newEmail, _id: { $ne: user._id } });

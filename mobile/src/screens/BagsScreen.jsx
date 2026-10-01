@@ -66,7 +66,7 @@ export default function BagsScreen({ navigation }) {
       addToCart(item, available[0]);
       Toast.show({ type: "success", text1: "Added to cart", text2: item.name });
     } else if (available.length > 1) {
-      Toast.show({ type: "info", text1: "Select a size first" });
+      Toast.show({ type: "info", text1: "Please select a size before adding it to cart." });
       navigation.navigate("ProductDetail", { product: item });
     } else {
       addToCart(item, null);

@@ -19,7 +19,7 @@ import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 import { censorProfanity } from "../utils/profanity";
 import PH_CITIES from "../utils/phCities";
 
-const BIO_MAX = 64;
+const BIO_MAX = 500;
 
 // The Place field accepts only a city from PH_CITIES, matched exactly and
 // case-insensitively — identical to the web Settings page, so a profile saved
@@ -164,7 +164,7 @@ export default function EditProfileScreen({ navigation }) {
         setEmailOtp("");
         setEmailOtpError("");
         resetEmailResendState();
-        Alert.alert("Code Sent", "OTP sent to your current email.");
+        Alert.alert("OTP sent to your current email", "");
       } else {
         setEmailError(data.message || "Failed to send OTP");
       }
@@ -223,7 +223,7 @@ export default function EditProfileScreen({ navigation }) {
         setNewEmailValue("");
         setEmailOtp("");
         await refreshUserProfile();
-        Alert.alert("Email Updated", "Your contact email has been changed.");
+        Alert.alert("Email updated", "");
       } else {
         setEmailOtpError(data.message || "Invalid OTP. Please try again.");
       }
@@ -264,7 +264,7 @@ export default function EditProfileScreen({ navigation }) {
       const data = await res.json();
       if (data.success) {
         await refreshUserProfile();
-        Alert.alert("Saved", "Your profile has been updated.", [
+        Alert.alert("Profile updated", "", [
           { text: "OK", onPress: () => navigation.goBack() },
         ]);
       } else {

@@ -1,10 +1,3 @@
-// src/services/api.js
-// ─────────────────────────────────────────────────────────────
-// Single file for all API calls.
-// In development  → http://localhost:4000  (npm start)
-// In production   → your Render URL       (npm run build)
-// ─────────────────────────────────────────────────────────────
-
 const API_BASE_URL =
   process.env.REACT_APP_API_URL || "http://localhost:4000";
 

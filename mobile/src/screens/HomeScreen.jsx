@@ -262,9 +262,7 @@ const StoreMapSection = ({ mapStyles, colors }) => {
         </View>
         <View style={mapStyles.infoRow}>
           <Ionicons name="call-outline" size={14} color="#ffffff" style={mapStyles.infoIcon} />
-          <TouchableOpacity onPress={callStore}>
-            <Text style={[mapStyles.infoText, mapStyles.infoTextLink]}>{STORE.phone}</Text>
-          </TouchableOpacity>
+          <Text style={mapStyles.infoText}>{STORE.phone}</Text>
         </View>
       </View>
 
@@ -334,7 +332,7 @@ export default function HomeScreen({ navigation }) {
       addToCart(item, available[0]);
       Toast.show({ type: "success", text1: "Added to cart", text2: item.name });
     } else if (available.length > 1) {
-      Toast.show({ type: "info", text1: "Select a size first" });
+      Toast.show({ type: "info", text1: "Please select a size before adding it to cart." });
       navigation.navigate("ProductDetail", { product: item });
     } else {
       addToCart(item, null);
@@ -605,7 +603,7 @@ export default function HomeScreen({ navigation }) {
           <View style={s.trendingSection}>
             <SectionHeader
               eyebrow="MOST WANTED THIS WEEK"
-              title="Trending Now"
+              title="Popular Products"
               s={s}
             />
             <ScrollView
@@ -649,7 +647,7 @@ export default function HomeScreen({ navigation }) {
           <View>
             <SectionHeader
               eyebrow="FRESH ARRIVALS"
-              title="Just Dropped"
+              title="New Collections"
               s={s}
             />
             <ScrollView
