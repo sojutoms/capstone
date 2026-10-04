@@ -41,23 +41,37 @@ async function main() {
     .toFile(path.join(ASSETS, "adaptive-icon.png"));
   console.log("✔  adaptive-icon.png   1024x1024  (Android foreground, transparent, safe-zone padded)");
 
-  const splashLogoSize = 512;
-  const splashLogoBuffer = await sharp(SOURCE)
-    .resize(splashLogoSize, splashLogoSize, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  // Splash logo for the expo-splash-screen plugin. The plugin composites this
+  // over its own backgroundColor (black) and sizes it via `imageWidth`, so this
+  // is just the mark on transparency — NOT a full-screen canvas like the old
+  // splash-icon.png the removed legacy `splash` key used.
+  //
+  // The master logo is a white mark on a solid black square, so its luminance
+  // IS the alpha mask. linear() crushes JPEG noise in the black areas to a
+  // true 0 so no grey haze survives around the mark on the black splash.
+  const srcMeta = await sharp(SOURCE).metadata();
+  const splashAlpha = await sharp(SOURCE).greyscale().linear(1.4, -28).raw().toBuffer();
+  const splashWhite = await sharp({
+    create: { width: srcMeta.width, height: srcMeta.height, channels: 3, background: { r: 255, g: 255, b: 255 } },
+  }).raw().toBuffer();
+
+  const splashMark = await sharp(splashWhite, { raw: { width: srcMeta.width, height: srcMeta.height, channels: 3 } })
+    .joinChannel(splashAlpha, { raw: { width: srcMeta.width, height: srcMeta.height, channels: 1 } })
+    .png()
+    .toBuffer();
+
+  const splashTrimmed = await sharp(splashMark).trim({ threshold: 1 }).toBuffer();
+  const splashFitted = await sharp(splashTrimmed)
+    .resize(Math.round(1024 * 0.78), Math.round(1024 * 0.78), { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .toBuffer();
 
   await sharp({
-    create: {
-      width: 1242,
-      height: 2436,
-      channels: 4,
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    },
+    create: { width: 1024, height: 1024, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
   })
-    .composite([{ input: splashLogoBuffer, gravity: "center" }])
+    .composite([{ input: splashFitted, gravity: "center" }])
     .png()
-    .toFile(path.join(ASSETS, "splash-icon.png"));
-  console.log("✔  splash-icon.png     1242x2436  (splash, transparent, logo centered)");
+    .toFile(path.join(ASSETS, "splash-logo.png"));
+  console.log("✔  splash-logo.png     1024x1024  (splash mark, white on transparent)");
 
   await sharp(SOURCE)
     .resize(48, 48, { fit: "cover" })

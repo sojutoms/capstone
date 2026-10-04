@@ -667,32 +667,75 @@ export default function PlaceOrderScreen({ navigation, route }) {
         {/* Saved address button */}
         {savedAddresses.length > 0 && (
           <View style={s.savedBlock}>
-            <TouchableOpacity
-              style={s.savedToggleBtn}
-              onPress={() => setShowAddressDropdown(!showAddressDropdown)}
-              activeOpacity={0.8}
-            >
-              <Text style={s.savedToggleText}>
-                {showAddressDropdown ? "↑ Hide" : "⊕ Use Saved Address"}
-              </Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                style={[s.savedToggleBtn, { flex: 1 }]}
+                onPress={() => setShowAddressDropdown(!showAddressDropdown)}
+                activeOpacity={0.8}
+              >
+                <Text style={s.savedToggleText}>
+                  {showAddressDropdown ? "↑ Hide" : "⊕ Use Saved Address"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.clearFormBtn}
+                onPress={() => {
+                  setForm({ firstName: "", lastName: "", email: "", street: "", phone: "+63", region: "", province: "", city: "", barangay: "" });
+                  setErrors({});
+                  setProvinces([]); setCities([]); setBarangays([]);
+                  setSaveAddress(false);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={s.clearFormText}>⤬ Clear Form</Text>
+              </TouchableOpacity>
+            </View>
 
             {showAddressDropdown && (
               <View style={s.savedList}>
                 {savedAddresses.map((addr, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    style={s.savedItem}
-                    onPress={() => useSavedAddress(addr)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={s.savedName}>{addr.firstName} {addr.lastName}</Text>
-                    <Text style={s.savedMeta}>
-                      {addr.street}, {addr.barangay?.name}, {addr.cityOrMunicipality?.name}
-                    </Text>
-                    <Text style={s.savedMeta}>{addr.province?.name}, {addr.region?.name}</Text>
-                    <Text style={s.savedPhone}>{addr.phone}</Text>
-                  </TouchableOpacity>
+                  <View key={idx} style={s.savedItem}>
+                    <TouchableOpacity onPress={() => useSavedAddress(addr)} activeOpacity={0.8}>
+                      <Text style={s.savedName}>{addr.firstName} {addr.lastName}</Text>
+                      <Text style={s.savedMeta}>
+                        {addr.street}, {addr.barangay?.name}, {addr.cityOrMunicipality?.name}
+                      </Text>
+                      <Text style={s.savedMeta}>{addr.province?.name}, {addr.region?.name}</Text>
+                      <Text style={s.savedPhone}>{addr.phone}</Text>
+                    </TouchableOpacity>
+                    <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+                      <TouchableOpacity
+                        style={s.savedActionBtn}
+                        onPress={() => navigation.navigate("AddressesScreen")}
+                      >
+                        <Ionicons name="create-outline" size={14} color={colors.textPrimary} />
+                        <Text style={s.savedActionText}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[s.savedActionBtn, { borderColor: colors.danger }]}
+                        onPress={() => {
+                          Alert.alert("Remove Address", "Remove this saved address?", [
+                            { text: "Cancel", style: "cancel" },
+                            { text: "Remove", style: "destructive", onPress: async () => {
+                              try {
+                                const res = await fetch(`${BASE_URL}/deleteaddress/${idx}`, {
+                                  method: "DELETE",
+                                  headers: { "auth-token": userToken },
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                  setSavedAddresses(data.addresses || []);
+                                }
+                              } catch {}
+                            }},
+                          ]);
+                        }}
+                      >
+                        <Ionicons name="trash-outline" size={14} color={colors.danger} />
+                        <Text style={[s.savedActionText, { color: colors.danger }]}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 ))}
               </View>
             )}
@@ -1104,6 +1147,10 @@ const makeStyles = (colors, isDark = false) => {
     backgroundColor: colors.accentGoldWash,
   },
   savedToggleText: { fontSize: 13, fontFamily: fonts.bodyBold, color: colors.accentGoldLight, letterSpacing: 0.5 },
+  clearFormBtn: { borderRadius: radius.sm, paddingVertical: 9, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: "transparent" },
+  clearFormText: { fontSize: 12, fontFamily: fonts.bodyBold, color: colors.textMuted, letterSpacing: 0.5 },
+  savedActionBtn: { flexDirection: "row", alignItems: "center", gap: 4, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radius.sm, paddingHorizontal: 10, paddingVertical: 5 },
+  savedActionText: { fontSize: 11, fontFamily: fonts.bodyBold, color: colors.textPrimary, letterSpacing: 0.5 },
   savedList: {
     marginTop: 10,
     borderRadius: radius.md,

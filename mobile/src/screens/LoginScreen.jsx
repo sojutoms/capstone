@@ -353,10 +353,10 @@ const av = StyleSheet.create({
 });
 
 // ─── Main Screen ───────────────────────────────────────────────────────────────
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen({ navigation, route }) {
   const { login, signup, confirmOtp, sendForgotOtp, confirmForgotOtp, confirmResetPassword, resendOtp } = useAuth();
 
-  const [mode, setMode] = useState("login"); // login | signup | forgot | reset
+  const [mode, setMode] = useState(route?.params?.mode || "login"); // login | signup | forgot | reset
   const [resetOtpVerified, setResetOtpVerified] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -849,7 +849,10 @@ const s = StyleSheet.create({
   otpHint: { color: "rgba(255,255,255,0.5)", fontSize: 12, textAlign: "center", marginBottom: 8 },
   resendRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginTop: 4, marginBottom: 8 },
   resendLabel: { color: "rgba(255,255,255,0.4)", fontSize: 12 },
-  resendLink: { color: colors.accentGold, fontSize: 12, fontWeight: "700" },
+  // Hardcoded white, not colors.accentGold — this screen always sits on the
+  // dark auth backdrop, and accentGold is #000000 in the light palette (the
+  // brand accent moved from gold to black), which rendered this invisible.
+  resendLink: { color: "#ffffff", fontSize: 12, fontWeight: "700" },
   resendTimer: { color: "rgba(255,255,255,0.35)", fontSize: 12 },
   backBtn: { color: "rgba(255,255,255,0.55)", fontSize: 12 },
 });

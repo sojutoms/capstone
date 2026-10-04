@@ -59,14 +59,21 @@ export default function MyReviewsScreen({ navigation }) {
     setRefreshing(false);
   };
 
+  const openProduct = (item) => {
+    if (!item.productId) return;
+    navigation.navigate("ProductDetail", { product: { id: item.productId, _id: item.productId, name: item.productName, image: item.productImage } });
+  };
+
   const renderReview = ({ item }) => (
     <View style={s.card}>
       <View style={s.cardHeader}>
-        <Image source={{ uri: item.productImage }} style={s.thumb} />
-        <View style={{ flex: 1 }}>
+        <TouchableOpacity onPress={() => openProduct(item)} activeOpacity={0.7}>
+          <Image source={{ uri: item.productImage }} style={s.thumb} />
+        </TouchableOpacity>
+        <TouchableOpacity style={{ flex: 1 }} onPress={() => openProduct(item)} activeOpacity={0.7}>
           <Text style={s.productName} numberOfLines={1}>{item.productName}</Text>
           <Stars rating={item.rating} colors={colors} />
-        </View>
+        </TouchableOpacity>
         <Text style={s.date}>
           {new Date(item.date).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}
         </Text>
@@ -98,7 +105,7 @@ export default function MyReviewsScreen({ navigation }) {
           <Text style={s.backArrow}>←</Text>
         </TouchableOpacity>
         <Text style={s.headerTitle}>MY REVIEWS</Text>
-        <View style={{ width: 24 }} />
+        <Text style={s.headerCount}>{reviews.length} {reviews.length === 1 ? "review" : "reviews"}</Text>
       </View>
 
       {loading ? (
@@ -144,6 +151,7 @@ const makeStyles = (colors) => StyleSheet.create({
   backBtn: { width: 24 },
   backArrow: { color: colors.textPrimary, fontSize: 20, fontWeight: "300" },
   headerTitle: { color: colors.textPrimary, fontSize: 15, fontFamily: fonts.display, letterSpacing: 1.5 },
+  headerCount: { color: colors.textMuted, fontSize: 11, fontFamily: fonts.body, minWidth: 60, textAlign: "right" },
 
   centered: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 40 },
   emptyIcon: { fontSize: 40, color: colors.bgTertiary, marginBottom: 16 },

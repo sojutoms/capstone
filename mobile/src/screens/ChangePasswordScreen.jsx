@@ -105,7 +105,7 @@ export default function ChangePasswordScreen({ navigation }) {
     setOtpResending(true);
     try {
       await resendOtp(userProfile?.email, "change-password");
-      Alert.alert("Sent", "A new code has been sent to your email.");
+      Alert.alert("New OTP sent to your email", "");
       setOtp("");
       setOtpError("");
       setOtpCanResend(false);
@@ -186,7 +186,7 @@ export default function ChangePasswordScreen({ navigation }) {
       });
       const data = await res.json();
       if (data.success) {
-        Alert.alert("Success", "Password updated successfully.", [
+        Alert.alert("Password Updated", "", [
           { text: "OK", onPress: () => navigation.goBack() },
         ]);
       } else {

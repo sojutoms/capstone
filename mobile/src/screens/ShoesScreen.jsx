@@ -97,6 +97,10 @@ export default function ShoesScreen({ navigation, route }) {
   const [selectedBrand,  setSelectedBrand]  = useState(initialBrand);
   const [activeCategory, setActiveCategory] = useState("All");
   const [sortBy,         setSortBy]         = useState("newest");
+  const [priceMin,       setPriceMin]       = useState("");
+  const [priceMax,       setPriceMax]       = useState("");
+  const [currentPage,    setCurrentPage]    = useState(1);
+  const PAGE_SIZE = 12;
   const [showSearch,     setShowSearch]     = useState(!!route?.params?.openSearch);
   const [showSortModal,  setShowSortModal]  = useState(false);
 
@@ -166,6 +170,18 @@ export default function ShoesScreen({ navigation, route }) {
       );
     }
 
+    // ── PRICE RANGE FILTER ───────────────────────────────────────────────
+    const minVal = parseFloat(priceMin);
+    const maxVal = parseFloat(priceMax);
+    if (!isNaN(minVal) || !isNaN(maxVal)) {
+      result = result.filter((p) => {
+        const price = getLowestPrice(p) || 0;
+        if (!isNaN(minVal) && price < minVal) return false;
+        if (!isNaN(maxVal) && price > maxVal) return false;
+        return true;
+      });
+    }
+
     // ── SORT ──────────────────────────────────────────────────────────────
     switch (sortBy) {
       case "newest":        result.sort((a, b) => productSortKey(b) - productSortKey(a)); break;
@@ -177,9 +193,14 @@ export default function ShoesScreen({ navigation, route }) {
     }
 
     return result;
-  }, [products, selectedBrand, activeCategory, searchQuery, sortBy]);
+  }, [products, selectedBrand, activeCategory, searchQuery, sortBy, priceMin, priceMax]);
 
   const displayed = filteredProducts();
+  const totalPages = Math.max(1, Math.ceil(displayed.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const paged = displayed.slice(pageStart, pageStart + PAGE_SIZE);
+  useEffect(() => { setCurrentPage(1); }, [selectedBrand, activeCategory, searchQuery, sortBy, priceMin, priceMax]);
 
   const activeSortLabel = SORT_OPTIONS.find((s) => s.value === sortBy)?.label || "Sort";
 
@@ -282,6 +303,33 @@ export default function ShoesScreen({ navigation, route }) {
             <View style={styles.tabDivider} />
           </View>
 
+          {/* Price range inputs */}
+          <View style={styles.priceRangeRow}>
+            <Text style={styles.priceRangeLabel}>₱</Text>
+            <TextInput
+              style={styles.priceInput}
+              placeholder="Min"
+              placeholderTextColor={colors.textMuted}
+              value={priceMin}
+              onChangeText={(v) => setPriceMin(v.replace(/[^0-9]/g, ""))}
+              keyboardType="number-pad"
+            />
+            <Text style={styles.priceRangeLabel}>—</Text>
+            <TextInput
+              style={styles.priceInput}
+              placeholder="Max"
+              placeholderTextColor={colors.textMuted}
+              value={priceMax}
+              onChangeText={(v) => setPriceMax(v.replace(/[^0-9]/g, ""))}
+              keyboardType="number-pad"
+            />
+            {(priceMin || priceMax) && (
+              <TouchableOpacity onPress={() => { setPriceMin(""); setPriceMax(""); }} style={styles.priceClearBtn}>
+                <Text style={styles.priceClearText}>Clear</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
           {/* Sort button + result count row */}
           <View style={styles.sortRow}>
             <Text style={styles.resultCount}>
@@ -301,7 +349,11 @@ export default function ShoesScreen({ navigation, route }) {
         {displayed.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="footsteps-outline" size={48} color={colors.textMuted} style={styles.emptyIcon} />
-            <Text style={styles.emptyTitle}>NO PRODUCTS FOUND</Text>
+            <Text style={styles.emptyTitle}>
+              {searchQuery.trim()
+                ? `NO PRODUCTS FOUND FOR "${searchQuery.trim().toUpperCase()}"`
+                : "NO PRODUCTS FOUND"}
+            </Text>
             <Text style={styles.emptySubtitle}>
               Try a different category or search term.
             </Text>
@@ -312,26 +364,50 @@ export default function ShoesScreen({ navigation, route }) {
                 setActiveCategory("All");
                 setSearchQuery("");
                 setSortBy("newest");
+                setPriceMin("");
+                setPriceMax("");
+                setCurrentPage(1);
               }}
             >
               <Text style={styles.resetBtnText}>RESET FILTERS</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.grid}>
-            {displayed.map((item, index) => (
-              <FadeInItem key={item._id || index} index={index}>
-                <ProductCard
-                  item={item}
-                  index={index}
-                  onPress={() => navigation.navigate("ProductDetail", { product: item })}
-                  onAddToCart={handleAddToCart}
-                  favorited={isFavorite(item.id)}
-                  onToggleFavorite={() => toggleFavorite(item.id)}
-                />
-              </FadeInItem>
-            ))}
-          </View>
+          <>
+            <View style={styles.grid}>
+              {paged.map((item, index) => (
+                <FadeInItem key={item._id || index} index={index}>
+                  <ProductCard
+                    item={item}
+                    index={index}
+                    onPress={() => navigation.navigate("ProductDetail", { product: item })}
+                    onAddToCart={handleAddToCart}
+                    favorited={isFavorite(item.id)}
+                    onToggleFavorite={() => toggleFavorite(item.id)}
+                  />
+                </FadeInItem>
+              ))}
+            </View>
+            {totalPages > 1 && (
+              <View style={styles.paginationRow}>
+                <TouchableOpacity
+                  style={[styles.pageBtn, safePage === 1 && styles.pageBtnDisabled]}
+                  onPress={() => setCurrentPage(Math.max(1, safePage - 1))}
+                  disabled={safePage === 1}
+                >
+                  <Text style={styles.pageBtnText}>‹ Prev</Text>
+                </TouchableOpacity>
+                <Text style={styles.pageInfo}>Page {safePage} of {totalPages}</Text>
+                <TouchableOpacity
+                  style={[styles.pageBtn, safePage === totalPages && styles.pageBtnDisabled]}
+                  onPress={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
+                  disabled={safePage === totalPages}
+                >
+                  <Text style={styles.pageBtnText}>Next ›</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
         )}
       </ScrollView>
 
@@ -465,6 +541,18 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   sortBtnText: { color: colors.textPrimary, fontSize: 12, fontWeight: "600" },
   sortBtnIcon: { color: colors.textPrimary, fontSize: 10 },
+
+  priceRangeRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 2 },
+  priceRangeLabel: { color: colors.textMuted, fontSize: 12, fontWeight: "600" },
+  priceInput: { flex: 1, borderWidth: 1, borderColor: colors.borderLight, borderRadius: radius.sm, paddingHorizontal: 10, paddingVertical: 6, fontSize: 12, color: colors.textPrimary, backgroundColor: colors.bgCard },
+  priceClearBtn: { paddingHorizontal: 10, paddingVertical: 6 },
+  priceClearText: { color: colors.textMuted, fontSize: 11, fontWeight: "600" },
+
+  paginationRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 16, gap: 10 },
+  pageBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.borderLight, backgroundColor: colors.bgCard },
+  pageBtnDisabled: { opacity: 0.4 },
+  pageBtnText: { color: colors.textPrimary, fontSize: 12, fontWeight: "600" },
+  pageInfo: { color: colors.textMuted, fontSize: 12, fontWeight: "600" },
 
   grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 12, gap: 10, paddingTop: 4 },
 

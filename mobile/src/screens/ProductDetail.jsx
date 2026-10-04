@@ -190,7 +190,7 @@ export default function ProductDetailScreen({ route }) {
       addToCart(item, available[0]);
       Toast.show({ type: "success", text1: "Added to cart", text2: item.name });
     } else if (available.length > 1) {
-      Toast.show({ type: "info", text1: "Select a size first" });
+      Toast.show({ type: "info", text1: "Please select a size before adding it to cart." });
       navigation.push("ProductDetail", { product: item });
     } else {
       hapticSuccess();
@@ -245,10 +245,9 @@ export default function ProductDetailScreen({ route }) {
   }, [product]);
   const displayPrice = selectedSize ? getSizePrice(selectedSize) : lowestPrice;
 
-  /* ── add to cart ── */
   const handleAddToCart = () => {
     if (!selectedSize && hasSizes) {
-      Toast.show({ type: "error", text1: "Select a size first" });
+      Toast.show({ type: "error", text1: "Please select a size before adding it to cart." });
       return;
     }
     hapticSuccess();
@@ -256,13 +255,12 @@ export default function ProductDetailScreen({ route }) {
       triggerFlyToCart({ x, y, width, height });
     });
     addToCart(product, selectedSize);
-    Toast.show({ type: "success", text1: "Added to cart", text2: product.name });
+    Toast.show({ type: "success", text1: "Product added to Bag." });
   };
 
-  /* ── buy now — skips the cart entirely, straight to checkout for just this item ── */
   const handleBuyNow = () => {
     if (!selectedSize && hasSizes) {
-      Toast.show({ type: "error", text1: "Select a size first" });
+      Toast.show({ type: "error", text1: "Please select a size before buying." });
       return;
     }
     navigation.navigate("PlaceOrder", {
@@ -472,7 +470,7 @@ export default function ProductDetailScreen({ route }) {
           </PressScale>
 
           <PressScale style={s.payBtn} onPress={handleBuyNow}>
-            <Text style={s.payText}>PAY</Text>
+            <Text style={s.payText}>BUY NOW</Text>
           </PressScale>
         </View>
 

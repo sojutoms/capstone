@@ -135,7 +135,7 @@ export default function ProfileScreen({ navigation }) {
       (uriExt  && disallowedExts.includes(uriExt))  ||
       (mime    && disallowedMimes.includes(mime))
     ) {
-      Alert.alert("Unsupported file type", "Please upload a JPG, PNG, or WEBP photo.");
+      Alert.alert("Image file format is not allowed", "");
       return false;
     }
 
@@ -146,7 +146,7 @@ export default function ProfileScreen({ navigation }) {
     const extOk  = allowedExts.includes(uriExt) || allowedExts.includes(origExt);
     const mimeOk = mime ? allowedMimes.includes(mime) : true;
     if (!(extOk && mimeOk)) {
-      Alert.alert("Unsupported file type", "Please upload a JPG, PNG, or WEBP photo.");
+      Alert.alert("Image file format is not allowed", "");
       return false;
     }
 
@@ -160,7 +160,7 @@ export default function ProfileScreen({ navigation }) {
       });
       const magic = atob(head).slice(0, 4);
       if (magic === "GIF8") {
-        Alert.alert("Unsupported file type", "Animated GIFs aren't supported. Please upload a JPG, PNG, or WEBP photo.");
+        Alert.alert("Image file format is not allowed", "");
         return false;
       }
     } catch {}
@@ -172,8 +172,8 @@ export default function ProfileScreen({ navigation }) {
         size = Number(info?.size) || 0;
       } catch {}
     }
-    if (size && size > 5 * 1024 * 1024) {
-      Alert.alert("That image is too large", "Please upload a photo up to 5MB.");
+    if (size && size > 10 * 1024 * 1024) {
+      Alert.alert("Upload failed", "");
       return false;
     }
 
@@ -240,9 +240,8 @@ export default function ProfileScreen({ navigation }) {
     }
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
+      allowsEditing: false,
+      quality: 0.9,
     });
     const asset = !result.canceled && result.assets?.[0];
     if (!asset?.uri) return;
@@ -258,9 +257,8 @@ export default function ProfileScreen({ navigation }) {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
+      allowsEditing: false,
+      quality: 0.9,
     });
     const asset = !result.canceled && result.assets?.[0];
     if (!asset?.uri) return;
