@@ -19,7 +19,7 @@ import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 import { censorProfanity } from "../utils/profanity";
 import PH_CITIES from "../utils/phCities";
 
-const BIO_MAX = 500;
+const BIO_MAX = 64;
 
 // The Place field accepts only a city from PH_CITIES, matched exactly and
 // case-insensitively — identical to the web Settings page, so a profile saved

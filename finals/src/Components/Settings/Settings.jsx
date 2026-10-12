@@ -4,7 +4,7 @@ import API_BASE_URL from "../../services/api";
 import PH_CITIES from "../../utils/phCities";
 import { censorProfanity } from "../../utils/profanity";
 
-const BIO_MAX = 500;
+const BIO_MAX = 64;
 
 // Converts a legacy 09XXXXXXXXX number (still the format most existing
 // accounts/checkout have saved) into the +63XXXXXXXXXX format the register
