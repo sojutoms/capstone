@@ -310,7 +310,7 @@ export default function EditProfileScreen({ navigation }) {
             value={form.firstName}
             onChangeText={(v) => handleChange("firstName", v)}
             placeholder="First name"
-            placeholderTextColor={colors.bgTertiary}
+            placeholderTextColor={colors.textMuted}
             maxLength={54}
           />
           <FieldError msg={errors.firstName} s={s} />
@@ -322,7 +322,7 @@ export default function EditProfileScreen({ navigation }) {
             value={form.lastName}
             onChangeText={(v) => handleChange("lastName", v)}
             placeholder="Last name"
-            placeholderTextColor={colors.bgTertiary}
+            placeholderTextColor={colors.textMuted}
             maxLength={54}
           />
           <FieldError msg={errors.lastName} s={s} />
@@ -347,7 +347,7 @@ export default function EditProfileScreen({ navigation }) {
               editable={emailEditing}
               onChangeText={(v) => { setNewEmailValue(v); setEmailError(""); }}
               placeholder="email@example.com"
-              placeholderTextColor={colors.bgTertiary}
+              placeholderTextColor={colors.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
             />
@@ -399,7 +399,7 @@ export default function EditProfileScreen({ navigation }) {
               value={emailOtp}
               onChangeText={(v) => { setEmailOtp(v.replace(/\D/g, "").slice(0, 6)); setEmailOtpError(""); }}
               placeholder="000000"
-              placeholderTextColor={colors.bgTertiary}
+              placeholderTextColor={colors.textMuted}
               keyboardType="number-pad"
               maxLength={6}
             />
@@ -448,7 +448,7 @@ export default function EditProfileScreen({ navigation }) {
           value={form.phone}
           onChangeText={(v) => handleChange("phone", v)}
           placeholder="+639XXXXXXXXX"
-          placeholderTextColor={colors.bgTertiary}
+          placeholderTextColor={colors.textMuted}
           keyboardType="number-pad"
           maxLength={13}
         />
@@ -462,7 +462,7 @@ export default function EditProfileScreen({ navigation }) {
           value={form.place}
           onChangeText={(v) => handleChange("place", v)}
           placeholder="Type or pick a Philippine city"
-          placeholderTextColor={colors.bgTertiary}
+          placeholderTextColor={colors.textMuted}
           maxLength={80}
           autoCorrect={false}
         />
@@ -494,7 +494,7 @@ export default function EditProfileScreen({ navigation }) {
           value={form.bio}
           onChangeText={(v) => handleChange("bio", v)}
           placeholder={`Tell us a bit about yourself (max. ${BIO_MAX} characters)…`}
-          placeholderTextColor={colors.bgTertiary}
+          placeholderTextColor={colors.textMuted}
           multiline
           maxLength={BIO_MAX}
           textAlignVertical="top"

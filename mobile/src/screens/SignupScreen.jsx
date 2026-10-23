@@ -31,6 +31,7 @@ function FloatingInput({
   valid,
   keyboardType = "default",
   maxLength,
+  editable = true,
 }) {
   const [focused, setFocused] = useState(false);
   const borderColor = focused ? "#3a3a3a" : valid ? "#252525" : "#1e1e1e";
@@ -40,9 +41,14 @@ function FloatingInput({
       <Text style={fieldStyles.label}>{label.toUpperCase()}</Text>
       <View style={fieldStyles.inputRow}>
         <TextInput
-          style={[fieldStyles.input, { borderColor }]}
+          style={[
+            fieldStyles.input,
+            { borderColor },
+            !editable && fieldStyles.inputDisabled,
+          ]}
           value={value}
-          onChangeText={onChangeText}
+          onChangeText={editable ? onChangeText : undefined}
+          editable={editable}
           secureTextEntry={secureTextEntry}
           placeholderTextColor="#242424"
           placeholder={secureTextEntry ? "••••••••" : `Enter your ${label.toLowerCase()}`}
@@ -96,6 +102,9 @@ const fieldStyles = StyleSheet.create({
     paddingRight: 38,
     color: "#d8d8d8",
     fontSize: 12,
+  },
+  inputDisabled: {
+    opacity: 0.5,
   },
   checkBadge: {
     position: "absolute",
@@ -375,8 +384,8 @@ function ShimmerButton({ label, onPress, disabled, loading }) {
         disabled ? btnStyles.off : btnStyles.on,
         !disabled && pressed && { transform: [{ scale: 0.97 }] },
       ]}
-      onPress={!disabled ? onPress : undefined}
-      disabled={loading}
+      onPress={!disabled && !loading ? onPress : undefined}
+      disabled={disabled || loading}
     >
       {loading ? (
         <ActivityIndicator color={colors.textInverse} />
@@ -574,6 +583,7 @@ export default function SignupScreen({ navigation }) {
   const [password, setPassword]                 = useState("");
   const [confirmPassword, setConfirmPassword]   = useState("");
   const [loading, setLoading]                   = useState(false);
+  const [otpRequested, setOtpRequested]         = useState(false);
   const [serverError, setServerError]           = useState("");
 
   // Two separate agreements (Terms + Privacy)
@@ -606,34 +616,65 @@ export default function SignupScreen({ navigation }) {
   const step0Ready = fnValid && lnValid && emValid && phValid; // ← phone required
   const step1Ready = pwValid && matchOk;
 
+  // Lock form inputs and back-navigation while OTP request is in-flight or completed
+  const formLocked = loading || otpRequested;
+
   const initials = ((firstName[0] || "") + (lastName[0] || "")).toUpperCase() || "?";
 
   const goNext = () => {
+    if (formLocked) return;
     if (step === 0 && !step0Ready) return;
     if (step === 1 && !step1Ready) return;
+    setServerError("");
     setStep((s) => s + 1);
   };
 
-  const goBack = () => setStep((s) => Math.max(0, s - 1));
+  const goBack = () => {
+    if (formLocked) return;
+    setServerError("");
+    setStep((s) => Math.max(0, s - 1));
+  };
 
   const handleSignup = async () => {
-    if (!bothAgreed) return;
+    if (!bothAgreed || formLocked) return;
+
+    // Guard against any state tampering or mismatched passwords before requesting OTP
+    if (!step0Ready) {
+      setServerError("Please complete your personal details.");
+      setStep(0);
+      return;
+    }
+    if (!pwValid || !matchOk || password !== confirmPassword) {
+      setServerError("Passwords do not match or do not meet security requirements.");
+      setStep(1);
+      return;
+    }
+
+    // Snapshot the validated password & fields at the moment of submission
+    const lockedPassword  = password;
+    const lockedFirstName = firstName.trim();
+    const lockedLastName  = lastName.trim();
+    const lockedEmail     = email.trim();
+    const lockedPhone     = phone.trim();
+
     setLoading(true);
+    setOtpRequested(true);
     setServerError("");
     try {
       const res = await fetch(`${BASE_URL}/signup`, {
         method: "POST",
         headers: API_HEADERS,
         body: JSON.stringify({
-          firstName: firstName.trim(),
-          lastName:  lastName.trim(),
-          email:     email.trim(),
-          phone:     phone.trim(),
-          password,
+          firstName: lockedFirstName,
+          lastName:  lockedLastName,
+          email:     lockedEmail,
+          phone:     lockedPhone,
+          password:  lockedPassword,
         }),
       });
       const data = await res.json();
       if (!data.success) {
+        setOtpRequested(false);
         const msg = String(data.errors || "").toLowerCase();
         setServerError(
           msg.includes("already") ? "An account with this email already exists." :
@@ -642,8 +683,9 @@ export default function SignupScreen({ navigation }) {
         );
         return;
       }
-      navigation.replace("VerifyOTP", { email: email.trim() });
+      navigation.replace("VerifyOTP", { email: lockedEmail });
     } catch {
+      setOtpRequested(false);
       setServerError("Unable to reach the server. Check your connection.");
     } finally {
       setLoading(false);
@@ -680,38 +722,59 @@ export default function SignupScreen({ navigation }) {
                   ) : null}
                   <View style={s.nameRow}>
                     <View style={s.nameField}>
-                      <FloatingInput label="First Name" value={firstName}
+                      <FloatingInput
+                        label="First Name"
+                        value={firstName}
+                        editable={!formLocked}
                         onChangeText={(v) => { setFirstName(v.replace(/[0-9]/g, "")); setServerError(""); }}
                         valid={fnValid}
                       />
                     </View>
                     <View style={s.nameField}>
-                      <FloatingInput label="Last Name" value={lastName}
+                      <FloatingInput
+                        label="Last Name"
+                        value={lastName}
+                        editable={!formLocked}
                         onChangeText={(v) => { setLastName(v.replace(/[0-9]/g, "")); setServerError(""); }}
                         valid={lnValid}
                       />
                     </View>
                   </View>
-                  <FloatingInput label="Email" value={email}
+                  <FloatingInput
+                    label="Email"
+                    value={email}
+                    editable={!formLocked}
                     onChangeText={(v) => { setEmail(v); setServerError(""); }}
-                    valid={emValid} keyboardType="email-address"
+                    valid={emValid}
+                    keyboardType="email-address"
                   />
                   {/* ── Phone field — matches web's LoginSignup.jsx exactly:
                       the +63 prefix lives inside the value itself and stays
                       locked, only the digits after it are actually editable. ── */}
-                  <FloatingInput label="Phone Number" value={phone}
+                  <FloatingInput
+                    label="Phone Number"
+                    value={phone}
+                    editable={!formLocked}
                     onChangeText={(v) => {
                       let digits = v.replace(/\D/g, "");
                       if (!digits.startsWith("63")) digits = "63" + digits.replace(/^6?3?/, "");
                       digits = digits.slice(0, 12);
                       setPhone("+" + digits);
+                      setServerError("");
                     }}
-                    valid={phValid} keyboardType="number-pad" maxLength={13}
+                    valid={phValid}
+                    keyboardType="number-pad"
+                    maxLength={13}
                   />
-                  <ShimmerButton label="CONTINUE" onPress={goNext} disabled={!step0Ready} />
+                  <ShimmerButton label="CONTINUE" onPress={goNext} disabled={!step0Ready || formLocked} />
                   <Text style={s.signinLink}>
                     Already have an account?{" "}
-                    <Text style={s.signinAccent} onPress={() => navigation.navigate("LoginScreen")}>Sign in</Text>
+                    <Text
+                      style={s.signinAccent}
+                      onPress={() => { if (!formLocked) navigation.navigate("LoginScreen"); }}
+                    >
+                      Sign in
+                    </Text>
                   </Text>
                 </AnimatedPanel>
               )}
@@ -719,12 +782,29 @@ export default function SignupScreen({ navigation }) {
               {/* ── Step 1: Security ── */}
               {step === 1 && (
                 <AnimatedPanel visible={step === 1}>
-                  <FloatingInput label="Password" value={password} onChangeText={setPassword} secureTextEntry valid={pwValid} />
+                  {serverError ? (
+                    <View style={s.errorBanner}><Text style={s.errorText}>{serverError}</Text></View>
+                  ) : null}
+                  <FloatingInput
+                    label="Password"
+                    value={password}
+                    editable={!formLocked}
+                    onChangeText={(v) => { setPassword(v); setServerError(""); }}
+                    secureTextEntry
+                    valid={pwValid}
+                  />
                   <StrengthBar password={password} />
-                  <FloatingInput label="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry valid={matchOk} />
+                  <FloatingInput
+                    label="Confirm Password"
+                    value={confirmPassword}
+                    editable={!formLocked}
+                    onChangeText={(v) => { setConfirmPassword(v); setServerError(""); }}
+                    secureTextEntry
+                    valid={matchOk}
+                  />
                   <View style={s.rulesGrid}>
                     <View style={s.rulesCol}>
-                      <RuleItem label="8+ characters"   met={hasLen} />
+                      <RuleItem label="8+ characters"    met={hasLen} />
                       <RuleItem label="Uppercase letter" met={hasUp} />
                     </View>
                     <View style={s.rulesCol}>
@@ -732,8 +812,13 @@ export default function SignupScreen({ navigation }) {
                       <RuleItem label="Passwords match" met={matchOk} />
                     </View>
                   </View>
-                  <ShimmerButton label="CONTINUE" onPress={goNext} disabled={!step1Ready} />
-                  <Text style={s.backLink} onPress={goBack}>← Back</Text>
+                  <ShimmerButton label="CONTINUE" onPress={goNext} disabled={!step1Ready || formLocked} />
+                  <Text
+                    style={[s.backLink, formLocked && { opacity: 0.4 }]}
+                    onPress={!formLocked ? goBack : undefined}
+                  >
+                    ← Back
+                  </Text>
                 </AnimatedPanel>
               )}
 
@@ -741,9 +826,9 @@ export default function SignupScreen({ navigation }) {
               {step === 2 && (
                 <AnimatedPanel visible={step === 2}>
                   <View style={s.reviewCard}>
-                    <ReviewRow label="NAME"  value={`${firstName.trim()} ${lastName.trim()}`} />
-                    <ReviewRow label="EMAIL" value={email.trim()} />
-                    <ReviewRow label="PHONE" value={phone} />
+                    <ReviewRow label="NAME"     value={`${firstName.trim()} ${lastName.trim()}`} />
+                    <ReviewRow label="EMAIL"    value={email.trim()} />
+                    <ReviewRow label="PHONE"    value={phone} />
                     <ReviewRow label="PASSWORD" value="••••••••" last />
                   </View>
 
@@ -756,11 +841,17 @@ export default function SignupScreen({ navigation }) {
                     </View>
                     <Text style={s.cboxText}>
                       I agree to the{" "}
-                      <Text style={[s.cboxLink, termsAgreed && s.cboxLinkDone]} onPress={() => setLegalModal("terms")}>
+                      <Text
+                        style={[s.cboxLink, termsAgreed && s.cboxLinkDone]}
+                        onPress={() => { if (!formLocked) setLegalModal("terms"); }}
+                      >
                         Terms of Use{termsAgreed ? " ✓" : " ↗"}
                       </Text>
                       {"  &  "}
-                      <Text style={[s.cboxLink, privacyAgreed && s.cboxLinkDone]} onPress={() => setLegalModal("privacy")}>
+                      <Text
+                        style={[s.cboxLink, privacyAgreed && s.cboxLinkDone]}
+                        onPress={() => { if (!formLocked) setLegalModal("privacy"); }}
+                      >
                         Privacy Policy{privacyAgreed ? " ✓" : " ↗"}
                       </Text>
                     </Text>
@@ -770,8 +861,15 @@ export default function SignupScreen({ navigation }) {
                     <View style={s.errorBanner}><Text style={s.errorText}>{serverError}</Text></View>
                   ) : null}
 
-                  <ShimmerButton label="SIGN UP" onPress={handleSignup} disabled={!bothAgreed} loading={loading} />
-                  <Text style={s.backLink} onPress={goBack}>← Back</Text>
+                  <ShimmerButton
+                    label="SIGN UP"
+                    onPress={handleSignup}
+                    disabled={!bothAgreed || !step0Ready || !step1Ready || formLocked}
+                    loading={loading}
+                  />
+                  {!formLocked && (
+                    <Text style={s.backLink} onPress={goBack}>← Back</Text>
+                  )}
                 </AnimatedPanel>
               )}
             </Animated.View>

@@ -464,7 +464,7 @@ function RefundModal({ visible, order, onClose, onSubmit, submitting, styles, co
             <TextInput
               style={styles.reviewInput}
               placeholder="Anything else we should know…"
-              placeholderTextColor={colors.bgTertiary}
+              placeholderTextColor={colors.textMuted}
               multiline
               value={notes}
               onChangeText={setNotes}
@@ -600,7 +600,7 @@ function ReviewModal({ visible, product, onClose, onSubmit, submitting, styles, 
             <TextInput
               style={[styles.reviewInput, errors.review && styles.reviewInputError]}
               placeholder="Describe what you liked, what you didn't, and other key things shoppers should know."
-              placeholderTextColor={colors.bgTertiary}
+              placeholderTextColor={colors.textMuted}
               multiline
               maxLength={5000}
               value={review}
@@ -1000,12 +1000,17 @@ export default function OrderHistoryScreen({ navigation }) {
             setLoadingIds((p) => [...p, order.orderNumber]);
             try {
               const res = await fetch(`${BASE_URL}/order/${order.orderNumber}/cancel`, {
-                method: "PUT",
+                method: "POST",
                 headers: { "auth-token": userToken, "Content-Type": "application/json" },
               });
               const data = await res.json();
               if (data.success) {
                 addToast("success", "Order cancelled successfully.");
+                if (data.order) {
+                  setSelected((prev) => (prev && prev.orderNumber === order.orderNumber ? data.order : prev));
+                } else {
+                  setDetailVisible(false);
+                }
                 fetchOrders(currentPage, statusFilter);
               } else {
                 addToast("error", data.error || "Failed to cancel.");

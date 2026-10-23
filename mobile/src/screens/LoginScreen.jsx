@@ -284,7 +284,7 @@ const FieldInput = ({ placeholder, value, onChangeText, secureTextEntry, keyboar
         selectionColor="#888"
       />
       {showToggle && (
-        <TouchableOpacity style={fi.toggle} onPress={onToggle} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity style={[fi.toggle, !editable ? fi.inputDisabled : null]} onPress={onToggle} disabled={!editable} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Text style={fi.toggleIcon}>{toggled ? "○" : "●"}</Text>
         </TouchableOpacity>
       )}
@@ -614,7 +614,7 @@ export default function LoginScreen({ navigation, route }) {
       <View style={{ height: 20 }} />
 
       <FieldInput placeholder="Email address" value={formData.email} onChangeText={set("email")} keyboardType="email-address" error={errors.email} />
-      <FieldInput placeholder="Password" value={formData.password} onChangeText={set("password")} secureTextEntry showToggle toggled={showPwd} onToggle={() => setShowPwd((v) => !v)} error={errors.password} />
+      <FieldInput placeholder="Password" value={formData.password} onChangeText={set("password")} secureTextEntry showToggle toggled={showPwd} onToggle={() => setShowPwd((v) => !v)} error={errors.password} editable={!otpSent && !loading} />
 
       <View style={s.forgotRow}>
         <LinkBtn label="Forgot password?" onPress={() => switchMode("forgot")} />
@@ -644,17 +644,17 @@ export default function LoginScreen({ navigation, route }) {
         <View style={{ flex: 1 }}>
           <FieldInput placeholder="First name" value={formData.firstName}
             onChangeText={(v) => set("firstName")(v.replace(/[0-9]/g, "").slice(0, 64))}
-            error={errors.firstName} editable={!otpSent} />
+            error={errors.firstName} editable={!otpSent && !loading} />
         </View>
         <View style={{ width: 10 }} />
         <View style={{ flex: 1 }}>
           <FieldInput placeholder="Last name" value={formData.lastName}
             onChangeText={(v) => set("lastName")(v.replace(/[0-9]/g, "").slice(0, 64))}
-            error={errors.lastName} editable={!otpSent} />
+            error={errors.lastName} editable={!otpSent && !loading} />
         </View>
       </View>
 
-      <FieldInput placeholder="Email address" value={formData.email} onChangeText={set("email")} keyboardType="email-address" error={errors.email} editable={!otpSent} />
+      <FieldInput placeholder="Email address" value={formData.email} onChangeText={set("email")} keyboardType="email-address" error={errors.email} editable={!otpSent && !loading} />
       <FieldInput placeholder="+639XXXXXXXXX" value={formData.phone}
         onChangeText={(v) => {
           let digits = v.replace(/\D/g, "");
@@ -662,16 +662,16 @@ export default function LoginScreen({ navigation, route }) {
           digits = digits.slice(0, 12);
           set("phone")("+" + digits);
         }}
-        keyboardType="number-pad" maxLength={13} error={errors.phone} editable={!otpSent} />
+        keyboardType="number-pad" maxLength={13} error={errors.phone} editable={!otpSent && !loading} />
 
-      <FieldInput placeholder="Password" value={formData.password} onChangeText={set("password")} secureTextEntry showToggle toggled={showPwd} onToggle={() => setShowPwd((v) => !v)} error={errors.password} />
+      <FieldInput placeholder="Password" value={formData.password} onChangeText={set("password")} secureTextEntry showToggle toggled={showPwd} onToggle={() => setShowPwd((v) => !v)} error={errors.password} editable={!otpSent && !loading} />
       {formData.password.length > 0 && <PwdChecklist checks={getPwdChecks(formData.password)} />}
       {pwStrength ? (
         <Text style={[s.strength, { color: STRENGTH_COLOR[pwStrength] || "#555" }]}>{pwStrength}</Text>
       ) : null}
 
       <View style={{ height: 4 }} />
-      <FieldInput placeholder="Confirm password" value={formData.confirmPassword} onChangeText={set("confirmPassword")} secureTextEntry showToggle toggled={showConfirm} onToggle={() => setShowConfirm((v) => !v)} error={errors.confirmPassword} />
+      <FieldInput placeholder="Confirm password" value={formData.confirmPassword} onChangeText={set("confirmPassword")} secureTextEntry showToggle toggled={showConfirm} onToggle={() => setShowConfirm((v) => !v)} error={errors.confirmPassword} editable={!otpSent && !loading} />
 
       {/* Terms & Privacy */}
       <View style={s.termsRow}>
@@ -680,11 +680,11 @@ export default function LoginScreen({ navigation, route }) {
         </View>
         <Text style={s.termsText}>
           I agree to the{" "}
-          <Text style={[s.termsLink, termsAgreed && s.termsLinkDone]} onPress={() => setLegalModal("terms")}>
+          <Text style={[s.termsLink, termsAgreed && s.termsLinkDone]} onPress={() => !otpSent && setLegalModal("terms")}>
             Terms of Use{termsAgreed ? " ✓" : " ↗"}
           </Text>
           {"  &  "}
-          <Text style={[s.termsLink, privacyAgreed && s.termsLinkDone]} onPress={() => setLegalModal("privacy")}>
+          <Text style={[s.termsLink, privacyAgreed && s.termsLinkDone]} onPress={() => !otpSent && setLegalModal("privacy")}>
             Privacy Policy{privacyAgreed ? " ✓" : " ↗"}
           </Text>
         </Text>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { BASE_URL } from "../api/config";
 import {
   View,
@@ -18,6 +18,7 @@ import {
   FlatList,
   Pressable,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { Alert } from "../utils/customAlert";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import axios from "axios";
@@ -29,6 +30,8 @@ import { useTheme } from "../context/ThemeContext";
 import { TAB_BAR_CLEARANCE } from "../navigation/tabBarMetrics";
 
 const NCR_REGION_CODE = "1300000000";
+const MANILA_CITY_CODE = "1380600000";
+const MANILA_GITLAB_CODE = "133900000";
 const { width } = Dimensions.get("window");
 const isSmall  = width < 380;
 const isTablet = width > 768;
@@ -71,8 +74,105 @@ const decodeMojibake = (str) => {
     .replace(/Ã/g, "Á").replace(/Ã‰/g, "É").replace(/Ã/g, "Í").replace(/Ã“/g, "Ó").replace(/Ãš/g, "Ú");
 };
 
+const naturalSortByName = (list) =>
+  [...list].sort((a, b) =>
+    (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: "base" })
+  );
+
 const fixList = (list) =>
-  (Array.isArray(list) ? list : []).map((it) => ({ ...it, name: decodeMojibake(it?.name) }));
+  (Array.isArray(list) ? list : []).map((it) => ({
+    ...it,
+    code: String(it?.psgc10DigitCode || it?.code || ""),
+    name: decodeMojibake(it?.name || ""),
+  }));
+
+const getLocName = (loc) => {
+  if (!loc) return "";
+  if (typeof loc === "string") return decodeMojibake(loc.trim());
+  return decodeMojibake(String(loc.name || "").trim());
+};
+
+const getLocCode = (loc) => {
+  if (!loc) return "";
+  if (typeof loc === "string") return "";
+  return String(loc.code || "").trim();
+};
+
+const codesMatch = (a, b) => {
+  const ca = String(a || "").trim();
+  const cb = String(b || "").trim();
+  if (!ca || !cb) return false;
+  if (ca === cb) return true;
+  if ((ca === MANILA_CITY_CODE && cb === MANILA_GITLAB_CODE) || (ca === MANILA_GITLAB_CODE && cb === MANILA_CITY_CODE)) {
+    return true;
+  }
+  // 10-digit vs 9-digit PSGC code comparison (e.g. Manila barangays 1380601001 vs 133901001)
+  if (ca.startsWith("13806") && cb.startsWith("1339") && ca.slice(5) === cb.slice(4)) return true;
+  if (cb.startsWith("13806") && ca.startsWith("1339") && cb.slice(5) === ca.slice(4)) return true;
+  return false;
+};
+
+// Fetches barangays for a given city/municipality code, with direct support for
+// City of Manila (1380600000) where psgc.cloud's city barangay endpoint returns [].
+const fetchBarangaysForCity = async (cityCode) => {
+  if (!cityCode) return [];
+  const codeStr = String(cityCode).trim();
+  const isManila = codeStr === MANILA_CITY_CODE || codeStr === MANILA_GITLAB_CODE;
+
+  // For City of Manila, psgc.cloud/api/cities-municipalities/1380600000/barangays returns [].
+  // Fetch directly from psgc.gitlab.io (all 897 barangays in one fast request) or NCR sub-municipalities.
+  if (isManila) {
+    try {
+      const manilaRes = await axios.get(
+        `https://psgc.gitlab.io/api/cities-municipalities/${MANILA_GITLAB_CODE}/barangays.json`
+      );
+      if (Array.isArray(manilaRes.data) && manilaRes.data.length > 0) {
+        return naturalSortByName(fixList(manilaRes.data));
+      }
+    } catch {}
+
+    try {
+      const subRes = await axios.get(`https://psgc.cloud/api/regions/${NCR_REGION_CODE}/sub-municipalities`);
+      if (Array.isArray(subRes.data) && subRes.data.length > 0) {
+        const allBrgys = await Promise.all(
+          subRes.data.map((sub) =>
+            axios
+              .get(`https://psgc.cloud/api/sub-municipalities/${encodeURIComponent(sub.code)}/barangays`)
+              .then((r) => (Array.isArray(r.data) ? r.data : []))
+              .catch(() => [])
+          )
+        );
+        const flattened = allBrgys.flat();
+        if (flattened.length > 0) {
+          return naturalSortByName(fixList(flattened));
+        }
+      }
+    } catch {}
+  }
+
+  // Standard PSGC cities-municipalities endpoint
+  try {
+    const res = await axios.get(
+      `https://psgc.cloud/api/cities-municipalities/${encodeURIComponent(codeStr)}/barangays`
+    );
+    if (Array.isArray(res.data) && res.data.length > 0) {
+      return naturalSortByName(fixList(res.data));
+    }
+  } catch {}
+
+  // Fallback: psgc.gitlab.io static JSON API
+  try {
+    const gitlabCode = isManila ? MANILA_GITLAB_CODE : codeStr.slice(0, 9);
+    const fallbackRes = await axios.get(
+      `https://psgc.gitlab.io/api/cities-municipalities/${encodeURIComponent(gitlabCode)}/barangays.json`
+    );
+    if (Array.isArray(fallbackRes.data) && fallbackRes.data.length > 0) {
+      return naturalSortByName(fixList(fallbackRes.data));
+    }
+  } catch {}
+
+  return [];
+};
 
 const Label = ({ text, s }) => <Text style={s.label}>{text}</Text>;
 
@@ -124,7 +224,7 @@ function Dropdown({
     });
   };
 
-  const selectedItem = items.find((i) => i.value === value);
+  const selectedItem = items.find((i) => codesMatch(i.value, value));
   const displayText = selectedItem ? selectedItem.label : placeholder;
   const isPlaceholder = !selectedItem;
 
@@ -179,7 +279,7 @@ function Dropdown({
 
             <FlatList
               data={items}
-              keyExtractor={(it) => String(it.value)}
+              keyExtractor={(it, idx) => `${it.value}_${idx}`}
               showsVerticalScrollIndicator
               keyboardShouldPersistTaps="handled"
               ItemSeparatorComponent={() => <View style={s.dropdownItemSep} />}
@@ -189,7 +289,7 @@ function Dropdown({
                 </View>
               }
               renderItem={({ item }) => {
-                const isSel = item.value === value;
+                const isSel = codesMatch(item.value, value);
                 return (
                   <TouchableOpacity
                     activeOpacity={0.75}
@@ -220,6 +320,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
   const { userToken }       = useAuth();
   const { colors, isDark }  = useTheme();
   const s = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
+  const placeholderColor = isDark ? "rgba(255,255,255,0.48)" : colors.textMuted;
 
   // "Buy Now" from ProductDetail passes a single item here directly,
   // bypassing the cart entirely — checkout works off that instead of the
@@ -234,10 +335,29 @@ export default function PlaceOrderScreen({ navigation, route }) {
     region: "", province: "", city: "", barangay: "",
   });
 
+  // Fallback names loaded from a saved address in case an API list is still loading or codes differ slightly
+  const [savedNamesFallback, setSavedNamesFallback] = useState({
+    region: "", province: "", city: "", barangay: "",
+  });
+
   const [placingOrder, setPlacingOrder] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [pendingOrderNumber, setPendingOrderNumber] = useState(null);
   const pendingOrderRef = useRef(null);
+
+  // Prevents the cascading fetch effects from overwriting lists that useSavedAddress just loaded.
+  const applyingSavedRef = useRef(false);
+
+  // Inline edit state for saved addresses in the checkout dropdown (matches web's PlaceOrder.jsx)
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editFormData, setEditFormData] = useState(null);
+  const [editProvinces, setEditProvinces] = useState([]);
+  const [editCities, setEditCities] = useState([]);
+  const [editBarangays, setEditBarangays] = useState([]);
+  const [editHasProvinces, setEditHasProvinces] = useState(true);
+  const [editLoading, setEditLoading] = useState({
+    provinces: false, cities: false, barangays: false, saving: false,
+  });
 
   // When the user comes back to the app after paying in the external
   // browser, verify the payment automatically instead of making them tap
@@ -265,7 +385,6 @@ export default function PlaceOrderScreen({ navigation, route }) {
   const [saveAddress,        setSaveAddress]        = useState(false);
   const [savedAddresses,     setSavedAddresses]     = useState([]);
   const [showAddressDropdown,setShowAddressDropdown]= useState(false);
-  const [isLoadingSavedAddress, setIsLoadingSavedAddress] = useState(false);
 
   const [regions,   setRegions]   = useState([]);
   const [provinces, setProvinces] = useState([]);
@@ -279,11 +398,56 @@ export default function PlaceOrderScreen({ navigation, route }) {
   const [loadingBarangays, setLoadingBarangays] = useState(false);
 
   /* ── helpers ── */
-  const findName = (list, code) => {
-    if (!code || !Array.isArray(list)) return "";
-    const found = list.find((item) => String(item.code) === String(code));
-    return found ? found.name : "";
+  const findName = (list, code, fallback = "") => {
+    if (!code) return fallback;
+    if (Array.isArray(list)) {
+      const found = list.find((item) => codesMatch(item.code, code));
+      if (found && found.name) return found.name;
+    }
+    return fallback;
   };
+
+  // Auto-detect if the current address (street + city/municipality + barangay) is already in savedAddresses
+  // Matches web's PlaceOrder.jsx and backend's saveAddress check.
+  const isAddressAlreadySaved = useMemo(() => {
+    if (
+      !savedAddresses.length ||
+      !form.street.trim() ||
+      !form.city ||
+      !form.barangay
+    ) {
+      return false;
+    }
+    const norm = (str) => decodeMojibake(str || "").trim().toLowerCase();
+    const currentStreet   = norm(form.street);
+    const currentCityName = norm(findName(cities, form.city, savedNamesFallback.city));
+    const currentBrgyName = norm(findName(barangays, form.barangay, savedNamesFallback.barangay));
+
+    return savedAddresses.some((addr) => {
+      if (norm(addr.street) !== currentStreet) return false;
+
+      const addrCityCode = getLocCode(addr.cityOrMunicipality) || getLocCode(addr.city);
+      const addrCityName = norm(getLocName(addr.cityOrMunicipality) || getLocName(addr.city));
+      const addrBrgyCode = getLocCode(addr.barangay);
+      const addrBrgyName = norm(getLocName(addr.barangay));
+
+      const cityMatch =
+        codesMatch(addrCityCode, form.city) ||
+        (currentCityName && addrCityName && addrCityName === currentCityName);
+      const brgyMatch =
+        codesMatch(addrBrgyCode, form.barangay) ||
+        (currentBrgyName && addrBrgyName && addrBrgyName === currentBrgyName);
+
+      return cityMatch && brgyMatch;
+    });
+  }, [form.street, form.city, form.barangay, savedAddresses, cities, barangays, savedNamesFallback]);
+
+  // Automatically uncheck saveAddress when the current form matches a saved address
+  useEffect(() => {
+    if (isAddressAlreadySaved && saveAddress) {
+      setSaveAddress(false);
+    }
+  }, [isAddressAlreadySaved, saveAddress]);
 
   const getSizePrice = (item) => {
     const sizeKey  = item?.selectedSize || item?.size;
@@ -355,67 +519,154 @@ export default function PlaceOrderScreen({ navigation, route }) {
     setAppliedVoucher(null);
   };
 
-  /* ── mount ── */
+  /* ── hydrate saved addresses that were saved with missing city/barangay names ── */
+  const hydrateMissingAddressNames = useCallback(async (rawList) => {
+    if (!Array.isArray(rawList) || !rawList.length) return;
+    let changed = false;
+    const updated = await Promise.all(
+      rawList.map(async (addr, idx) => {
+        const rCode = getLocCode(addr.region);
+        const pCode = getLocCode(addr.province);
+        const cCode = getLocCode(addr.cityOrMunicipality) || getLocCode(addr.city);
+        const bCode = getLocCode(addr.barangay);
+
+        let rName = getLocName(addr.region);
+        let pName = getLocName(addr.province);
+        let cName = getLocName(addr.cityOrMunicipality) || getLocName(addr.city);
+        let bName = getLocName(addr.barangay);
+
+        if ((cCode && !cName) || (bCode && !bName)) {
+          const isNCR = rCode === NCR_REGION_CODE;
+          if (cCode && !cName && (rCode || pCode)) {
+            try {
+              const url = isNCR
+                ? `https://psgc.cloud/api/regions/${encodeURIComponent(rCode)}/cities-municipalities`
+                : `https://psgc.cloud/api/provinces/${encodeURIComponent(pCode)}/cities-municipalities`;
+              const res = await axios.get(url);
+              const list = fixList(res.data);
+              const found = list.find((c) => codesMatch(c.code, cCode));
+              if (found?.name) cName = found.name;
+            } catch {}
+          }
+          if (bCode && !bName && cCode) {
+            try {
+              const bList = await fetchBarangaysForCity(cCode);
+              const found = bList.find((b) => codesMatch(b.code, bCode));
+              if (found?.name) bName = found.name;
+            } catch {}
+          }
+          if (cName || bName) {
+            changed = true;
+            const nextAddr = {
+              ...addr,
+              region: { code: rCode, name: rName },
+              province: { code: pCode || (isNCR ? NCR_REGION_CODE : ""), name: pName || (isNCR ? "Metro Manila" : "") },
+              cityOrMunicipality: { code: cCode, name: cName },
+              barangay: { code: bCode, name: bName },
+            };
+            if (userToken) {
+              fetch(`${BASE_URL}/updateaddress/${idx}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json", "auth-token": userToken },
+                body: JSON.stringify(nextAddr),
+              }).catch(() => {});
+            }
+            return nextAddr;
+          }
+        }
+        return addr;
+      })
+    );
+    if (changed) {
+      setSavedAddresses(updated);
+    }
+  }, [userToken]);
+
+  const loadSavedAddresses = useCallback(async () => {
+    if (!userToken) return;
+    try {
+      const res  = await fetch(`${BASE_URL}/getsavedaddresses`, { headers: { "auth-token": userToken } });
+      const data = await res.json();
+      if (data.success) {
+        const list = data.addresses || [];
+        setSavedAddresses(list);
+        hydrateMissingAddressNames(list);
+      }
+    } catch {}
+  }, [userToken, hydrateMissingAddressNames]);
+
+  /* ── mount & focus ── */
   useEffect(() => {
     setLoadingRegions(true);
     axios.get("https://psgc.cloud/api/regions")
       .then((res) => setRegions(fixList(res.data)))
       .catch(() => setRegions([]))
       .finally(() => setLoadingRegions(false));
-    loadSavedAddresses();
   }, []);
 
-  const loadSavedAddresses = async () => {
-    if (!userToken) return;
-    try {
-      const res  = await fetch(`${BASE_URL}/getsavedaddresses`, { headers: { "auth-token": userToken } });
-      const data = await res.json();
-      if (data.success) setSavedAddresses(data.addresses || []);
-    } catch {}
-  };
+  useFocusEffect(
+    useCallback(() => {
+      loadSavedAddresses();
+    }, [loadSavedAddresses])
+  );
 
-  /* ── region → provinces ── */
+  /* ── region → provinces (fetch only; never wipes form fields) ── */
   useEffect(() => {
-    if (!isLoadingSavedAddress) { setProvinces([]); setCities([]); setBarangays([]); setHasProvinces(true); }
-    if (!form.region) return;
+    if (applyingSavedRef.current) return;
+    if (!form.region) {
+      setHasProvinces(true);
+      setProvinces([]);
+      return;
+    }
     const isNCR = String(form.region) === NCR_REGION_CODE;
     setHasProvinces(!isNCR);
     if (!isNCR) {
       setLoadingProvinces(true);
       axios.get(`https://psgc.cloud/api/regions/${encodeURIComponent(form.region)}/provinces`)
-        .then((res) => setProvinces(fixList(res.data).sort((a, b) => (a.name||"").localeCompare(b.name||""))))
+        .then((res) => setProvinces(naturalSortByName(fixList(res.data))))
         .catch(() => setProvinces([]))
         .finally(() => setLoadingProvinces(false));
+    } else {
+      setProvinces([]);
     }
-  }, [form.region, isLoadingSavedAddress]);
+  }, [form.region]);
 
-  /* ── province / NCR → cities ── */
+  /* ── province / NCR → cities (fetch only; never wipes form fields) ── */
   useEffect(() => {
-    if (!isLoadingSavedAddress) { setCities([]); setBarangays([]); setForm((p) => ({ ...p, city: "", barangay: "" })); }
-    if (hasProvinces && !form.province) return;
-    if (!hasProvinces && !form.region) return;
+    if (applyingSavedRef.current) return;
+    if (!form.region) {
+      setCities([]);
+      return;
+    }
+    const isNCR = String(form.region) === NCR_REGION_CODE;
+    if (!isNCR && !form.province) {
+      setCities([]);
+      return;
+    }
     setLoadingCities(true);
-    const url = hasProvinces
+    const url = !isNCR
       ? `https://psgc.cloud/api/provinces/${encodeURIComponent(form.province)}/cities-municipalities`
       : `https://psgc.cloud/api/regions/${encodeURIComponent(form.region)}/cities-municipalities`;
     axios.get(url)
-      .then((res) => setCities(fixList(res.data).sort((a, b) => (a.name||"").localeCompare(b.name||""))))
+      .then((res) => setCities(naturalSortByName(fixList(res.data))))
       .catch(() => setCities([]))
       .finally(() => setLoadingCities(false));
-  }, [form.province, form.region, hasProvinces, isLoadingSavedAddress]);
+  }, [form.province, form.region]);
 
-  /* ── city → barangays ── */
+  /* ── city → barangays (fetch only; never wipes form fields) ── */
   useEffect(() => {
-    if (!isLoadingSavedAddress) { setBarangays([]); setForm((p) => ({ ...p, barangay: "" })); }
-    if (!form.city) return;
+    if (applyingSavedRef.current) return;
+    if (!form.city) {
+      setBarangays([]);
+      return;
+    }
     setLoadingBarangays(true);
-    axios.get(`https://psgc.cloud/api/cities-municipalities/${encodeURIComponent(form.city)}/barangays`)
-      .then((res) => setBarangays(fixList(res.data).sort((a, b) => (a.name||"").localeCompare(b.name||""))))
-      .catch(() => setBarangays([]))
+    fetchBarangaysForCity(form.city)
+      .then((list) => setBarangays(list))
       .finally(() => setLoadingBarangays(false));
-  }, [form.city, isLoadingSavedAddress]);
+  }, [form.city]);
 
-  /* ── input handler ── */
+  /* ── input handler (resets child dropdowns only on explicit user change, matching web) ── */
   const handleChange = (name, value) => {
     if (name === "firstName" || name === "lastName") {
       value = value.replace(/[0-9]/g, "").replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' \-]/g, "").slice(0, 54);
@@ -425,8 +676,288 @@ export default function PlaceOrderScreen({ navigation, route }) {
       digits = digits.slice(0, 12);
       value = "+" + digits;
     }
+
+    if (name === "region") {
+      const isNCR = String(value) === NCR_REGION_CODE;
+      setHasProvinces(!isNCR);
+      setProvinces([]);
+      setCities([]);
+      setBarangays([]);
+      setSavedNamesFallback({ region: "", province: "", city: "", barangay: "" });
+      setForm((prev) => ({
+        ...prev,
+        region: value,
+        province: isNCR ? NCR_REGION_CODE : "",
+        city: "",
+        barangay: "",
+      }));
+      setErrors((prev) => ({ ...prev, region: "", province: "", city: "", barangay: "" }));
+      return;
+    }
+
+    if (name === "province") {
+      setCities([]);
+      setBarangays([]);
+      setSavedNamesFallback((prev) => ({ ...prev, province: "", city: "", barangay: "" }));
+      setForm((prev) => ({ ...prev, province: value, city: "", barangay: "" }));
+      setErrors((prev) => ({ ...prev, province: "", city: "", barangay: "" }));
+      return;
+    }
+
+    if (name === "city") {
+      setBarangays([]);
+      setSavedNamesFallback((prev) => ({ ...prev, city: "", barangay: "" }));
+      setForm((prev) => ({ ...prev, city: value, barangay: "" }));
+      setErrors((prev) => ({ ...prev, city: "", barangay: "" }));
+      return;
+    }
+
+    if (name === "barangay") {
+      setSavedNamesFallback((prev) => ({ ...prev, barangay: "" }));
+    }
+
     setForm((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+
+  /* ── inline saved-address editing (matches web's PlaceOrder.jsx) ── */
+  const startEditAddress = async (idx) => {
+    const addr = savedAddresses[idx];
+    if (!addr) return;
+    const rCode = getLocCode(addr.region);
+    const pCode = getLocCode(addr.province);
+    const cCode = getLocCode(addr.cityOrMunicipality) || getLocCode(addr.city);
+    const bCode = getLocCode(addr.barangay);
+    const rName = getLocName(addr.region);
+    const pName = getLocName(addr.province);
+    const cName = getLocName(addr.cityOrMunicipality) || getLocName(addr.city);
+    const bName = getLocName(addr.barangay);
+
+    const resolvedRCode =
+      regions.find((r) => codesMatch(r.code, rCode))?.code ||
+      regions.find((r) => (r.name || "").toLowerCase() === rName.toLowerCase())?.code ||
+      rCode;
+    const isNCR = String(resolvedRCode) === NCR_REGION_CODE;
+
+    setEditHasProvinces(!isNCR);
+    setEditingIndex(idx);
+    setEditFormData({
+      firstName: addr.firstName || "",
+      lastName: addr.lastName || "",
+      email: addr.email || "",
+      street: addr.street || "",
+      phone: normalizePhone(addr.phone || ""),
+      region: resolvedRCode,
+      province: isNCR ? NCR_REGION_CODE : pCode,
+      cityOrMunicipality: cCode,
+      barangay: bCode,
+    });
+
+    setEditLoading({ provinces: !isNCR && !!resolvedRCode, cities: !!resolvedRCode, barangays: !!cCode, saving: false });
+    try {
+      let provList = [];
+      if (!isNCR && resolvedRCode) {
+        const pRes = await axios.get(`https://psgc.cloud/api/regions/${encodeURIComponent(resolvedRCode)}/provinces`);
+        provList = naturalSortByName(fixList(pRes.data));
+      }
+      setEditProvinces(provList);
+
+      const resolvedPCode = isNCR
+        ? NCR_REGION_CODE
+        : (provList.find((p) => codesMatch(p.code, pCode))?.code ||
+           provList.find((p) => (p.name || "").toLowerCase() === pName.toLowerCase())?.code ||
+           pCode);
+
+      let cityList = [];
+      const pOrR = isNCR ? resolvedRCode : resolvedPCode;
+      if (pOrR) {
+        const cityUrl = isNCR
+          ? `https://psgc.cloud/api/regions/${encodeURIComponent(pOrR)}/cities-municipalities`
+          : `https://psgc.cloud/api/provinces/${encodeURIComponent(pOrR)}/cities-municipalities`;
+        const cRes = await axios.get(cityUrl);
+        cityList = naturalSortByName(fixList(cRes.data));
+      }
+
+      const resolvedCCode =
+        cityList.find((c) => codesMatch(c.code, cCode))?.code ||
+        cityList.find((c) => (c.name || "").toLowerCase() === cName.toLowerCase())?.code ||
+        cCode;
+      if (resolvedCCode && cName && !cityList.some((c) => codesMatch(c.code, resolvedCCode))) {
+        cityList = [...cityList, { code: resolvedCCode, name: cName }];
+      }
+      setEditCities(cityList);
+
+      let brgyList = [];
+      if (resolvedCCode) {
+        brgyList = await fetchBarangaysForCity(resolvedCCode);
+      }
+      const resolvedBCode =
+        brgyList.find((b) => codesMatch(b.code, bCode))?.code ||
+        brgyList.find((b) => (b.name || "").toLowerCase() === bName.toLowerCase())?.code ||
+        bCode;
+      if (resolvedBCode && bName && !brgyList.some((b) => codesMatch(b.code, resolvedBCode))) {
+        brgyList = [...brgyList, { code: resolvedBCode, name: bName }];
+      }
+      setEditBarangays(brgyList);
+
+      setEditFormData((prev) =>
+        prev
+          ? {
+              ...prev,
+              province: resolvedPCode,
+              cityOrMunicipality: String(resolvedCCode || ""),
+              barangay: String(resolvedBCode || ""),
+            }
+          : prev
+      );
+    } catch {} finally {
+      setEditLoading({ provinces: false, cities: false, barangays: false, saving: false });
+    }
+  };
+
+  const handleEditChange = async (name, value) => {
+    if (name === "firstName" || name === "lastName") {
+      value = value.replace(/[0-9]/g, "").replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' \-]/g, "").slice(0, 54);
+      setEditFormData((p) => ({ ...p, [name]: value }));
+      return;
+    }
+    if (name === "phone") {
+      let digits = value.replace(/\D/g, "");
+      if (!digits.startsWith("63")) digits = "63" + digits.replace(/^6?3?/, "");
+      digits = digits.slice(0, 12);
+      setEditFormData((p) => ({ ...p, phone: "+" + digits }));
+      return;
+    }
+    if (name === "region") {
+      const isNCR = String(value) === NCR_REGION_CODE;
+      setEditHasProvinces(!isNCR);
+      setEditProvinces([]);
+      setEditCities([]);
+      setEditBarangays([]);
+      setEditFormData((p) => ({
+        ...p,
+        region: value,
+        province: isNCR ? NCR_REGION_CODE : "",
+        cityOrMunicipality: "",
+        barangay: "",
+      }));
+      if (isNCR) {
+        setEditLoading((p) => ({ ...p, cities: true }));
+        try {
+          const res = await axios.get(`https://psgc.cloud/api/regions/${encodeURIComponent(value)}/cities-municipalities`);
+          setEditCities(naturalSortByName(fixList(res.data)));
+        } catch {} finally {
+          setEditLoading((p) => ({ ...p, cities: false }));
+        }
+      } else if (value) {
+        setEditLoading((p) => ({ ...p, provinces: true }));
+        try {
+          const res = await axios.get(`https://psgc.cloud/api/regions/${encodeURIComponent(value)}/provinces`);
+          setEditProvinces(naturalSortByName(fixList(res.data)));
+        } catch {} finally {
+          setEditLoading((p) => ({ ...p, provinces: false }));
+        }
+      }
+      return;
+    }
+    if (name === "province") {
+      setEditCities([]);
+      setEditBarangays([]);
+      setEditFormData((p) => ({ ...p, province: value, cityOrMunicipality: "", barangay: "" }));
+      if (value) {
+        setEditLoading((p) => ({ ...p, cities: true }));
+        try {
+          const res = await axios.get(`https://psgc.cloud/api/provinces/${encodeURIComponent(value)}/cities-municipalities`);
+          setEditCities(naturalSortByName(fixList(res.data)));
+        } catch {} finally {
+          setEditLoading((p) => ({ ...p, cities: false }));
+        }
+      }
+      return;
+    }
+    if (name === "cityOrMunicipality") {
+      setEditBarangays([]);
+      setEditFormData((p) => ({ ...p, cityOrMunicipality: value, barangay: "" }));
+      if (value) {
+        setEditLoading((p) => ({ ...p, barangays: true }));
+        try {
+          const list = await fetchBarangaysForCity(value);
+          setEditBarangays(list);
+        } catch {} finally {
+          setEditLoading((p) => ({ ...p, barangays: false }));
+        }
+      }
+      return;
+    }
+    setEditFormData((p) => ({ ...p, [name]: value }));
+  };
+
+  const saveEditedAddress = async () => {
+    if (!userToken || editingIndex === null || !editFormData) return;
+    if (
+      !editFormData.firstName.trim() ||
+      !editFormData.lastName.trim() ||
+      !editFormData.email.trim() ||
+      !editFormData.street.trim() ||
+      !editFormData.region ||
+      (editHasProvinces && !editFormData.province) ||
+      !editFormData.cityOrMunicipality ||
+      !editFormData.barangay ||
+      !/^\+63\d{10}$/.test(editFormData.phone || "")
+    ) {
+      Alert.alert("Incomplete", "Please complete all address fields including City / Municipality and Barangay.");
+      return;
+    }
+    setEditLoading((p) => ({ ...p, saving: true }));
+    try {
+      const current = savedAddresses[editingIndex] || {};
+      const payload = {
+        firstName: editFormData.firstName.trim(),
+        lastName: editFormData.lastName.trim(),
+        email: editFormData.email.trim(),
+        street: editFormData.street.trim(),
+        phone: editFormData.phone.trim(),
+        region: {
+          code: editFormData.region,
+          name: findName(regions, editFormData.region, getLocName(current.region)),
+        },
+        province: editHasProvinces
+          ? {
+              code: editFormData.province,
+              name: findName(editProvinces, editFormData.province, getLocName(current.province)),
+            }
+          : { code: editFormData.region, name: "Metro Manila" },
+        cityOrMunicipality: {
+          code: editFormData.cityOrMunicipality,
+          name: findName(
+            editCities,
+            editFormData.cityOrMunicipality,
+            getLocName(current.cityOrMunicipality) || getLocName(current.city)
+          ),
+        },
+        barangay: {
+          code: editFormData.barangay,
+          name: findName(editBarangays, editFormData.barangay, getLocName(current.barangay)),
+        },
+      };
+      const res = await fetch(`${BASE_URL}/updateaddress/${editingIndex}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "auth-token": userToken },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSavedAddresses(data.addresses || []);
+        setEditingIndex(null);
+        setEditFormData(null);
+      } else {
+        Alert.alert("Error", data.error || "Failed to update address.");
+      }
+    } catch {
+      Alert.alert("Network Error", "Failed to update address.");
+    } finally {
+      setEditLoading((p) => ({ ...p, saving: false }));
+    }
   };
 
   /* ── validation ── */
@@ -521,17 +1052,32 @@ export default function PlaceOrderScreen({ navigation, route }) {
     const total = calculateTotal();
 
     const deliveryInfo = {
-      firstName: form.firstName, lastName: form.lastName, email: form.email,
-      street: form.street, phone: form.phone,
-      region: { code: form.region, name: findName(regions, form.region) },
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
+      email: form.email.trim(),
+      street: form.street.trim(),
+      phone: form.phone.trim(),
+      region: {
+        code: String(form.region),
+        name: findName(regions, form.region, savedNamesFallback.region),
+      },
       province: hasProvinces
-        ? { code: form.province, name: findName(provinces, form.province) }
-        : { code: form.region, name: "Metro Manila" },
-      cityOrMunicipality: { code: form.city, name: findName(cities, form.city) },
-      barangay: { code: form.barangay, name: findName(barangays, form.barangay) },
+        ? {
+            code: String(form.province),
+            name: findName(provinces, form.province, savedNamesFallback.province),
+          }
+        : { code: String(form.region), name: "Metro Manila" },
+      cityOrMunicipality: {
+        code: String(form.city),
+        name: findName(cities, form.city, savedNamesFallback.city),
+      },
+      barangay: {
+        code: String(form.barangay),
+        name: findName(barangays, form.barangay, savedNamesFallback.barangay),
+      },
     };
 
-    if (saveAddress && userToken) {
+    if (saveAddress && !isAddressAlreadySaved && userToken) {
       try {
         await fetch(`${BASE_URL}/saveaddress`, {
           method: "POST",
@@ -576,24 +1122,57 @@ export default function PlaceOrderScreen({ navigation, route }) {
 
   /* ── load saved address ── */
   const useSavedAddress = async (address) => {
-    setIsLoadingSavedAddress(true);
+    applyingSavedRef.current = true;
+    setShowAddressDropdown(false);
+    setEditingIndex(null);
+    setEditFormData(null);
     try {
-      const regionCode   = address.region?.code || "";
-      const provinceCode = address.province?.code || "";
-      const cityCode     = address.cityOrMunicipality?.code || "";
-      const barangayCode = address.barangay?.code || "";
-      const isNCR        = regionCode === NCR_REGION_CODE;
+      const rawRegionCode   = getLocCode(address.region);
+      const rawProvinceCode = getLocCode(address.province);
+      const rawCityCode     = getLocCode(address.cityOrMunicipality) || getLocCode(address.city);
+      const rawBrgyCode     = getLocCode(address.barangay);
+
+      const regionName   = getLocName(address.region);
+      const provinceName = getLocName(address.province);
+      const cityName     = getLocName(address.cityOrMunicipality) || getLocName(address.city);
+      const brgyName     = getLocName(address.barangay);
+
+      const resolvedRegionCode =
+        regions.find((r) => codesMatch(r.code, rawRegionCode))?.code ||
+        regions.find((r) => (r.name || "").toLowerCase() === regionName.toLowerCase())?.code ||
+        rawRegionCode;
+
+      const isNCR = String(resolvedRegionCode) === NCR_REGION_CODE;
       setHasProvinces(!isNCR);
 
-      if (!isNCR && regionCode) {
+      let loadedProvinces = [];
+      if (!isNCR && resolvedRegionCode) {
         setLoadingProvinces(true);
         try {
-          const res = await axios.get(`https://psgc.cloud/api/regions/${encodeURIComponent(regionCode)}/provinces`);
-          setProvinces((Array.isArray(res.data) ? res.data : []).sort((a, b) => (a.name||"").localeCompare(b.name||"")));
-        } catch { setProvinces([]); } finally { setLoadingProvinces(false); }
+          const res = await axios.get(
+            `https://psgc.cloud/api/regions/${encodeURIComponent(resolvedRegionCode)}/provinces`
+          );
+          loadedProvinces = naturalSortByName(fixList(res.data));
+        } catch {
+          loadedProvinces = [];
+        } finally {
+          setLoadingProvinces(false);
+        }
       }
 
-      const pOrR = isNCR ? regionCode : provinceCode;
+      const resolvedProvinceCode = isNCR
+        ? NCR_REGION_CODE
+        : (loadedProvinces.find((p) => codesMatch(p.code, rawProvinceCode))?.code ||
+           loadedProvinces.find((p) => (p.name || "").toLowerCase() === provinceName.toLowerCase())?.code ||
+           rawProvinceCode);
+
+      if (!isNCR && resolvedProvinceCode && provinceName && !loadedProvinces.some((p) => codesMatch(p.code, resolvedProvinceCode))) {
+        loadedProvinces = [...loadedProvinces, { code: resolvedProvinceCode, name: provinceName }];
+      }
+      setProvinces(loadedProvinces);
+
+      const pOrR = isNCR ? resolvedRegionCode : resolvedProvinceCode;
+      let loadedCities = [];
       if (pOrR) {
         setLoadingCities(true);
         try {
@@ -601,29 +1180,71 @@ export default function PlaceOrderScreen({ navigation, route }) {
             ? `https://psgc.cloud/api/regions/${encodeURIComponent(pOrR)}/cities-municipalities`
             : `https://psgc.cloud/api/provinces/${encodeURIComponent(pOrR)}/cities-municipalities`;
           const res = await axios.get(url);
-          setCities((Array.isArray(res.data) ? res.data : []).sort((a, b) => (a.name||"").localeCompare(b.name||"")));
-        } catch { setCities([]); } finally { setLoadingCities(false); }
+          loadedCities = naturalSortByName(fixList(res.data));
+        } catch {
+          loadedCities = [];
+        } finally {
+          setLoadingCities(false);
+        }
       }
 
-      if (cityCode) {
+      const resolvedCityObj =
+        loadedCities.find((c) => codesMatch(c.code, rawCityCode)) ||
+        loadedCities.find((c) => (c.name || "").toLowerCase() === cityName.toLowerCase());
+      const resolvedCityCode = resolvedCityObj?.code || rawCityCode;
+      const resolvedCityName = resolvedCityObj?.name || cityName;
+
+      if (resolvedCityCode && resolvedCityName && !loadedCities.some((c) => codesMatch(c.code, resolvedCityCode))) {
+        loadedCities = [...loadedCities, { code: resolvedCityCode, name: resolvedCityName }];
+      }
+      setCities(loadedCities);
+
+      let loadedBarangays = [];
+      if (resolvedCityCode) {
         setLoadingBarangays(true);
         try {
-          const res = await axios.get(`https://psgc.cloud/api/cities-municipalities/${encodeURIComponent(cityCode)}/barangays`);
-          setBarangays((Array.isArray(res.data) ? res.data : []).sort((a, b) => (a.name||"").localeCompare(b.name||"")));
-        } catch { setBarangays([]); } finally { setLoadingBarangays(false); }
+          loadedBarangays = await fetchBarangaysForCity(resolvedCityCode);
+        } catch {
+          loadedBarangays = [];
+        } finally {
+          setLoadingBarangays(false);
+        }
       }
 
-      setForm((prev) => ({
-        ...prev,
-        firstName: address.firstName || "", lastName: address.lastName || "",
-        email: address.email || "", street: address.street || "",
+      const resolvedBrgyObj =
+        loadedBarangays.find((b) => codesMatch(b.code, rawBrgyCode)) ||
+        loadedBarangays.find((b) => (b.name || "").toLowerCase() === brgyName.toLowerCase());
+      const resolvedBrgyCode = resolvedBrgyObj?.code || rawBrgyCode;
+      const resolvedBrgyName = resolvedBrgyObj?.name || brgyName;
+
+      if (resolvedBrgyCode && resolvedBrgyName && !loadedBarangays.some((b) => codesMatch(b.code, resolvedBrgyCode))) {
+        loadedBarangays = [...loadedBarangays, { code: resolvedBrgyCode, name: resolvedBrgyName }];
+      }
+      setBarangays(loadedBarangays);
+
+      setSavedNamesFallback({
+        region: regionName || findName(regions, resolvedRegionCode),
+        province: isNCR ? "Metro Manila" : (provinceName || findName(loadedProvinces, resolvedProvinceCode)),
+        city: resolvedCityName,
+        barangay: resolvedBrgyName,
+      });
+
+      setForm({
+        firstName: address.firstName || "",
+        lastName: address.lastName || "",
+        email: address.email || "",
+        street: address.street || "",
         phone: normalizePhone(address.phone || ""),
-        region: regionCode, province: isNCR ? NCR_REGION_CODE : provinceCode,
-        city: cityCode, barangay: barangayCode,
-      }));
+        region: String(resolvedRegionCode || ""),
+        province: String(resolvedProvinceCode || ""),
+        city: String(resolvedCityCode || ""),
+        barangay: String(resolvedBrgyCode || ""),
+      });
+      setErrors({});
     } catch {} finally {
-      setIsLoadingSavedAddress(false);
-      setShowAddressDropdown(false);
+      setTimeout(() => {
+        applyingSavedRef.current = false;
+      }, 150);
     }
   };
 
@@ -670,20 +1291,30 @@ export default function PlaceOrderScreen({ navigation, route }) {
             <View style={{ flexDirection: "row", gap: 8 }}>
               <TouchableOpacity
                 style={[s.savedToggleBtn, { flex: 1 }]}
-                onPress={() => setShowAddressDropdown(!showAddressDropdown)}
+                onPress={() => {
+                  setShowAddressDropdown(!showAddressDropdown);
+                  setEditingIndex(null);
+                  setEditFormData(null);
+                }}
                 activeOpacity={0.8}
               >
                 <Text style={s.savedToggleText}>
-                  {showAddressDropdown ? "↑ Hide" : "⊕ Use Saved Address"}
+                  {showAddressDropdown ? "↑ Hide Saved Addresses" : "⊕ Use Saved Address"}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={s.clearFormBtn}
                 onPress={() => {
+                  applyingSavedRef.current = true;
                   setForm({ firstName: "", lastName: "", email: "", street: "", phone: "+63", region: "", province: "", city: "", barangay: "" });
+                  setSavedNamesFallback({ region: "", province: "", city: "", barangay: "" });
                   setErrors({});
                   setProvinces([]); setCities([]); setBarangays([]);
+                  setHasProvinces(true);
                   setSaveAddress(false);
+                  setTimeout(() => {
+                    applyingSavedRef.current = false;
+                  }, 100);
                 }}
                 activeOpacity={0.8}
               >
@@ -693,50 +1324,222 @@ export default function PlaceOrderScreen({ navigation, route }) {
 
             {showAddressDropdown && (
               <View style={s.savedList}>
-                {savedAddresses.map((addr, idx) => (
-                  <View key={idx} style={s.savedItem}>
-                    <TouchableOpacity onPress={() => useSavedAddress(addr)} activeOpacity={0.8}>
-                      <Text style={s.savedName}>{addr.firstName} {addr.lastName}</Text>
-                      <Text style={s.savedMeta}>
-                        {addr.street}, {addr.barangay?.name}, {addr.cityOrMunicipality?.name}
-                      </Text>
-                      <Text style={s.savedMeta}>{addr.province?.name}, {addr.region?.name}</Text>
-                      <Text style={s.savedPhone}>{addr.phone}</Text>
-                    </TouchableOpacity>
-                    <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
-                      <TouchableOpacity
-                        style={s.savedActionBtn}
-                        onPress={() => navigation.navigate("AddressesScreen")}
-                      >
-                        <Ionicons name="create-outline" size={14} color={colors.textPrimary} />
-                        <Text style={s.savedActionText}>Edit</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[s.savedActionBtn, { borderColor: colors.danger }]}
-                        onPress={() => {
-                          Alert.alert("Remove Address", "Remove this saved address?", [
-                            { text: "Cancel", style: "cancel" },
-                            { text: "Remove", style: "destructive", onPress: async () => {
-                              try {
-                                const res = await fetch(`${BASE_URL}/deleteaddress/${idx}`, {
-                                  method: "DELETE",
-                                  headers: { "auth-token": userToken },
-                                });
-                                const data = await res.json();
-                                if (data.success) {
-                                  setSavedAddresses(data.addresses || []);
-                                }
-                              } catch {}
-                            }},
-                          ]);
-                        }}
-                      >
-                        <Ionicons name="trash-outline" size={14} color={colors.danger} />
-                        <Text style={[s.savedActionText, { color: colors.danger }]}>Delete</Text>
-                      </TouchableOpacity>
+                {savedAddresses.map((addr, idx) => {
+                  const brgyLabel = getLocName(addr.barangay);
+                  const cityLabel = getLocName(addr.cityOrMunicipality) || getLocName(addr.city);
+                  const provLabel = getLocName(addr.province);
+                  const regLabel  = getLocName(addr.region);
+                  const line1Parts = [addr.street, brgyLabel, cityLabel].filter(Boolean);
+                  const line2Parts = [provLabel, regLabel].filter(Boolean);
+                  const isEditingThis = editingIndex === idx && !!editFormData;
+
+                  return (
+                    <View key={idx} style={s.savedItem}>
+                      {!isEditingThis ? (
+                        <>
+                          <TouchableOpacity onPress={() => useSavedAddress(addr)} activeOpacity={0.8}>
+                            <Text style={s.savedName}>{addr.firstName} {addr.lastName}</Text>
+                            <Text style={s.savedMeta}>
+                              {line1Parts.join(", ")}
+                            </Text>
+                            {line2Parts.length > 0 && (
+                              <Text style={s.savedMeta}>{line2Parts.join(", ")}</Text>
+                            )}
+                            <Text style={s.savedPhone}>{addr.phone}</Text>
+                          </TouchableOpacity>
+                          <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+                            <TouchableOpacity
+                              style={s.savedActionBtn}
+                              onPress={() => startEditAddress(idx)}
+                            >
+                              <Ionicons name="create-outline" size={14} color={colors.textPrimary} />
+                              <Text style={s.savedActionText}>Edit</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[s.savedActionBtn, { borderColor: colors.danger }]}
+                              onPress={() => {
+                                Alert.alert("Remove Address", "Remove this saved address?", [
+                                  { text: "Cancel", style: "cancel" },
+                                  { text: "Remove", style: "destructive", onPress: async () => {
+                                    try {
+                                      const res = await fetch(`${BASE_URL}/deleteaddress/${idx}`, {
+                                        method: "DELETE",
+                                        headers: { "auth-token": userToken },
+                                      });
+                                      const data = await res.json();
+                                      if (data.success) {
+                                        setSavedAddresses(data.addresses || []);
+                                        if (editingIndex === idx) {
+                                          setEditingIndex(null);
+                                          setEditFormData(null);
+                                        }
+                                      }
+                                    } catch {}
+                                  }},
+                                ]);
+                              }}
+                            >
+                              <Ionicons name="trash-outline" size={14} color={colors.danger} />
+                              <Text style={[s.savedActionText, { color: colors.danger }]}>Delete</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </>
+                      ) : (
+                        <View style={{ gap: 4 }}>
+                          <View style={s.row}>
+                            <View style={[s.fieldGroup, { flex: 1 }]}>
+                              <Label text="First Name" s={s} />
+                              <TextInput
+                                style={s.input}
+                                value={editFormData.firstName}
+                                onChangeText={(v) => handleEditChange("firstName", v)}
+                                placeholder="First name"
+                                placeholderTextColor={placeholderColor}
+                                maxLength={54}
+                              />
+                            </View>
+                            <View style={[s.fieldGroup, { flex: 1 }]}>
+                              <Label text="Last Name" s={s} />
+                              <TextInput
+                                style={s.input}
+                                value={editFormData.lastName}
+                                onChangeText={(v) => handleEditChange("lastName", v)}
+                                placeholder="Last name"
+                                placeholderTextColor={placeholderColor}
+                                maxLength={54}
+                              />
+                            </View>
+                          </View>
+
+                          <View style={s.fieldGroup}>
+                            <Label text="Email" s={s} />
+                            <TextInput
+                              style={s.input}
+                              value={editFormData.email}
+                              onChangeText={(v) => handleEditChange("email", v)}
+                              placeholder="email@example.com"
+                              placeholderTextColor={placeholderColor}
+                              keyboardType="email-address"
+                              autoCapitalize="none"
+                            />
+                          </View>
+
+                          <View style={s.fieldGroup}>
+                            <Label text="Street Address" s={s} />
+                            <TextInput
+                              style={s.input}
+                              value={editFormData.street}
+                              onChangeText={(v) => handleEditChange("street", v)}
+                              placeholder="House no., Street, Subdivision"
+                              placeholderTextColor={placeholderColor}
+                            />
+                          </View>
+
+                          <Dropdown
+                            label="Region"
+                            value={editFormData.region}
+                            items={regions.map((r) => ({ label: r.name, value: r.code }))}
+                            onSelect={(v) => handleEditChange("region", v)}
+                            placeholder="Select Region"
+                            enabled={!loadingRegions}
+                            loading={loadingRegions}
+                            s={s}
+                            colors={colors}
+                          />
+
+                          {!editHasProvinces ? (
+                            <Dropdown
+                              label="Province"
+                              value={NCR_REGION_CODE}
+                              items={[{ label: "Metro Manila", value: NCR_REGION_CODE }]}
+                              onSelect={() => {}}
+                              placeholder="Metro Manila"
+                              enabled={false}
+                              loading={false}
+                              s={s}
+                              colors={colors}
+                            />
+                          ) : (
+                            <Dropdown
+                              label="Province"
+                              value={editFormData.province}
+                              items={editProvinces.map((p) => ({ label: p.name, value: p.code }))}
+                              onSelect={(v) => handleEditChange("province", v)}
+                              placeholder="Select Province"
+                              enabled={!!editFormData.region && !editLoading.provinces}
+                              loading={editLoading.provinces}
+                              s={s}
+                              colors={colors}
+                            />
+                          )}
+
+                          <Dropdown
+                            label="City / Municipality"
+                            value={editFormData.cityOrMunicipality}
+                            items={editCities.map((c) => ({ label: c.name, value: c.code }))}
+                            onSelect={(v) => handleEditChange("cityOrMunicipality", v)}
+                            placeholder="Select City / Municipality"
+                            enabled={!!(editFormData.province || (!editHasProvinces && editFormData.region)) && !editLoading.cities}
+                            loading={editLoading.cities}
+                            s={s}
+                            colors={colors}
+                          />
+
+                          <Dropdown
+                            label="Barangay"
+                            value={editFormData.barangay}
+                            items={editBarangays.map((b) => ({ label: b.name, value: b.code }))}
+                            onSelect={(v) => handleEditChange("barangay", v)}
+                            placeholder="Select Barangay"
+                            enabled={!!editFormData.cityOrMunicipality && !editLoading.barangays}
+                            loading={editLoading.barangays}
+                            s={s}
+                            colors={colors}
+                          />
+
+                          <View style={s.fieldGroup}>
+                            <Label text="Phone" s={s} />
+                            <TextInput
+                              style={s.input}
+                              value={editFormData.phone}
+                              onChangeText={(v) => handleEditChange("phone", v)}
+                              placeholder="+639XXXXXXXXX"
+                              placeholderTextColor={placeholderColor}
+                              keyboardType="number-pad"
+                              maxLength={13}
+                            />
+                          </View>
+
+                          <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
+                            <TouchableOpacity
+                              style={[s.editSaveBtn, editLoading.saving && { opacity: 0.6 }]}
+                              onPress={saveEditedAddress}
+                              disabled={editLoading.saving}
+                              activeOpacity={0.85}
+                            >
+                              {editLoading.saving ? (
+                                <ActivityIndicator size="small" color={colors.textInverse} />
+                              ) : (
+                                <Text style={s.editSaveBtnText}>SAVE CHANGES</Text>
+                              )}
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={s.editCancelBtn}
+                              onPress={() => {
+                                setEditingIndex(null);
+                                setEditFormData(null);
+                              }}
+                              disabled={editLoading.saving}
+                              activeOpacity={0.85}
+                            >
+                              <Text style={s.editCancelBtnText}>CANCEL</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
             )}
           </View>
@@ -751,7 +1554,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
               value={form.firstName}
               onChangeText={(v) => handleChange("firstName", v)}
               placeholder="First name"
-              placeholderTextColor={colors.bgTertiary}
+              placeholderTextColor={placeholderColor}
               maxLength={54}
             />
             <FieldError msg={errors.firstName} s={s} />
@@ -763,7 +1566,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
               value={form.lastName}
               onChangeText={(v) => handleChange("lastName", v)}
               placeholder="Last name"
-              placeholderTextColor={colors.bgTertiary}
+              placeholderTextColor={placeholderColor}
               maxLength={54}
             />
             <FieldError msg={errors.lastName} s={s} />
@@ -778,7 +1581,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
             value={form.email}
             onChangeText={(v) => handleChange("email", v)}
             placeholder="email@example.com"
-            placeholderTextColor={colors.bgTertiary}
+            placeholderTextColor={placeholderColor}
             keyboardType="email-address"
             autoCapitalize="none"
           />
@@ -793,7 +1596,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
             value={form.street}
             onChangeText={(v) => handleChange("street", v)}
             placeholder="House no., Street, Subdivision"
-            placeholderTextColor={colors.bgTertiary}
+            placeholderTextColor={placeholderColor}
           />
           <FieldError msg={errors.street} s={s} />
         </View>
@@ -855,19 +1658,42 @@ export default function PlaceOrderScreen({ navigation, route }) {
             value={form.phone}
             onChangeText={(v) => handleChange("phone", v)}
             placeholder="+639XXXXXXXXX"
-            placeholderTextColor={colors.bgTertiary}
+            placeholderTextColor={placeholderColor}
             keyboardType="number-pad"
             maxLength={13}
           />
           <FieldError msg={errors.phone} s={s} />
         </View>
 
-        {/* Save address checkbox */}
-        <TouchableOpacity style={s.checkRow} onPress={() => setSaveAddress(!saveAddress)} activeOpacity={0.7}>
-          <View style={[s.checkbox, saveAddress && s.checkboxOn]}>
-            {saveAddress && <Text style={s.checkmark}>✓</Text>}
+        {/* Shipping tier & ETA hint banner (matches web's ShippingBanner) */}
+        {shippingTier && (
+          <View style={[s.shippingBanner, shippingTier.fee === 0 && s.shippingBannerFree]}>
+            <Text style={s.shippingBannerTitle}>
+              {shippingTier.fee === 0
+                ? "COMPLIMENTARY SHIPPING"
+                : `PREMIUM SHIPPING: ₱${shippingTier.fee.toLocaleString("en-PH")}`}
+            </Text>
+            <Text style={s.shippingBannerSub}>
+              {shippingTier.label} · Est. {shippingTier.eta}
+            </Text>
           </View>
-          <Text style={s.checkLabel}>Save this address for future orders</Text>
+        )}
+
+        {/* Save address checkbox / auto-detected saved note */}
+        <TouchableOpacity
+          style={[s.checkRow, isAddressAlreadySaved && s.checkRowSaved]}
+          onPress={() => !isAddressAlreadySaved && setSaveAddress(!saveAddress)}
+          activeOpacity={isAddressAlreadySaved ? 1 : 0.7}
+          disabled={isAddressAlreadySaved}
+        >
+          <View style={[s.checkbox, (saveAddress || isAddressAlreadySaved) && s.checkboxOn]}>
+            {(saveAddress || isAddressAlreadySaved) && <Text style={s.checkmark}>✓</Text>}
+          </View>
+          <Text style={[s.checkLabel, isAddressAlreadySaved && s.checkLabelSaved]}>
+            {isAddressAlreadySaved
+              ? "This address is already saved"
+              : "Save this address for future orders"}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -1081,6 +1907,7 @@ const makeStyles = (colors, isDark = false) => {
   // against the dark surfaces.
   const dim = isDark ? "#ffffff" : colors.textMuted;
   const body = isDark ? "#ffffff" : colors.textSecondary;
+  const placeholderCol = isDark ? "rgba(255,255,255,0.48)" : colors.textMuted;
   return StyleSheet.create({
   root:    { flex: 1, backgroundColor: colors.bgPrimary },
   // No SafeAreaView on this screen — paddingTop covers the status bar/notch
@@ -1166,6 +1993,35 @@ const makeStyles = (colors, isDark = false) => {
   savedName:  { fontSize: 14, fontFamily: fonts.bodyBold, color: colors.textPrimary },
   savedMeta:  { fontSize: 12, color: body },
   savedPhone: { fontSize: 12, color: body, marginTop: 2 },
+  editSaveBtn: {
+    flex: 1,
+    backgroundColor: colors.accentGold,
+    borderRadius: radius.sm,
+    paddingVertical: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editSaveBtnText: {
+    color: colors.textInverse,
+    fontSize: 11,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 1,
+  },
+  editCancelBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: radius.sm,
+    paddingVertical: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editCancelBtnText: {
+    color: body,
+    fontSize: 11,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 1,
+  },
 
   /* ── form ── */
   row:       { flexDirection: "row", gap: 10 },
@@ -1208,7 +2064,7 @@ const makeStyles = (colors, isDark = false) => {
   },
   dropdownFieldDisabled: {
     backgroundColor: colors.bgTertiary,
-    opacity: 0.7,
+    opacity: 0.75,
   },
   dropdownText: {
     flex: 1,
@@ -1217,7 +2073,7 @@ const makeStyles = (colors, isDark = false) => {
     marginRight: 8,
   },
   dropdownPlaceholder: {
-    color: dim,
+    color: placeholderCol,
   },
   loadingText: { fontSize: 13, color: dim },
 
@@ -1283,12 +2139,43 @@ const makeStyles = (colors, isDark = false) => {
     backgroundColor: colors.borderSubtle,
   },
 
+  /* ── shipping banner ── */
+  shippingBanner: {
+    backgroundColor: colors.bgTertiary,
+    borderRadius: radius.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.accentGold,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+    gap: 2,
+  },
+  shippingBannerFree: {
+    borderLeftColor: colors.success || colors.accentGold,
+  },
+  shippingBannerTitle: {
+    fontSize: 11,
+    fontFamily: fonts.bodyBold,
+    letterSpacing: 1,
+    color: colors.textPrimary,
+  },
+  shippingBannerSub: {
+    fontSize: 12,
+    color: body,
+  },
+
   /* ── checkbox ── */
   checkRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     marginTop: 4,
+  },
+  checkRowSaved: {
+    backgroundColor: colors.accentGoldWash,
+    borderRadius: radius.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   checkbox: {
     width: 22,
@@ -1303,6 +2190,7 @@ const makeStyles = (colors, isDark = false) => {
   checkboxOn: { backgroundColor: colors.accentGold, borderColor: colors.accentGold },
   checkmark:  { color: colors.textInverse, fontSize: 13, fontWeight: "800" },
   checkLabel: { fontSize: 13, color: body, flex: 1 },
+  checkLabelSaved: { fontFamily: fonts.bodyBold, color: colors.textPrimary },
 
   /* ── payment methods ── */
   methodRow: {
