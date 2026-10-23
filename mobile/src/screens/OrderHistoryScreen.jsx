@@ -271,7 +271,7 @@ const isAwaitingPayment = (order) =>
   order.paymentMethod === "online" &&
   order.paymentStatus &&
   order.paymentStatus !== "paid" &&
-  !["cancelled", "refunded"].includes(normalizeStatus(order.status));
+  normalizeStatus(order.status) === "pending";
 
 // Formats ms remaining as "M:SS". Returns null until a checkout attempt has
 // actually started a reservation window.

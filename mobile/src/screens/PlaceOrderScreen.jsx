@@ -562,7 +562,7 @@ export default function PlaceOrderScreen({ navigation, route }) {
         if (method === "online") {
           await startPayMongoCheckout(data.orderNumber);
         } else {
-          goToOrders(data.orderNumber);
+          goToOrders(data.orderNumber, payload);
         }
       } else {
         Alert.alert("Order Failed", data.error || data.message || JSON.stringify(data));
