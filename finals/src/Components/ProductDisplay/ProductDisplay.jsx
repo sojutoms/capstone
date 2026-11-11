@@ -229,10 +229,10 @@ const ProductDisplay = ({ product, loading = false }) => {
     const sizeData = findSizeEntry(product.sizes || {}, size);
     if (sizeData === null || sizeData === undefined) return 0;
     if (typeof sizeData === "object") {
-      if (sizeData.quantity !== undefined) { const q = toNumber(sizeData.quantity); return Number.isFinite(q) ? q : 0; }
+      if (sizeData.quantity !== undefined) { const q = toNumber(sizeData.quantity); return Number.isFinite(q) ? Math.floor(q) : 0; }
       return 0;
     }
-    if (typeof sizeData === "number" || typeof sizeData === "string") { const q = toNumber(sizeData); return Number.isFinite(q) ? q : 0; }
+    if (typeof sizeData === "number" || typeof sizeData === "string") { const q = toNumber(sizeData); return Number.isFinite(q) ? Math.floor(q) : 0; }
     return 0;
   };
 
@@ -258,7 +258,7 @@ const ProductDisplay = ({ product, loading = false }) => {
 
   const getSimpleRemaining = () => {
     if (!product) return 0;
-    const total = Number.isFinite(toNumber(product.stock)) ? Number(toNumber(product.stock)) : 0;
+    const total = Number.isFinite(toNumber(product.stock)) ? Math.floor(Number(toNumber(product.stock))) : 0;
     const inCart = cartItems[`${product.id}_null`] || cartItems[`${product.id}_`] || 0;
     return Math.max(0, total - inCart);
   };

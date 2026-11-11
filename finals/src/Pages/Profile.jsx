@@ -134,6 +134,9 @@ const Profile = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("auth-token");
+    localStorage.removeItem("cartItems");
+    localStorage.removeItem("cartSizes");
+    localStorage.removeItem("user-name");
     window.location.replace("/");
   };
 

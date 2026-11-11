@@ -5,6 +5,7 @@ import Item from "../Components/Item/Item";
 import CategorySkeleton from "../Components/Skeleton/CategorySkeleton";
 import "./CSS/ShopCategory.css";
 import API_BASE_URL from "../services/api";
+import { getDisplayPrice } from "../utils/price";
 
 const CATEGORY_META = {
   shoes:        { label: "Shoes",        tagline: "Step into the culture. Curated kicks, every drop." },
@@ -113,47 +114,9 @@ const ShopCategory = (props) => {
     return `₱${val}`;
   };
 
-  const toNumber = useCallback((v) => {
-    if (v == null || v === "") return NaN;
-    if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
-    if (typeof v === "string") { const n = Number(v.replace(/[, ₱\s]+/g, "")); return Number.isFinite(n) ? n : NaN; }
-    return NaN;
-  }, []);
-
-  const getNumericPrice = useCallback((product) => {
-    if (!product) return NaN;
-
-    if (product.sizes && typeof product.sizes === "object" && !Array.isArray(product.sizes)) {
-      const sizeValues = Object.values(product.sizes);
-      if (sizeValues.length > 0) {
-        const prices = sizeValues
-          .filter((s) => s && typeof s === "object" && s.price !== undefined)
-          .map((s) => toNumber(s.price))
-          .filter((n) => Number.isFinite(n) && n > 0);
-        if (prices.length > 0) return Math.min(...prices);
-      }
-    }
-
-    if (Array.isArray(product.sizes) && product.sizes.length > 0) {
-      const prices = product.sizes
-        .map((s) => (!s ? NaN : typeof s === "object" && s.price !== undefined ? toNumber(s.price) : toNumber(s)))
-        .filter((n) => Number.isFinite(n) && n > 0);
-      if (prices.length > 0) return Math.min(...prices);
-    }
-
-    for (const c of [product.price, product.new_price, product.price_php, product.amount, product.value]) {
-      const n = toNumber(c);
-      if (Number.isFinite(n) && n > 0) return n;
-    }
-
-    if (product.priceRange && typeof product.priceRange === "object") {
-      if (Number.isFinite(product.priceRange.min) && product.priceRange.min > 0) {
-        return product.priceRange.min;
-      }
-    }
-
-    return NaN;
-  }, [toNumber]);
+  // Uses the exact same "lowest in-stock price" as the product card (Item.jsx),
+  // so the price filter and price sort always agree with the price shown.
+  const getNumericPrice = useCallback((product) => getDisplayPrice(product), []);
 
   const availableSubCategories = useMemo(() => {
     const fromProducts = new Set();

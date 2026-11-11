@@ -16,6 +16,12 @@ const CartItems = () => {
   const [canCheckout, setCanCheckout] = useState(true);
   const [validating, setValidating] = useState(false);
 
+  useEffect(() => {
+    if (!localStorage.getItem("auth-token")) {
+      navigate("/login", { replace: true });
+    }
+  }, [navigate]);
+
   const formatPrice = (price) => {
     const num = Number(price);
     if (!Number.isFinite(num)) return "0.00";
@@ -254,7 +260,13 @@ const CartItems = () => {
               </div>
               <button
                 className="checkout-button"
-                onClick={() => navigate("/place-order")}
+                onClick={() => {
+                  if (!localStorage.getItem("auth-token")) {
+                    navigate("/login");
+                  } else {
+                    navigate("/place-order");
+                  }
+                }}
                 disabled={!canCheckout || validating}
               >
                 {validating ? "VALIDATING..." : "PROCEED TO CHECKOUT"}

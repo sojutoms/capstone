@@ -43,6 +43,12 @@ const formatCurrencyForDisplay = (priceStr) => {
   }).format(cents / 100);
 };
 
+const blockNonIntegerKeys = (e) => {
+  if ([".", ",", "-", "+", "e", "E"].includes(e.key)) {
+    e.preventDefault();
+  }
+};
+
 const SIMPLE_CATEGORIES = ["bags", "collectibles"];
 const WATCH_CATEGORIES  = ["watch"];
 
@@ -395,7 +401,9 @@ const AddProduct = ({ onAdded }) => {
     );
 
   const handleSizeQuantityChange = (size, raw) => {
-    setSizes((prev) => ({ ...prev, [size]: { ...prev[size], quantity: Math.max(0, parseInt(raw || 0, 10) || 0) } }));
+    const digits = String(raw ?? "").replace(/\D/g, "");
+    const qty = digits === "" ? 0 : Math.max(0, parseInt(digits, 10) || 0);
+    setSizes((prev) => ({ ...prev, [size]: { ...prev[size], quantity: qty } }));
     setErrors((prev) => ({ ...prev, sizes: "" }));
   };
 
@@ -405,7 +413,9 @@ const AddProduct = ({ onAdded }) => {
   };
 
   const handleSingleStockChange = (raw) => {
-    setSingleStock(Math.max(0, parseInt(raw || 0, 10) || 0));
+    const digits = String(raw ?? "").replace(/\D/g, "");
+    const qty = digits === "" ? 0 : Math.max(0, parseInt(digits, 10) || 0);
+    setSingleStock(qty);
     setErrors((prev) => ({ ...prev, single: "" }));
   };
 
@@ -742,7 +752,7 @@ const AddProduct = ({ onAdded }) => {
               <label className="form-label">UNITS</label>
               <div className="luxe-input-group">
                 <span className="group-prefix">QTY</span>
-                <input type="number" className="luxe-num-input" min="0" step="1" placeholder="0" value={String(singleStock ?? "")} onChange={(e) => handleSingleStockChange(e.target.value)} />
+                <input type="number" inputMode="numeric" pattern="[0-9]*" className="luxe-num-input" min="0" step="1" placeholder="0" value={String(singleStock ?? "")} onKeyDown={blockNonIntegerKeys} onChange={(e) => handleSingleStockChange(e.target.value)} />
               </div>
             </div>
             <div className="inventory-field">
@@ -762,7 +772,7 @@ const AddProduct = ({ onAdded }) => {
                   className="size-inputs"
                   style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px", overflow: "visible" }}
                 >
-                  <input className="luxe-num-input" type="number" placeholder="QTY" min="0" step="1" value={String(sizes[size]?.quantity ?? "")} onChange={(e) => handleSizeQuantityChange(size, e.target.value)} />
+                  <input className="luxe-num-input" type="number" inputMode="numeric" pattern="[0-9]*" placeholder="QTY" min="0" step="1" value={String(sizes[size]?.quantity ?? "")} onKeyDown={blockNonIntegerKeys} onChange={(e) => handleSizeQuantityChange(size, e.target.value)} />
                   <input className="luxe-num-input" type="number" placeholder="PRICE" inputMode="decimal" min="0" step="0.01" value={sizes[size]?.price ?? ""} onChange={(e) => handleSizePriceChange(size, e.target.value)} />
                 </div>
               </div>

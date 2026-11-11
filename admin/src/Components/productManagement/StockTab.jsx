@@ -12,6 +12,19 @@ const PRICE_REASONS = [
 
 const fmtPrice = (v) => "₱" + (Number(v) || 0).toLocaleString();
 
+const sanitizeWholeQty = (raw) => {
+  if (raw === null || raw === undefined) return "";
+  const digits = String(raw).replace(/\D/g, "");
+  if (digits === "") return "";
+  return String(parseInt(digits, 10));
+};
+
+const blockNonIntegerKeys = (e) => {
+  if ([".", ",", "-", "+", "e", "E"].includes(e.key)) {
+    e.preventDefault();
+  }
+};
+
 const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated }) => {
   const [mode, setMode] = useState("list");
   const [search, setSearch] = useState("");
@@ -53,6 +66,17 @@ const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated })
   const activeSizes = isSimple ? ["—"] : shoeSizes;
   const authH = { "Content-Type": "application/json" };
 
+  const getSizeLiveInfo = (liveMap, sz) => {
+    if (!liveMap) return { quantity: 0, price: 0 };
+    if (isSimple) {
+      return liveMap["—"] || liveMap.single || {
+        quantity: Math.floor(Number(selectedProduct?.stock || 0)),
+        price: Number(selectedProduct?.price || 0),
+      };
+    }
+    return liveMap[sz] || { quantity: 0, price: 0 };
+  };
+
   const filtered = allproducts
     .filter((p) => !p.isDeleted)
     .filter((p) =>
@@ -65,9 +89,11 @@ const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated })
     setMode("addstock");
     const live = getEffectiveSizes(product);
     const lines = {};
-    const sizes = SIMPLE_CATEGORIES.includes((product.category || "").toLowerCase()) ? ["—"] : shoeSizes;
+    const prodIsSimple = SIMPLE_CATEGORIES.includes((product.category || "").toLowerCase());
+    const sizes = prodIsSimple ? ["—"] : shoeSizes;
     sizes.forEach((s) => {
-      const existingPrice = live[s]?.price || 0;
+      const liveEntry = prodIsSimple ? (live["—"] || live.single || { price: product.price || 0 }) : live[s];
+      const existingPrice = liveEntry?.price || 0;
       lines[s] = { qty: "", price: existingPrice > 0 ? existingPrice : "" };
     });
     setSizeLines(lines);
@@ -101,25 +127,26 @@ const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated })
     const buildPreviews = async () => {
       setLoadingPreview(true);
       const live = getEffectiveSizes(selectedProduct);
-      const sizes = isSimple ? ["—"] : FALLBACK_SHOE_SIZES;
+      const sizes = isSimple ? ["—"] : shoeSizes;
       const counts = {};
       for (const sz of sizes) {
-        if (!live[sz] || live[sz].quantity === 0) { counts[sz] = 0; continue; }
+        const liveEntry = getSizeLiveInfo(live, sz);
+        if (!liveEntry || liveEntry.quantity === 0) { counts[sz] = 0; continue; }
         if (priceMode === "all") {
-          counts[sz] = live[sz].quantity;
+          counts[sz] = Math.floor(Number(liveEntry.quantity || 0));
         } else if (priceMode === "older_than") {
           const cutoff = new Date();
           cutoff.setDate(cutoff.getDate() - Number(olderThanDays || 0));
           const relevantBatches = batches.filter((b) => new Date(b.receivedDate) <= cutoff);
           counts[sz] = relevantBatches.reduce((sum, b) => {
             const line = b.lines?.find((l) => l.size === sz);
-            return sum + Math.min(line?.quantity || 0, b.availableUnits || 0);
+            return sum + Math.min(Math.floor(Number(line?.quantity || 0)), b.availableUnits || 0);
           }, 0);
         } else if (priceMode === "batch") {
           const batch = batches.find((b) => String(b._id) === selectedBatch);
           if (!batch) { counts[sz] = 0; continue; }
           const line = batch.lines?.find((l) => l.size === sz);
-          counts[sz] = line ? Math.min(line.quantity, batch.availableUnits || 0) : 0;
+          counts[sz] = line ? Math.min(Math.floor(Number(line.quantity || 0)), batch.availableUnits || 0) : 0;
         }
       }
       setPreviewCounts(counts);
@@ -130,15 +157,54 @@ const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated })
 
   const handleSaveStock = async () => {
     if (!selectedProduct) return;
-    const validLines = activeSizes
-      .map((s) => ({ size: s, quantity: Number(sizeLines[s]?.qty || 0), sellingPrice: Number(sizeLines[s]?.price || 0) }))
-      .filter((l) => l.quantity > 0);
-    if (validLines.length === 0) { showToast({ message: "Add at least one unit — enter qty and price for a size.", type: "warning" }); return; }
+    const rawEnteredLines = activeSizes
+      .map((s) => ({
+        size: s,
+        rawQty: String(sizeLines[s]?.qty ?? "").trim(),
+        quantity: Number(sizeLines[s]?.qty || 0),
+        sellingPrice: Number(sizeLines[s]?.price || 0),
+      }))
+      .filter((l) => l.rawQty !== "" && l.quantity > 0);
+
+    if (rawEnteredLines.length === 0) {
+      showToast({ message: "Add at least one unit — enter a whole-number qty and price.", type: "warning" });
+      return;
+    }
+
+    const nonWholeLine = rawEnteredLines.find(
+      (l) => !Number.isInteger(l.quantity) || l.quantity < 1 || !/^\d+$/.test(l.rawQty)
+    );
+    if (nonWholeLine) {
+      showToast({ message: "Quantity must be a whole number (no decimals).", type: "warning" });
+      return;
+    }
+
+    const validLines = rawEnteredLines.map(({ size, quantity, sellingPrice }) => ({
+      size,
+      quantity: Math.floor(quantity),
+      sellingPrice,
+    }));
+
     const missingPrice = validLines.find((l) => l.sellingPrice <= 0);
-    if (missingPrice) { showToast({ message: `Missing selling price for size ${missingPrice.size}`, type: "warning" }); return; }
+    if (missingPrice) {
+      showToast({ message: `Missing selling price for ${isSimple ? "item" : `size ${missingPrice.size}`}`, type: "warning" });
+      return;
+    }
+
     setSaving(true);
     try {
-      const res = await authorizedFetch("/addstockbatch", { method: "POST", headers: authH, body: JSON.stringify({ productId: selectedProduct.id, supplierName: batchSupplier, costPrice: Number(batchCost) || 0, notes: batchNotes, receivedDate: batchDate, lines: validLines }) });
+      const res = await authorizedFetch("/addstockbatch", {
+        method: "POST",
+        headers: authH,
+        body: JSON.stringify({
+          productId: selectedProduct.id,
+          supplierName: batchSupplier,
+          costPrice: Number(batchCost) || 0,
+          notes: batchNotes,
+          receivedDate: batchDate,
+          lines: validLines,
+        }),
+      });
       const data = await res.json();
       if (!data.success) { showToast({ message: data.error || "Failed to add stock", type: "error" }); return; }
       const total = validLines.reduce((s, l) => s + l.quantity, 0);
@@ -152,8 +218,11 @@ const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated })
   const handleSavePrices = async () => {
     if (!selectedProduct) return;
     const live = getEffectiveSizes(selectedProduct);
-    const sizes = isSimple ? ["—"] : FALLBACK_SHOE_SIZES;
-    const sizesToUpdate = sizes.filter((sz) => Number(editSizePrices[sz]) > 0 && (live[sz]?.quantity || 0) > 0);
+    const sizes = isSimple ? ["—"] : shoeSizes;
+    const sizesToUpdate = sizes.filter((sz) => {
+      const liveEntry = getSizeLiveInfo(live, sz);
+      return Number(editSizePrices[sz]) > 0 && (liveEntry?.quantity || 0) > 0;
+    });
     if (sizesToUpdate.length === 0) { showToast({ message: "Enter a new price for at least one size that has stock.", type: "warning" }); return; }
     if (priceMode === "batch" && !selectedBatch) { showToast({ message: "Select a batch to update.", type: "warning" }); return; }
     setSavingPrices(true);
@@ -194,7 +263,7 @@ const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated })
         <div className="acw-product-grid">
           {filtered.map((p) => {
             const live = getEffectiveSizes(p);
-            const totalStock = Object.values(live).reduce((s, o) => s + Number(o.quantity || 0), 0);
+            const totalStock = Math.floor(Object.values(live).reduce((s, o) => s + Number(o.quantity || 0), 0));
             const stockStatus = totalStock === 0 ? "out" : totalStock <= 5 ? "low" : "ok";
             return (
               <div key={p.id} className="acw-product-card glass-medium" onClick={() => selectProduct(p)}>
@@ -223,7 +292,7 @@ const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated })
   }
 
   const live = getEffectiveSizes(selectedProduct);
-  const totalAdding = activeSizes.reduce((s, sz) => s + Number(sizeLines[sz]?.qty || 0), 0);
+  const totalAdding = activeSizes.reduce((s, sz) => s + Math.floor(Number(sizeLines[sz]?.qty || 0)), 0);
   const isColorway = !!selectedProduct?.parentId;
 
   return (
@@ -277,23 +346,40 @@ const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated })
               <span className="section-badge">INVENTORY GRID</span>
             </div>
             <div className="sized-inventory-grid">
-              {shoeSizes.map((sz) => {
-                const currentQty = live[sz]?.quantity || 0;
-                const currentPrice = live[sz]?.price || 0;
-                const addingQty = Number(sizeLines[sz]?.qty || 0);
+              {activeSizes.map((sz) => {
+                const liveEntry = getSizeLiveInfo(live, sz);
+                const currentQty = Math.floor(Number(liveEntry?.quantity || 0));
+                const currentPrice = Number(liveEntry?.price || 0);
+                const addingQty = Math.floor(Number(sizeLines[sz]?.qty || 0));
                 const hasInput = sizeLines[sz]?.qty !== "" && addingQty > 0;
                 const priceReadOnly = currentQty > 0 && currentPrice > 0;
                 return (
                   <div key={sz} className="size-row">
-                    <div className="size-header">{sz}</div>
+                    <div className="size-header">{isSimple ? "UNITS" : sz}</div>
                     <div
                       className="size-inputs"
                       style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px", overflow: "visible" }}
                     >
-                      <input className="luxe-num-input" type="number" placeholder="QTY" value={sizeLines[sz]?.qty || ""} onChange={(e) => setSizeLines((prev) => ({ ...prev, [sz]: { ...prev[sz], qty: e.target.value } }))} />
                       <input
                         className="luxe-num-input"
                         type="number"
+                        min="0"
+                        step="1"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="QTY"
+                        value={sizeLines[sz]?.qty || ""}
+                        onKeyDown={blockNonIntegerKeys}
+                        onChange={(e) => {
+                          const clean = sanitizeWholeQty(e.target.value);
+                          setSizeLines((prev) => ({ ...prev, [sz]: { ...prev[sz], qty: clean } }));
+                        }}
+                      />
+                      <input
+                        className="luxe-num-input"
+                        type="number"
+                        min="0"
+                        step="0.01"
                         placeholder="Price"
                         value={sizeLines[sz]?.price || ""}
                         readOnly={priceReadOnly}
@@ -328,21 +414,22 @@ const StockTab = ({ allproducts, getEffectiveSizes, showToast, onStockUpdated })
             </div>
             <div className="price-adjustment-list">
               {activeSizes.map((sz) => {
-                const currentQty = live[sz]?.quantity || 0;
-                const currentPrice = live[sz]?.price || 0;
+                const liveEntry = getSizeLiveInfo(live, sz);
+                const currentQty = Math.floor(Number(liveEntry?.quantity || 0));
+                const currentPrice = Number(liveEntry?.price || 0);
                 if (currentQty === 0 && currentPrice === 0) return null;
                 const newP = Number(editSizePrices[sz] || 0);
                 const changed = newP > 0 && newP !== currentPrice;
                 const count = previewCounts[sz] || 0;
                 return (
                   <div key={sz} className={`price-row-luxe glass-medium ${changed ? "active" : ""}`}>
-                    <div className="row-size">{sz}</div>
+                    <div className="row-size">{isSimple ? "UNITS" : sz}</div>
                     <div className="row-meta">
                       <span className="row-stock">{currentQty} STOCK</span>
                       <span className="row-current">{fmtPrice(currentPrice)}</span>
                     </div>
                     <div className="row-input">
-                      <input className="luxe-num-input" type="number" placeholder="NEW PRICE" value={editSizePrices[sz] || ""} onChange={(e) => setEditSizePrices((prev) => ({ ...prev, [sz]: e.target.value }))} />
+                      <input className="luxe-num-input" type="number" min="0" step="0.01" placeholder="NEW PRICE" value={editSizePrices[sz] || ""} onChange={(e) => setEditSizePrices((prev) => ({ ...prev, [sz]: e.target.value }))} />
                     </div>
                     {changed && count > 0 && (
                       <div className="preview-indicator">

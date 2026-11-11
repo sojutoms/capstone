@@ -94,11 +94,14 @@ async function getNextBatchNumber(productId) {
 const addStock = async (req, res) => {
   const { productId, size, quantity, price } = req.body;
   try {
-    if (!productId || !size || !quantity || quantity < 1)
+    if (!productId || !size || !quantity || Number(quantity) < 1)
       return res.status(400).json({ success: false, error: "Product ID, size, and quantity (min 1) are required" });
+    if (!Number.isInteger(Number(quantity)))
+      return res.status(400).json({ success: false, error: "Quantity must be a whole number (no decimals)" });
     if (!price || price <= 0)
       return res.status(400).json({ success: false, error: "Price is required and must be greater than 0" });
 
+    const qtyInt = Math.floor(Number(quantity));
     const sizePrice = parseFloat(price);
     const product = await Product.findOne({ id: productId });
     if (!product) return res.status(404).json({ success: false, error: "Product not found" });
@@ -110,12 +113,12 @@ const addStock = async (req, res) => {
     const skuNumber = product.id;
 
     const [sequences, pidRange] = await Promise.all([
-      getNextSequences(quantity),
-      getNextProductItemIds(product.id, quantity),
+      getNextSequences(qtyInt),
+      getNextProductItemIds(product.id, qtyInt),
     ]);
 
     const sequenceInserts = [];
-    for (let i = 0; i < quantity; i++) {
+    for (let i = 0; i < qtyInt; i++) {
       sequenceInserts.push({
         skuNumber,
         productItemId: pidRange.start + i,
@@ -139,7 +142,7 @@ const addStock = async (req, res) => {
       const skuCount = await ShoeSequence.countDocuments({ productId: product.id, status: "available" });
       updatedProduct = await Product.findOneAndUpdate(
         { id: product.id },
-        { $set: { stock: skuCount, available: skuCount > 0 } },
+        { $set: { stock: skuCount, available: skuCount > 0, price: sizePrice } },
         { new: true }
       );
     } else {
@@ -149,15 +152,15 @@ const addStock = async (req, res) => {
       if (existingIdx !== -1) {
         currentSizesArray[existingIdx] = {
           size: normalizedSize,
-          quantity: Number(currentSizesArray[existingIdx].quantity || 0) + quantity,
+          quantity: Math.floor(Number(currentSizesArray[existingIdx].quantity || 0)) + qtyInt,
           price: sizePrice,
         };
       } else {
-        currentSizesArray.push({ size: normalizedSize, quantity: quantity, price: sizePrice });
+        currentSizesArray.push({ size: normalizedSize, quantity: qtyInt, price: sizePrice });
       }
 
       // Calculate total stock for top-level field
-      const totalStock = currentSizesArray.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
+      const totalStock = currentSizesArray.reduce((acc, curr) => acc + Math.floor(Number(curr.quantity || 0)), 0);
 
       updatedProduct = await Product.findOneAndUpdate(
         { id: product.id },
@@ -179,17 +182,17 @@ const addStock = async (req, res) => {
       productName: product.name,
       skuNumber,
       size: normalizedSize,
-      quantity,
+      quantity: qtyInt,
       price: sizePrice,
     });
 
-    const range = quantity === 1
+    const range = qtyInt === 1
       ? `#${pidRange.start}`
       : `#${pidRange.start}–${pidRange.end}`;
 
     res.json({
       success: true,
-      message: `Added ${quantity} unit(s) at ₱${sizePrice}`,
+      message: `Added ${qtyInt} unit(s) at ₱${sizePrice}`,
       sequenceRange: range,
       skuNumber,
       productItemIdRange: { start: pidRange.start, end: pidRange.end },
@@ -254,10 +257,10 @@ const markSequenceSold = async (req, res) => {
           const existingIdx = currentSizesArray.findIndex(e => String(e.size) === sz);
           
           if (existingIdx !== -1) {
-            currentSizesArray[existingIdx].quantity = Math.max(0, Number(currentSizesArray[existingIdx].quantity || 0) - 1);
+            currentSizesArray[existingIdx].quantity = Math.max(0, Math.floor(Number(currentSizesArray[existingIdx].quantity || 0)) - 1);
             
             // Calculate total stock for top-level field
-            const totalStock = currentSizesArray.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
+            const totalStock = currentSizesArray.reduce((acc, curr) => acc + Math.floor(Number(curr.quantity || 0)), 0);
             
             await Product.findOneAndUpdate(
               { id: product.id },
@@ -478,10 +481,10 @@ const restoreSequence = async (req, res) => {
         const existingIdx = currentSizesArray.findIndex(e => String(e.size) === sz);
 
         if (existingIdx !== -1) {
-          currentSizesArray[existingIdx].quantity = Number(currentSizesArray[existingIdx].quantity || 0) + 1;
+          currentSizesArray[existingIdx].quantity = Math.floor(Number(currentSizesArray[existingIdx].quantity || 0)) + 1;
           
           // Calculate total stock for top-level field
-          const totalStock = currentSizesArray.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
+          const totalStock = currentSizesArray.reduce((acc, curr) => acc + Math.floor(Number(curr.quantity || 0)), 0);
           
           await Product.findOneAndUpdate(
             { id: product.id },
@@ -532,10 +535,10 @@ const deleteSequence = async (req, res) => {
           const existingIdx = currentSizesArray.findIndex(e => String(e.size) === sz);
 
           if (existingIdx !== -1) {
-            currentSizesArray[existingIdx].quantity = Math.max(0, Number(currentSizesArray[existingIdx].quantity || 0) - 1);
+            currentSizesArray[existingIdx].quantity = Math.max(0, Math.floor(Number(currentSizesArray[existingIdx].quantity || 0)) - 1);
             
             // Calculate total stock for top-level field
-            const totalStock = currentSizesArray.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
+            const totalStock = currentSizesArray.reduce((acc, curr) => acc + Math.floor(Number(curr.quantity || 0)), 0);
             
             await Product.findOneAndUpdate(
               { id: product.id },
@@ -571,12 +574,12 @@ const createSkusForProductRoute = async (req, res) => {
 
     let sizesOverride = null;
     if (Array.isArray(sizes)) {
-      sizesOverride = sizes.map((s) => ({ size: String(s.size), quantity: Number(s.quantity || defaultQuantity || 0), price: s.price == null ? (defaultPrice ?? null) : Number(s.price) }));
+      sizesOverride = sizes.map((s) => ({ size: String(s.size), quantity: Math.floor(Number(s.quantity || defaultQuantity || 0)), price: s.price == null ? (defaultPrice ?? null) : Number(s.price) }));
     } else if (sizes && typeof sizes === "object") {
       sizesOverride = Object.entries(sizes).map(([size, val]) => {
         if (val == null) return null;
-        if (typeof val === "object") return { size: String(size), quantity: Number(val.quantity ?? defaultQuantity ?? 0), price: val.price == null ? (defaultPrice ?? null) : Number(val.price) };
-        return { size: String(size), quantity: Number(val || defaultQuantity || 0), price: defaultPrice ?? null };
+        if (typeof val === "object") return { size: String(size), quantity: Math.floor(Number(val.quantity ?? defaultQuantity ?? 0)), price: val.price == null ? (defaultPrice ?? null) : Number(val.price) };
+        return { size: String(size), quantity: Math.floor(Number(val || defaultQuantity || 0)), price: defaultPrice ?? null };
       }).filter(Boolean);
     }
 
@@ -638,7 +641,7 @@ const deduplicateSkusRoute = async (req, res) => {
       const isSimple = SIMPLE_CATEGORIES.includes((product.category || "").toLowerCase());
 
       if (isSimple) {
-        const expectedStock = Number(product.stock || 0);
+        const expectedStock = Math.floor(Number(product.stock || 0));
         const allSeqs = await ShoeSequence.find({ productId: product.id }).sort({ sequenceNumber: 1 }).lean();
         const availSeqs = allSeqs.filter((s) => s.status === "available");
         const excess = Math.max(0, availSeqs.length - expectedStock);
@@ -652,7 +655,7 @@ const deduplicateSkusRoute = async (req, res) => {
         const sizesMap = {};
         if (Array.isArray(product.sizes)) {
           product.sizes.forEach((e) => { 
-            if (e?.size) sizesMap[String(e.size)] = Number(e.quantity || 0); 
+            if (e?.size) sizesMap[String(e.size)] = Math.floor(Number(e.quantity || 0)); 
           });
         }
 
@@ -748,6 +751,7 @@ const updateSkuPrice = async (req, res) => {
   }
 };
 
+
 const addStockBatch = async (req, res) => {
   const {
     productId,
@@ -772,13 +776,19 @@ const addStockBatch = async (req, res) => {
     if (validLines.length === 0)
       return res.status(400).json({ success: false, error: "No valid lines — each line needs size, quantity > 0, and sellingPrice > 0" });
 
+    const hasNonWholeQty = validLines.some(
+      (l) => !Number.isInteger(Number(l.quantity)) || Number(l.quantity) < 1
+    );
+    if (hasNonWholeQty)
+      return res.status(400).json({ success: false, error: "Quantity must be a whole number (no decimals)" });
+
     const product = await Product.findOne({ id: Number(productId) });
     if (!product)
       return res.status(404).json({ success: false, error: "Product not found" });
 
     const addedBy = getAdminEmailFromRequest(req);
     const isSimple = SIMPLE_CATEGORIES.includes((product.category || "").toLowerCase());
-    const totalUnits = validLines.reduce((s, l) => s + Number(l.quantity), 0);
+    const totalUnits = validLines.reduce((s, l) => s + Math.floor(Number(l.quantity)), 0);
     const batchNumber = await getNextBatchNumber(product.id);
     const intakeDate = receivedDate ? new Date(receivedDate) : new Date();
 
@@ -800,7 +810,7 @@ const addStockBatch = async (req, res) => {
       addedBy,
       lines: validLines.map((l) => ({
         size: isSimple ? "—" : String(l.size),
-        quantity: Number(l.quantity),
+        quantity: Math.floor(Number(l.quantity)),
         sellingPrice: Number(l.sellingPrice),
       })),
       totalUnits,
@@ -817,7 +827,7 @@ const addStockBatch = async (req, res) => {
 
     for (const line of validLines) {
       const normalizedSize = isSimple ? "—" : String(line.size);
-      const qty = Number(line.quantity);
+      const qty = Math.floor(Number(line.quantity));
       const sellPrice = Number(line.sellingPrice);
 
       for (let i = 0; i < qty; i++) {
@@ -862,9 +872,10 @@ const addStockBatch = async (req, res) => {
       const skuCount = await ShoeSequence.countDocuments({
         productId: product.id, status: "available",
       });
+      const simplePrice = Number(validLines[0]?.sellingPrice || product.price || 0);
       updatedProduct = await Product.findOneAndUpdate(
         { id: product.id },
-        { $set: { stock: skuCount, available: skuCount > 0 } },
+        { $set: { stock: skuCount, available: skuCount > 0, ...(simplePrice > 0 ? { price: simplePrice } : {}) } },
         { new: true }
       );
     } else {
@@ -872,13 +883,13 @@ const addStockBatch = async (req, res) => {
       const currentSizesArray = Array.isArray(product.sizes) ? [...product.sizes] : [];
       for (const line of validLines) {
         const sz = String(line.size);
-        const qty = Number(line.quantity);
+        const qty = Math.floor(Number(line.quantity));
         const price = Number(line.sellingPrice);
         const existingIdx = currentSizesArray.findIndex(e => String(e.size) === sz);
         if (existingIdx !== -1) {
           currentSizesArray[existingIdx] = {
             size: sz,
-            quantity: Number(currentSizesArray[existingIdx].quantity || 0) + qty,
+            quantity: Math.floor(Number(currentSizesArray[existingIdx].quantity || 0)) + qty,
             price: price,
           };
         } else {
@@ -887,7 +898,7 @@ const addStockBatch = async (req, res) => {
       }
 
       // Calculate total stock for top-level field
-      const totalStock = currentSizesArray.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
+      const totalStock = currentSizesArray.reduce((acc, curr) => acc + Math.floor(Number(curr.quantity || 0)), 0);
 
       updatedProduct = await Product.findOneAndUpdate(
         { id: product.id },

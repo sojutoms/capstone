@@ -2,85 +2,7 @@ import React from "react";
 import PropTypes from "prop-types";
 import "./Item.css";
 import { Link, useNavigate } from "react-router-dom";
-
-const toNumber = (v) => {
-  if (v === null || v === undefined || v === "") return NaN;
-  if (typeof v === "object") return NaN;
-  if (typeof v === "string") return Number(v.replace(/[, ]+/g, ""));
-  return Number(v);
-};
-
-const PRICE_KEYS = ["price", "amount", "retail_price", "value", "new_price", "price_php", "php", "p"];
-const QTY_KEYS = ["quantity", "qty", "stock", "available", "inventory"];
-
-const findPriceInEntry = (entry) => {
-  if (entry === null || entry === undefined) return NaN;
-  if (typeof entry === "number" || typeof entry === "string") {
-    const n = toNumber(entry);
-    return Number.isFinite(n) ? n : NaN;
-  }
-  if (Array.isArray(entry)) {
-    for (const it of entry) {
-      const p = findPriceInEntry(it);
-      if (Number.isFinite(p)) return p;
-    }
-    return NaN;
-  }
-  for (const k of PRICE_KEYS) {
-    if (Object.prototype.hasOwnProperty.call(entry, k)) {
-      const p = toNumber(entry[k]);
-      if (Number.isFinite(p)) return p;
-    }
-  }
-  for (const val of Object.values(entry)) {
-    const p = findPriceInEntry(val);
-    if (Number.isFinite(p)) return p;
-  }
-  return NaN;
-};
-
-const isAvailableEntry = (entry) => {
-  if (entry === null || entry === undefined) return false;
-  if (typeof entry !== "object") return true;
-  for (const k of QTY_KEYS) {
-    if (Object.prototype.hasOwnProperty.call(entry, k)) {
-      const q = toNumber(entry[k]);
-      return Number.isFinite(q) && q > 0;
-    }
-  }
-  return true;
-};
-
-const gatherPricesFromSizes = (sizes) => {
-  if (!sizes || typeof sizes !== "object") return [];
-  const prices = [];
-  Object.values(sizes).forEach((entry) => {
-    if (!isAvailableEntry(entry)) return;
-    const p = findPriceInEntry(entry);
-    if (Number.isFinite(p) && p > 0) prices.push(p);
-  });
-  return prices;
-};
-
-const gatherFallbackPrices = (props) => {
-  const candidates = [];
-  if (props.new_price !== undefined) {
-    const p = findPriceInEntry(props.new_price);
-    if (Number.isFinite(p)) candidates.push(p);
-  }
-  if (props.price !== undefined) {
-    const p = findPriceInEntry(props.price);
-    if (Number.isFinite(p)) candidates.push(p);
-  }
-  const altKeys = ["price_map", "variants", "prices", "priceList"];
-  for (const k of altKeys) {
-    if (props[k] !== undefined) {
-      const p = findPriceInEntry(props[k]);
-      if (Number.isFinite(p)) candidates.push(p);
-    }
-  }
-  return candidates;
-};
+import { getDisplayPrice } from "../../utils/price";
 
 const formatPriceNumber = (num) => {
   if (!Number.isFinite(num) || num <= 0) return null;
@@ -92,12 +14,8 @@ const formatPriceNumber = (num) => {
 };
 
 const Item = (props) => {
-  const sizePrices = gatherPricesFromSizes(props.sizes);
-  const fallbackPrices = gatherFallbackPrices(props);
-  const allPrices = sizePrices.length > 0 ? sizePrices : fallbackPrices;
-  const uniquePrices = Array.from(new Set(allPrices)).sort((a, b) => a - b);
-
-  const lowest = uniquePrices.length > 0 ? uniquePrices[0] : NaN;
+  // Same lowest in-stock price the shop filter/sort uses (utils/price.js).
+  const lowest = getDisplayPrice(props);
   const formattedLowest = formatPriceNumber(lowest);
 
   const [isHovered, setIsHovered] = React.useState(false);

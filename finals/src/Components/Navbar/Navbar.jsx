@@ -177,6 +177,9 @@ const Navbar = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("auth-token");
+    localStorage.removeItem("cartItems");
+    localStorage.removeItem("cartSizes");
+    localStorage.removeItem("user-name");
     window.location.replace("/");
   };
 
@@ -212,7 +215,7 @@ const Navbar = () => {
     const token = localStorage.getItem("auth-token");
     if (!token) {
       setCartDrawerOpen(false);
-      navigate("/place-order");
+      navigate("/login");
       return;
     }
     try {
@@ -393,8 +396,23 @@ const Navbar = () => {
             role="button"
             tabIndex={0}
             aria-label={`Open bag, ${getTotalCartItems()} items`}
-            onClick={() => setCartDrawerOpen(true)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCartDrawerOpen(true); } }}
+            onClick={() => {
+              if (!localStorage.getItem("auth-token")) {
+                navigate("/login");
+              } else {
+                setCartDrawerOpen(true);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                if (!localStorage.getItem("auth-token")) {
+                  navigate("/login");
+                } else {
+                  setCartDrawerOpen(true);
+                }
+              }
+            }}
           >
             <span className="nav-cart-icon" aria-hidden="true"><CartIcon /></span>
             <div className="nav-cart-count">{getTotalCartItems()}</div>

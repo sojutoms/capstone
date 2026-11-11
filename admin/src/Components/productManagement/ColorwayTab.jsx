@@ -21,6 +21,12 @@ const priceStringToCents = (s) => {
   return Number.isFinite(n) ? Math.round(n * 100) : NaN;
 };
 
+const blockNonIntegerKeys = (e) => {
+  if ([".", ",", "-", "+", "e", "E"].includes(e.key)) {
+    e.preventDefault();
+  }
+};
+
 const ColorwayTab = ({ allproducts, getEffectiveSizes, showToast, onColorwayAdded }) => {
   const [shoeSizes, setShoeSizes] = useState(FALLBACK_SHOE_SIZES);
   useEffect(() => {
@@ -100,7 +106,8 @@ const ColorwayTab = ({ allproducts, getEffectiveSizes, showToast, onColorwayAdde
   };
 
   const handleSizeQty = (size, raw) => {
-    const qty = raw === "" ? "" : Math.max(0, parseInt(raw || 0, 10) || 0);
+    const digits = String(raw ?? "").replace(/\D/g, "");
+    const qty = digits === "" ? "" : Math.max(0, parseInt(digits, 10) || 0);
     setSizes((prev) => ({ ...prev, [size]: { ...prev[size], quantity: qty } }));
     setErrors((prev) => ({ ...prev, sizes: "" }));
   };
@@ -152,10 +159,10 @@ const ColorwayTab = ({ allproducts, getEffectiveSizes, showToast, onColorwayAdde
         if (subData.success) subImageUrls = subData.image_urls;
       }
 
-      const sizesPayload = FALLBACK_SHOE_SIZES
+      const sizesPayload = shoeSizes
         .map((s) => {
           const obj = sizes[s] || { quantity: 0, price: "" };
-          const qty = Number(obj.quantity || 0);
+          const qty = Math.floor(Number(obj.quantity || 0));
           const priceCents = priceStringToCents(obj.price || "");
           return { size: String(s), quantity: qty, price: Number.isFinite(priceCents) ? priceCents / 100 : 0 };
         })
@@ -203,7 +210,7 @@ const ColorwayTab = ({ allproducts, getEffectiveSizes, showToast, onColorwayAdde
         <div className="acw-product-grid">
           {filtered.map((p) => {
             const live = getEffectiveSizes(p);
-            const totalStock = Object.values(live).reduce((s, o) => s + Number(o.quantity || 0), 0);
+            const totalStock = Math.floor(Object.values(live).reduce((s, o) => s + Number(o.quantity || 0), 0));
             return (
               <div key={p.id} className="acw-product-card glass-medium" onClick={() => selectParent(p)}>
                 <div className="card-visual">
@@ -302,8 +309,8 @@ const ColorwayTab = ({ allproducts, getEffectiveSizes, showToast, onColorwayAdde
                       className="size-inputs" 
                       style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px", overflow: "visible" }}
                     >
-                    <input className="luxe-num-input" type="number" placeholder="QTY" value={sizes[sz]?.quantity ?? ""} onChange={(e) => handleSizeQty(sz, e.target.value)} />
-                    <input className="luxe-num-input" type="number" placeholder="Price" value={sizes[sz]?.price ?? ""} onChange={(e) => handleSizePrice(sz, e.target.value)} />
+                    <input className="luxe-num-input" type="number" min="0" step="1" inputMode="numeric" pattern="[0-9]*" placeholder="QTY" value={sizes[sz]?.quantity ?? ""} onKeyDown={blockNonIntegerKeys} onChange={(e) => handleSizeQty(sz, e.target.value)} />
+                    <input className="luxe-num-input" type="number" min="0" step="0.01" placeholder="Price" value={sizes[sz]?.price ?? ""} onChange={(e) => handleSizePrice(sz, e.target.value)} />
                   </div>
                 </div>
               ))}

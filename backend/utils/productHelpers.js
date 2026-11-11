@@ -68,14 +68,14 @@ const formatProduct = (product, topSellerIds = new Set(), reservedMap = {}) => {
     product.sizes.forEach((entry) => {
       if (!entry || !entry.size) return;
       sizes[String(entry.size)] = {
-        quantity: Math.max(0, Number(entry.quantity || 0) - reservedFor(entry.size)),
+        quantity: Math.max(0, Math.floor(Number(entry.quantity || 0)) - reservedFor(entry.size)),
         price: Number(entry.price !== undefined ? entry.price : fallbackPrice),
       };
     });
   } else {
     Object.entries(product.sizes || {}).forEach(([k, v]) => {
       sizes[k] = {
-        quantity: Math.max(0, Number(v.quantity || 0) - reservedFor(k)),
+        quantity: Math.max(0, Math.floor(Number(v.quantity || 0)) - reservedFor(k)),
         price: Number(v.price !== undefined ? v.price : fallbackPrice),
       };
     });
@@ -92,8 +92,8 @@ const formatProduct = (product, topSellerIds = new Set(), reservedMap = {}) => {
     maxPrice = Math.max(...priceValues);
   }
 
-  const adjustedSimpleStock = Math.max(0, Number(product.stock || 0) - reservedFor(""));
-  const totalStock = Object.values(sizes).reduce((sum, s) => sum + Number(s.quantity || 0), 0) || adjustedSimpleStock;
+  const adjustedSimpleStock = Math.max(0, Math.floor(Number(product.stock || 0)) - reservedFor(""));
+  const totalStock = Object.values(sizes).reduce((sum, s) => sum + Math.floor(Number(s.quantity || 0)), 0) || adjustedSimpleStock;
 
   const now = Date.now();
   const productDate = product.date ? new Date(product.date).getTime() : now;
@@ -101,7 +101,7 @@ const formatProduct = (product, topSellerIds = new Set(), reservedMap = {}) => {
 
   return {
     ...product,
-    stock: Object.keys(sizes).length > 0 ? product.stock : adjustedSimpleStock,
+    stock: Object.keys(sizes).length > 0 ? Math.floor(Number(product.stock || 0)) : adjustedSimpleStock,
     sizes,
     priceRange: { min: minPrice, max: maxPrice },
     totalStock,

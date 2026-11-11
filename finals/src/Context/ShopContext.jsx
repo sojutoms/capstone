@@ -7,7 +7,10 @@ export const ShopContext = createContext(null);
 const ShopContextProvider = (props) => {
   const [all_product, setAll_Product] = useState([]);
   const [cartItems, setCartItems] = useState(() => {
-    if (localStorage.getItem("auth-token")) return {};
+    if (!localStorage.getItem("auth-token")) {
+      localStorage.removeItem("cartItems");
+      return {};
+    }
     try {
       const saved = localStorage.getItem("cartItems");
       return saved ? JSON.parse(saved) : {};
@@ -16,7 +19,10 @@ const ShopContextProvider = (props) => {
     }
   });
   const [cartSizes, setCartSizes] = useState(() => {
-    if (localStorage.getItem("auth-token")) return {};
+    if (!localStorage.getItem("auth-token")) {
+      localStorage.removeItem("cartSizes");
+      return {};
+    }
     try {
       const saved = localStorage.getItem("cartSizes");
       return saved ? JSON.parse(saved) : {};
@@ -27,8 +33,13 @@ const ShopContextProvider = (props) => {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem("cartItems", JSON.stringify(cartItems));
-    localStorage.setItem("cartSizes", JSON.stringify(cartSizes));
+    if (localStorage.getItem("auth-token")) {
+      localStorage.setItem("cartItems", JSON.stringify(cartItems));
+      localStorage.setItem("cartSizes", JSON.stringify(cartSizes));
+    } else {
+      localStorage.removeItem("cartItems");
+      localStorage.removeItem("cartSizes");
+    }
   }, [cartItems, cartSizes]);
 
   useEffect(() => {
@@ -63,19 +74,26 @@ const ShopContextProvider = (props) => {
           });
           const cartData = await cartRes.json();
 
-          const backendCart  = {};
-          const backendSizes = {};
-          cartData.forEach(({ itemId, size, quantity }) => {
-            const key           = `${itemId}_${size}`;
-            backendCart[key]    = quantity;
-            backendSizes[key]   = size;
-          });
+          if (Array.isArray(cartData)) {
+            const backendCart  = {};
+            const backendSizes = {};
+            cartData.forEach(({ itemId, size, quantity }) => {
+              const key           = `${itemId}_${size}`;
+              backendCart[key]    = quantity;
+              backendSizes[key]   = size;
+            });
 
-          setCartItems(backendCart);
-          setCartSizes(backendSizes);
+            setCartItems(backendCart);
+            setCartSizes(backendSizes);
+          }
         } catch (err) {
           console.error("Failed to fetch cart from backend:", err);
         }
+      } else {
+        setCartItems({});
+        setCartSizes({});
+        localStorage.removeItem("cartItems");
+        localStorage.removeItem("cartSizes");
       }
     };
 
@@ -86,114 +104,78 @@ const ShopContextProvider = (props) => {
     const key   = `${itemId}_${size}`;
     const token = localStorage.getItem("auth-token");
 
-    if (token) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/addtocart`, {
-          method: "POST",
-          headers: {
-            Accept:           "application/json",
-            "auth-token":     token,
-            "Content-Type":   "application/json",
-          },
-          body: JSON.stringify({ itemId: Number(itemId), size }),
-        });
-        const data = await response.json();
-
-        if (data.success) {
-          setCartItems((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
-          setCartSizes((prev) => ({ ...prev, [key]: size }));
-          return { success: true };
-        }
-        showToast("error", data.error || data.message || "Failed to add to cart.");
-        return { success: false };
-      } catch (err) {
-        console.error("Failed to sync cart with backend:", err);
-        showToast("error", "Error adding to cart. Please try again.");
-        return { success: false };
-      }
-    }
-
-    const product = all_product.find((p) => p.id === Number(itemId));
-    if (!product) { showToast("error", "Product not found"); return { success: false }; }
-
-    let availableStock = 0;
-    const targetSize = String(size || "").trim();
-
-    if (Array.isArray(product.sizes)) {
-      const sizeEntry = product.sizes.find(s => {
-        const sSize = String(s.size || "").trim();
-        return sSize === targetSize || (parseFloat(sSize) === parseFloat(targetSize) && !isNaN(parseFloat(targetSize)));
-      });
-      availableStock = sizeEntry ? Number(sizeEntry.quantity || 0) : Number(product.stock || 0);
-    } else if (product.sizes && typeof product.sizes === "object") {
-      const sizeEntry = product.sizes[size] || product.sizes[targetSize];
-      availableStock = typeof sizeEntry === "object" ? Number(sizeEntry.quantity || 0) : Number(sizeEntry || product.stock || 0);
-    } else {
-      availableStock = Number(product.stock || 0);
-    }
-
-    const currentQtyInCart = cartItems[key] || 0;
-
-    if (currentQtyInCart + 1 > availableStock) {
-      showToast("error", `Only ${availableStock} item(s) available in size ${size}. You already have ${currentQtyInCart} in your cart.`);
+    if (!token) {
+      window.location.href = "/login";
       return { success: false };
     }
 
-    setCartItems((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
-    setCartSizes((prev) => ({ ...prev, [key]: size }));
-    return { success: true };
+    try {
+      const response = await fetch(`${API_BASE_URL}/addtocart`, {
+        method: "POST",
+        headers: {
+          Accept:           "application/json",
+          "auth-token":     token,
+          "Content-Type":   "application/json",
+        },
+        body: JSON.stringify({ itemId: Number(itemId), size }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setCartItems((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+        setCartSizes((prev) => ({ ...prev, [key]: size }));
+        return { success: true };
+      }
+      showToast("error", data.error || data.message || "Failed to add to cart.");
+      return { success: false };
+    } catch (err) {
+      console.error("Failed to sync cart with backend:", err);
+      showToast("error", "Error adding to cart. Please try again.");
+      return { success: false };
+    }
   };
 
   const removeFromCart = async (key) => {
     const token = localStorage.getItem("auth-token");
     const willDelete = (cartItems[key] || 0) <= 1;
 
-    if (token) {
-      const [itemId, size] = key.split("_");
-      try {
-        const res  = await fetch(`${API_BASE_URL}/removefromcart`, {
-          method: "POST",
-          headers: {
-            Accept:           "application/json",
-            "auth-token":     token,
-            "Content-Type":   "application/json",
-          },
-          body: JSON.stringify({ itemId: Number(itemId), size }),
-        });
-        const data = await res.json();
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
 
-        if (data.success) {
-          setCartItems((prev) => {
-            const updated = { ...prev };
-            if (updated[key] > 1) updated[key] -= 1;
-            else delete updated[key];
-            return updated;
-          });
-          setCartSizes((prev) => {
-            const updated = { ...prev };
-            if (willDelete) delete updated[key];
-            return updated;
-          });
-        } else {
-          console.error("Backend failed to remove item:", data.error);
-          showToast("error", data.error || "Failed to remove from cart");
-        }
-      } catch (err) {
-        console.error("Failed to sync cart removal:", err);
-        showToast("error", "Error removing from cart. Please try again.");
+    const [itemId, size] = key.split("_");
+    try {
+      const res  = await fetch(`${API_BASE_URL}/removefromcart`, {
+        method: "POST",
+        headers: {
+          Accept:           "application/json",
+          "auth-token":     token,
+          "Content-Type":   "application/json",
+        },
+        body: JSON.stringify({ itemId: Number(itemId), size }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setCartItems((prev) => {
+          const updated = { ...prev };
+          if (updated[key] > 1) updated[key] -= 1;
+          else delete updated[key];
+          return updated;
+        });
+        setCartSizes((prev) => {
+          const updated = { ...prev };
+          if (willDelete) delete updated[key];
+          return updated;
+        });
+      } else {
+        console.error("Backend failed to remove item:", data.error);
+        showToast("error", data.error || "Failed to remove from cart");
       }
-    } else {
-      setCartItems((prev) => {
-        const updated = { ...prev };
-        if (updated[key] > 1) updated[key] -= 1;
-        else delete updated[key];
-        return updated;
-      });
-      setCartSizes((prev) => {
-        const updated = { ...prev };
-        if (willDelete) delete updated[key];
-        return updated;
-      });
+    } catch (err) {
+      console.error("Failed to sync cart removal:", err);
+      showToast("error", "Error removing from cart. Please try again.");
     }
   };
 

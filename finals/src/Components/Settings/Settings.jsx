@@ -553,7 +553,13 @@ const Settings = () => {
         headers: { "Content-Type": "application/json", "auth-token": token },
       });
       const data = await res.json();
-      if (data.success) { localStorage.removeItem("auth-token"); window.location.replace("/"); }
+      if (data.success) {
+        localStorage.removeItem("auth-token");
+        localStorage.removeItem("cartItems");
+        localStorage.removeItem("cartSizes");
+        localStorage.removeItem("user-name");
+        window.location.replace("/");
+      }
       else showMessage("error", data.message || "Failed to delete account");
     } catch {
       showMessage("error", "Delete request failed");
@@ -578,7 +584,13 @@ const Settings = () => {
             <button className={activeTab === "danger" ? "active" : ""} onClick={() => { setActiveTab("danger"); handleCancel(); }}>Advanced</button>
           </nav>
           <div style={{ marginTop: 24 }}>
-            <button className="logout-trigger" onClick={() => { localStorage.removeItem("auth-token"); window.location.replace("/"); }}>
+            <button className="logout-trigger" onClick={() => {
+              localStorage.removeItem("auth-token");
+              localStorage.removeItem("cartItems");
+              localStorage.removeItem("cartSizes");
+              localStorage.removeItem("user-name");
+              window.location.replace("/");
+            }}>
               Logout Session
             </button>
           </div>

@@ -132,7 +132,10 @@ const addProduct = async (req, res) => {
 
     // Simple categories
     if (SIMPLE_CATEGORIES.includes(category)) {
-      const stock = parseInt(incoming.stock);
+      if (!Number.isInteger(Number(incoming.stock))) {
+        return res.status(400).json({ success: false, error: "Stock must be a whole number." });
+      }
+      const stock = parseInt(incoming.stock, 10);
       const price = parseFloat(incoming.price);
 
       if (isNaN(stock) || stock <= 0 || isNaN(price) || price < 0) {
@@ -178,7 +181,7 @@ const addProduct = async (req, res) => {
     // Shoe category
     const subCategories = sanitizeSubCategories(incoming.subCategories);
     const sizesArray = normalizeSizesToArray(incoming.sizes || {});
-    const totalStock = sizesArray.reduce((sum, s) => sum + Number(s.quantity || 0), 0);
+    const totalStock = sizesArray.reduce((sum, s) => sum + Math.floor(Number(s.quantity || 0)), 0);
 
     if (totalStock <= 0) return res.status(400).json({ success: false, error: "Stock required." });
 
@@ -241,7 +244,7 @@ const editProduct = async (req, res) => {
     // Size handling
     if (req.body.sizes) {
       product.sizes = normalizeSizesToArray(req.body.sizes);
-      product.stock = product.sizes.reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0);
+      product.stock = product.sizes.reduce((acc, curr) => acc + Math.floor(Number(curr.quantity || 0)), 0);
       product.available = product.stock > 0;
     }
 
@@ -411,6 +414,7 @@ const addColorway = async (req, res) => {
     const parent = await Product.findOne({ id: parentId });
     if (!parent) return res.status(404).json({ success: false, error: "Parent product not found" });
 
+    const normalizedSizes = normalizeSizesToArray(sizes || []);
     const last = await Product.findOne({}).sort({ id: -1 }).lean();
     const id = last && last.id ? last.id + 1 : 1;
     const skuNumber = await getNextSkuNumber();
@@ -426,13 +430,13 @@ const addColorway = async (req, res) => {
       category: parent.category,
       brand: parent.brand,
       subCategories: parent.subCategories,
-      sizes: sizes || [],
-      stock: (sizes || []).reduce((acc, curr) => acc + (Number(curr.quantity) || 0), 0),
+      sizes: normalizedSizes,
+      stock: normalizedSizes.reduce((acc, curr) => acc + Math.floor(Number(curr.quantity || 0)), 0),
       available: true,
     });
 
     await product.save();
-    await createSkusForProduct(product.id, { sizesOverride: sizes });
+    await createSkusForProduct(product.id, { sizesOverride: normalizedSizes });
 
     writeAudit("add_colorway", req, { productId: id, parentId, name });
     res.json({ success: true, id, skuNumber });

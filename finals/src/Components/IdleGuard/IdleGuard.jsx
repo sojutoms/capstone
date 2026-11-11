@@ -37,6 +37,9 @@ const IdleGuard = () => {
 
   const logout = useCallback(() => {
     localStorage.removeItem("auth-token");
+    localStorage.removeItem("cartItems");
+    localStorage.removeItem("cartSizes");
+    localStorage.removeItem("user-name");
     showModalRef.current = false;
     setShowModal(false);
     window.location.replace("/login");

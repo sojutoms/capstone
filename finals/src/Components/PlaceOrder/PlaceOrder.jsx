@@ -212,6 +212,10 @@ const PlaceOrder = () => {
     ? { [`${buyNowItem.id}_${buyNowItem.size || ''}`]: buyNowItem.quantity || 1 }
     : contextCartItems;
 
+  const [accountProfile, setAccountProfile] = useState({
+    firstName: '', lastName: '', email: '', phone: '+63',
+  });
+
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', street: '',
     region: '', province: '', cityOrMunicipality: '', barangay: '',
@@ -223,6 +227,7 @@ const PlaceOrder = () => {
 
   const [errors, setErrors] = useState({});
   const [saveAddress, setSaveAddress] = useState(false);
+  const [savingAddressNow, setSavingAddressNow] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [showSaved, setShowSaved] = useState(false);
 
@@ -251,6 +256,45 @@ const PlaceOrder = () => {
   const [toasts, setToasts] = useState([]);
   const toastIdRef = useRef(0);
   const toastTimersRef = useRef({});
+
+  useEffect(() => {
+    const token = localStorage.getItem('auth-token');
+    if (!token) {
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    fetch(`${API_BASE_URL}/user/profile`, {
+      headers: { 'auth-token': token },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && data.user) {
+          const u = data.user;
+          const nameParts = String(u.name || '').trim().split(/\s+/).filter(Boolean);
+          const fName = (u.firstName || nameParts[0] || '').trim();
+          const lName = (u.lastName || nameParts.slice(1).join(' ') || '').trim();
+          const uEmail = (u.email || '').trim();
+          const uPhone = u.phone ? normalizePhone(u.phone) : '+63';
+
+          setAccountProfile({
+            firstName: fName,
+            lastName: lName,
+            email: uEmail,
+            phone: uPhone,
+          });
+
+          setFormData((prev) => ({
+            ...prev,
+            firstName: prev.firstName || fName,
+            lastName: prev.lastName || lName,
+            email: prev.email || uEmail,
+            phone: (!prev.phone || prev.phone === '+63') ? uPhone : prev.phone,
+          }));
+        }
+      })
+      .catch((err) => console.error('Profile fetch error:', err));
+  }, [navigate]);
 
   const removeToast = useCallback((id) => {
     setToasts((t) => t.filter((x) => x.id !== id));
@@ -299,11 +343,16 @@ const PlaceOrder = () => {
   const shippingFee = getShippingFee(formData.region);
   const shippingTier = getShippingTier(formData.region, cartSubtotal);
 
-  const isAlreadySaved = savedAddresses.some(
-    (addr) =>
-      addr.street?.trim().toLowerCase() === formData.street?.trim().toLowerCase() &&
-      addr.barangay?.code === formData.barangay &&
-      addr.cityOrMunicipality?.code === formData.cityOrMunicipality
+  const isAlreadySaved = Boolean(
+    formData.street?.trim() &&
+    formData.barangay &&
+    formData.cityOrMunicipality &&
+    savedAddresses.some(
+      (addr) =>
+        addr.street?.trim().toLowerCase() === formData.street?.trim().toLowerCase() &&
+        addr.barangay?.code === formData.barangay &&
+        addr.cityOrMunicipality?.code === formData.cityOrMunicipality
+    )
   );
 
   const findName = (list, code) => {
@@ -501,6 +550,7 @@ const PlaceOrder = () => {
       setBarangays(brgyRes.sort((a, b) => a.name.localeCompare(b.name, 'fil')));
       setFormData((p) => ({
         ...p, ...address,
+        email: address.email || accountProfile.email || p.email,
         phone: normalizePhone(address.phone),
         region: rCode,
         province: isNCR ? NCR_REGION_CODE : pCode,
@@ -520,7 +570,7 @@ const PlaceOrder = () => {
     setEditHasProvinces(!isNCR);
     setEditingIndex(idx);
     setEditFormData({
-      firstName: addr.firstName || '', lastName: addr.lastName || '', email: addr.email || '',
+      firstName: addr.firstName || '', lastName: addr.lastName || '', email: addr.email || accountProfile.email || '',
       street: addr.street || '', phone: normalizePhone(addr.phone),
       region: rCode, province: isNCR ? '' : pCode, cityOrMunicipality: cCode, barangay: addr.barangay?.code || '',
     });
@@ -643,6 +693,59 @@ const PlaceOrder = () => {
     };
   };
 
+  const handleSaveAddressClick = async () => {
+    const authToken = localStorage.getItem('auth-token');
+    if (!authToken) {
+      navigate('/login');
+      return;
+    }
+
+    const { deliveryInfo } = buildOrderPayload();
+    const isComplete =
+      Boolean(deliveryInfo.firstName?.trim()) &&
+      Boolean(deliveryInfo.lastName?.trim()) &&
+      Boolean(deliveryInfo.email?.trim()) &&
+      Boolean(deliveryInfo.street?.trim()) &&
+      Boolean(formData.region) &&
+      (!hasProvinces || Boolean(formData.province)) &&
+      Boolean(formData.cityOrMunicipality) &&
+      Boolean(formData.barangay) &&
+      /^\+63\d{10}$/.test(String(deliveryInfo.phone || '').trim());
+
+    if (!isComplete) {
+      setSaveAddress((prev) => !prev);
+      addToast('error', 'Please fill out all shipping details (including a 10-digit +63 phone number) to save this address now.');
+      return;
+    }
+
+    if (savingAddressNow) return;
+    setSavingAddressNow(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/saveaddress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'auth-token': authToken },
+        body: JSON.stringify({ address: deliveryInfo }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (Array.isArray(data.addresses)) {
+          setSavedAddresses(data.addresses);
+        } else {
+          await loadSavedAddresses();
+        }
+        setSaveAddress(true);
+        addToast('success', 'Address saved.');
+      } else {
+        addToast('error', data.error || 'Failed to save address.');
+      }
+    } catch (err) {
+      console.error('Failed to save address:', err);
+      addToast('error', 'Failed to save address.');
+    } finally {
+      setSavingAddressNow(false);
+    }
+  };
+
   const startPayMongoCheckout = async (orderNumber) => {
     const authToken = localStorage.getItem('auth-token');
     const sessionData = await createCheckoutSession(authToken, orderNumber);
@@ -655,10 +758,14 @@ const PlaceOrder = () => {
 
   const submitOrder = async (payload, orderItems, paymentMethod) => {
     const authToken = localStorage.getItem('auth-token');
+    if (!authToken) {
+      navigate('/login');
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE_URL}/placeorder`, {
         method: 'POST',
-        headers: { 'auth-token': authToken || '', 'Content-Type': 'application/json' },
+        headers: { 'auth-token': authToken, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
@@ -695,10 +802,14 @@ const PlaceOrder = () => {
 
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
-    const { orderItems, deliveryInfo, payload } = buildOrderPayload();
     const authToken = localStorage.getItem('auth-token');
+    if (!authToken) {
+      navigate('/login');
+      return;
+    }
+    const { orderItems, deliveryInfo, payload } = buildOrderPayload();
 
-    if (saveAddress && authToken) {
+    if (saveAddress && !isAlreadySaved) {
       try {
         await fetch(`${API_BASE_URL}/saveaddress`, {
           method: 'POST',
@@ -720,6 +831,10 @@ const PlaceOrder = () => {
       setRetryingPayment(false);
     }
   };
+
+  if (!localStorage.getItem('auth-token')) {
+    return null;
+  }
 
   return (
     <div className="checkout-terminal">
@@ -837,9 +952,12 @@ const PlaceOrder = () => {
                       className="clear-form-link"
                       onClick={() => {
                         setFormData({
-                          firstName: '', lastName: '', email: '', street: '',
+                          firstName: accountProfile.firstName || '',
+                          lastName: accountProfile.lastName || '',
+                          email: accountProfile.email || '',
+                          street: '',
                           region: '', province: '', cityOrMunicipality: '', barangay: '',
-                          phone: '+63',
+                          phone: accountProfile.phone || '+63',
                         });
                         setProvinces([]);
                         setCities([]);
@@ -856,7 +974,7 @@ const PlaceOrder = () => {
                     <div className="field-group"><label>First Name</label><input name="firstName" value={formData.firstName} onChange={handleInputChange} placeholder="GIVEN NAME" required /></div>
                     <div className="field-group"><label>Last Name</label><input name="lastName" value={formData.lastName} onChange={handleInputChange} placeholder="SURNAME" required /></div>
                   </div>
-                  <div className="field-group"><label>Email Address</label><input name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="AUTHORIZED EMAIL" required /></div>
+                  <div className="field-group"><label>Email Address</label><input name="email" type="email" value={formData.email} onChange={handleInputChange} readOnly={Boolean(accountProfile.email)} placeholder="AUTHORIZED EMAIL" required /></div>
                   <div className="field-group"><label>Street Address</label><input name="street" value={formData.street} onChange={handleInputChange} placeholder="RESIDENCE / UNIT / STREET" maxLength={64} required /></div>
                   <div className="input-grid">
                     <div className="field-group">
@@ -902,11 +1020,16 @@ const PlaceOrder = () => {
                     <button
                       type="button"
                       className={`save-address-btn-big ${saveAddress ? 'active' : ''}`}
-                      onClick={() => setSaveAddress(!saveAddress)}
+                      onClick={handleSaveAddressClick}
+                      disabled={savingAddressNow}
                     >
                       <span className="save-address-check">{saveAddress ? '✓' : '+'}</span>
                       <span className="save-address-label">
-                        {saveAddress ? 'Address will be saved' : 'Save this address for later'}
+                        {savingAddressNow
+                          ? 'Saving address...'
+                          : saveAddress
+                            ? 'Address will be saved'
+                            : 'Save this address for later'}
                       </span>
                     </button>
                   )}
